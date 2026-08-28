@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
+import { useTheme } from "next-themes";
 import { useAppStore } from "@/store/app-store";
 import { EmberField } from "@/components/fantasy/ember-field";
 import { AuthDialog } from "@/components/auth/auth-dialog";
@@ -13,9 +14,11 @@ import { GrimoireView } from "@/components/sections/grimoire";
 import { ProfileView } from "@/components/sections/profile";
 import { AdminView } from "@/components/sections/admin";
 import { Button } from "@/components/ui/button";
-import { ScrollText, BookOpen, Sword, Sparkles, User, Crown, LogOut, Flame } from "lucide-react";
+import { ScrollText, BookOpen, Sword, Sparkles, User, Crown, LogOut, Flame, Search, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { PageTransition } from "@/components/fantasy/page-transition";
+import { Omnisearch } from "@/components/omnisearch";
 
 interface MeResponse {
   user: { id: string; name: string; email: string; role: string } | null;
@@ -42,6 +45,21 @@ export function AppShell() {
 
   const isAdmin = session?.user?.role === "ADMIN";
   const isPlayer = session?.user?.role === "PLAYER";
+
+  const [searchOpen, setSearchOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
+  // Track hydration without setState-in-effect (React 19 lint): useSyncExternalStore
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+
+  // Guard: redirect unauthorized users away from protected views (no side-effect in render)
+  useEffect(() => {
+    if (view === "profile" && !isPlayer && session !== undefined) setView("hall");
+    if (view === "admin" && !isAdmin && session !== undefined) setView("hall");
+  }, [view, isPlayer, isAdmin, session, setView]);
 
   const handleSignOut = () => {
     signOut({ redirect: false });
@@ -124,6 +142,24 @@ export function AppShell() {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-gold/20 bg-background/30 text-foreground/60 hover:text-gold hover:border-gold/40 transition-all text-sm"
+                  aria-label="Поиск по миру"
+                >
+                  <Search className="w-4 h-4" />
+                  <span className="hidden md:inline font-[family-name:var(--font-cinzel)] text-xs tracking-wide">Искать</span>
+                </button>
+                {mounted && (
+                  <button
+                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                    className="p-2 rounded-md border border-gold/20 bg-background/30 text-gold/70 hover:text-gold hover:border-gold/40 transition-all"
+                    aria-label="Сменить освещение"
+                    title={theme === "dark" ? "Зажечь рассвет" : "Задуть свечи"}
+                  >
+                    {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                  </button>
+                )}
                 {session?.user ? (
                   <div className="flex items-center gap-2">
                     <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded border border-gold/20 bg-background/30">
@@ -162,14 +198,24 @@ export function AppShell() {
 
         {/* ===== MAIN ===== */}
         <main className="flex-1 relative z-10">
-          {view === "hall" && <HallView onNavigate={setView} />}
-          {view === "knowledge" && <KnowledgeView />}
-          {view === "guild" && <GuildView />}
-          {view === "grimoire" && <GrimoireView />}
-          {view === "profile" && isPlayer && <ProfileView />}
-          {view === "admin" && isAdmin && <AdminView />}
-          {(view === "profile" && !isPlayer) ||
-            (view === "admin" && !isAdmin && setView("hall"))}
+          {view === "hall" && (
+            <PageTransition viewKey="hall"><HallView onNavigate={setView} /></PageTransition>
+          )}
+          {view === "knowledge" && (
+            <PageTransition viewKey="knowledge"><KnowledgeView /></PageTransition>
+          )}
+          {view === "guild" && (
+            <PageTransition viewKey="guild"><GuildView /></PageTransition>
+          )}
+          {view === "grimoire" && (
+            <PageTransition viewKey="grimoire"><GrimoireView /></PageTransition>
+          )}
+          {view === "profile" && isPlayer && (
+            <PageTransition viewKey="profile"><ProfileView /></PageTransition>
+          )}
+          {view === "admin" && isAdmin && (
+            <PageTransition viewKey="admin"><AdminView /></PageTransition>
+          )}
         </main>
 
         {/* ===== FOOTER (sticky) ===== */}
@@ -189,6 +235,7 @@ export function AppShell() {
       </div>
 
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+      <Omnisearch open={searchOpen} onOpenChange={setSearchOpen} onNavigate={setView} />
     </div>
   );
 }

@@ -45,65 +45,68 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* ===== DEFAULT THEME: Candlelit Grimoire (dark) ===== */
+/* ===== LIGHT THEME: Dawn of Eldrin (warm parchment daylight) ===== */
 :root {
   --radius: 0.4rem;
 
-  /* Parchment-toned dark backdrop like an old library at night */
-  --background: oklch(0.16 0.018 45);
-  --foreground: oklch(0.90 0.04 70);
+  /* Warm dawn backdrop — sunlit library */
+  --background: oklch(0.96 0.025 75);
+  --foreground: oklch(0.22 0.04 40);
 
-  /* Parchment cards — aged cream */
-  --card: oklch(0.93 0.045 75);
-  --card-foreground: oklch(0.22 0.03 45);
+  /* Slightly darker parchment for cards */
+  --card: oklch(0.98 0.03 80);
+  --card-foreground: oklch(0.22 0.04 40);
 
-  --popover: oklch(0.95 0.05 80);
-  --popover-foreground: oklch(0.22 0.03 45);
+  --popover: oklch(0.97 0.035 78);
+  --popover-foreground: oklch(0.22 0.04 40);
 
   /* Deep wine/burgundy primary */
   --primary: oklch(0.42 0.15 25);
   --primary-foreground: oklch(0.96 0.02 75);
 
   /* Aged gold secondary */
-  --secondary: oklch(0.45 0.09 70);
-  --secondary-foreground: oklch(0.96 0.02 75);
+  --secondary: oklch(0.78 0.10 75);
+  --secondary-foreground: oklch(0.22 0.04 40);
 
-  --muted: oklch(0.88 0.04 78);
-  --muted-foreground: oklch(0.40 0.03 50);
+  --muted: oklch(0.90 0.03 75);
+  --muted-foreground: oklch(0.42 0.03 50);
 
   /* Burnished gold accent */
-  --accent: oklch(0.72 0.13 75);
-  --accent-foreground: oklch(0.18 0.03 45);
+  --accent: oklch(0.62 0.13 70);
+  --accent-foreground: oklch(0.96 0.02 75);
 
-  --destructive: oklch(0.55 0.22 27);
-  --border: oklch(0.60 0.05 60 / 40%);
-  --input: oklch(0.60 0.05 60 / 30%);
-  --ring: oklch(0.72 0.13 75);
+  --destructive: oklch(0.50 0.22 27);
+  --border: oklch(0.55 0.06 55 / 35%);
+  --input: oklch(0.55 0.06 55 / 25%);
+  --ring: oklch(0.62 0.13 70);
 
-  --chart-1: oklch(0.62 0.16 30);
-  --chart-2: oklch(0.72 0.13 75);
-  --chart-3: oklch(0.55 0.10 160);
-  --chart-4: oklch(0.50 0.14 290);
-  --chart-5: oklch(0.78 0.12 90);
+  --chart-1: oklch(0.55 0.16 30);
+  --chart-2: oklch(0.55 0.13 75);
+  --chart-3: oklch(0.50 0.10 160);
+  --chart-4: oklch(0.45 0.14 290);
+  --chart-5: oklch(0.68 0.12 90);
 
-  --sidebar: oklch(0.14 0.02 45);
-  --sidebar-foreground: oklch(0.90 0.04 70);
-  --sidebar-primary: oklch(0.72 0.13 75);
-  --sidebar-primary-foreground: oklch(0.18 0.03 45);
-  --sidebar-accent: oklch(0.20 0.025 45);
-  --sidebar-accent-foreground: oklch(0.90 0.04 70);
-  --sidebar-border: oklch(0.60 0.05 60 / 30%);
-  --sidebar-ring: oklch(0.72 0.13 75);
+  --sidebar: oklch(0.94 0.02 75);
+  --sidebar-foreground: oklch(0.22 0.04 40);
+  --sidebar-primary: oklch(0.62 0.13 70);
+  --sidebar-primary-foreground: oklch(0.96 0.02 75);
+  --sidebar-accent: oklch(0.88 0.03 75);
+  --sidebar-accent-foreground: oklch(0.22 0.04 40);
+  --sidebar-border: oklch(0.55 0.06 55 / 25%);
+  --sidebar-ring: oklch(0.62 0.13 70);
 
-  /* Custom fantasy tokens */
-  --gold: oklch(0.78 0.13 85);
-  --gold-bright: oklch(0.85 0.15 88);
+  /* Custom fantasy tokens (light) */
+  --gold: oklch(0.55 0.13 70);
+  --gold-bright: oklch(0.65 0.15 75);
   --wine: oklch(0.42 0.15 25);
   --parchment: oklch(0.93 0.045 75);
   --parchment-dark: oklch(0.78 0.06 70);
   --ink: oklch(0.22 0.03 45);
-  --magic-glow: oklch(0.72 0.14 280);
-  --ember: oklch(0.65 0.20 40);
+  --magic-glow: oklch(0.55 0.15 290);
+  --ember: oklch(0.55 0.18 40);
+  --ambient-1: oklch(0.92 0.04 75 / 0.5);
+  --ambient-2: oklch(0.88 0.08 60 / 0.25);
+  --ambient-3: oklch(0.90 0.06 290 / 0.2);
 }
 
 .dark {
@@ -125,6 +128,18 @@
   --border: oklch(0.60 0.05 60 / 40%);
   --input: oklch(0.60 0.05 60 / 30%);
   --ring: oklch(0.72 0.13 75);
+  /* Dark fantasy tokens */
+  --gold: oklch(0.78 0.13 85);
+  --gold-bright: oklch(0.85 0.15 88);
+  --wine: oklch(0.55 0.17 30);
+  --parchment: oklch(0.93 0.045 75);
+  --parchment-dark: oklch(0.78 0.06 70);
+  --ink: oklch(0.22 0.03 45);
+  --magic-glow: oklch(0.72 0.14 280);
+  --ember: oklch(0.65 0.20 40);
+  --ambient-1: oklch(0.30 0.06 50 / 0.5);
+  --ambient-2: oklch(0.28 0.10 30 / 0.3);
+  --ambient-3: oklch(0.22 0.08 290 / 0.25);
 }
 
 @layer base {
@@ -422,6 +437,95 @@
   transition: all 0.3s ease;
 }
 
+/* Fantasy buttons that work ON PARCHMENT (light) backgrounds.
+   Use these instead of variant="outline" inside .parchment cards. */
+.btn-parchment {
+  font-family: var(--font-cinzel);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.8rem;
+  background: transparent;
+  color: var(--wine);
+  border: 1px solid oklch(0.42 0.15 25 / 0.55);
+  border-radius: var(--radius);
+  transition: all 0.25s ease;
+  position: relative;
+}
+.btn-parchment:hover {
+  background: oklch(0.42 0.15 25 / 0.10);
+  border-color: oklch(0.42 0.15 25 / 0.85);
+  box-shadow: 0 0 14px oklch(0.42 0.15 25 / 0.18);
+}
+
+.btn-gold {
+  font-family: var(--font-cinzel);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.8rem;
+  background: transparent;
+  color: oklch(0.50 0.13 70);
+  border: 1px solid oklch(0.65 0.13 75 / 0.6);
+  border-radius: var(--radius);
+  transition: all 0.25s ease;
+}
+.btn-gold:hover {
+  background: oklch(0.72 0.13 75 / 0.15);
+  border-color: oklch(0.65 0.13 75);
+  color: oklch(0.40 0.13 65);
+  box-shadow: 0 0 16px oklch(0.72 0.13 75 / 0.3);
+}
+
+.btn-wine-solid {
+  font-family: var(--font-cinzel);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.8rem;
+  background: linear-gradient(180deg, oklch(0.48 0.16 28), oklch(0.38 0.15 25));
+  color: oklch(0.96 0.02 75);
+  border: 1px solid oklch(0.30 0.12 25);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 8px oklch(0.30 0.12 25 / 0.3), inset 0 1px 0 oklch(0.60 0.16 30 / 0.4);
+  transition: all 0.25s ease;
+}
+.btn-wine-solid:hover {
+  background: linear-gradient(180deg, oklch(0.52 0.17 28), oklch(0.42 0.16 25));
+  box-shadow: 0 4px 16px oklch(0.30 0.12 25 / 0.45), inset 0 1px 0 oklch(0.65 0.17 30 / 0.5);
+  transform: translateY(-1px);
+}
+
+/* ===== Page transition (fade+rise) ===== */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.animate-page-enter { animation: page-enter 0.5s ease-out both; }
+
+/* ===== Staggered child fade-in ===== */
+@keyframes fade-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-rise { animation: fade-rise 0.45s ease-out both; }
+
+/* ===== Ornate SVG flourish color ===== */
+.flourish-stroke {
+  stroke: oklch(0.72 0.13 75 / 0.6);
+  fill: none;
+}
+
+/* ===== Better empty state ===== */
+.empty-portal {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: oklch(0.40 0.03 50);
+}
+.empty-portal-glow {
+  filter: drop-shadow(0 0 12px oklch(0.72 0.13 75 / 0.2));
+}
+
 /* ===== Decorative corner ornaments ===== */
 .corner-ornament {
   position: relative;
@@ -469,23 +573,26 @@
 .diff-hard { color: oklch(0.62 0.18 45); }
 .diff-deadly { color: oklch(0.58 0.22 20); }
 
-/* ===== Page background ambient ===== */
+/* ===== Page background ambient (theme-aware via --ambient-* tokens) ===== */
 .bg-grimoire {
-  background-color: oklch(0.12 0.015 45);
+  background-color: var(--background);
   background-image:
-    radial-gradient(ellipse at 50% -10%, oklch(0.30 0.06 50 / 0.5), transparent 55%),
-    radial-gradient(ellipse at 0% 100%, oklch(0.28 0.10 30 / 0.3), transparent 50%),
-    radial-gradient(ellipse at 100% 100%, oklch(0.22 0.08 290 / 0.25), transparent 50%);
+    radial-gradient(ellipse at 50% -10%, var(--ambient-1), transparent 55%),
+    radial-gradient(ellipse at 0% 100%, var(--ambient-2), transparent 50%),
+    radial-gradient(ellipse at 100% 100%, var(--ambient-3), transparent 50%);
 }
 
-/* Vignette overlay for full immersion */
+/* Vignette overlay for full immersion (stronger in dark, subtle in light) */
 .vignette::after {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 50%, oklch(0.08 0.01 45 / 0.6) 100%);
+  background: radial-gradient(ellipse at center, transparent 55%, oklch(0.08 0.01 45 / 0.35) 100%);
   z-index: 1;
+}
+.dark .vignette::after {
+  background: radial-gradient(ellipse at center, transparent 50%, oklch(0.08 0.01 45 / 0.65) 100%);
 }
 
 /* Floating embers / dust particles */

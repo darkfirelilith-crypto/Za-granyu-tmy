@@ -49,3 +49,34 @@ Unresolved / Next-phase priorities:
 - Polish: add character portrait image upload, quest completion by player (currently auto on assign), more seed lore.
 - Features: notification when achievements granted, grimoire auto-unlock by condition, dark/light theme toggle, search across all lore.
 - Production: move NEXTAUTH_SECRET to Vercel env, switch DB to Postgres for Vercel, add rate limiting.
+
+---
+Task ID: cron-round-1
+Agent: main (autonomous cron review)
+Task: QA testing + bug fixes + new features (omnisearch, theme toggle, quest completion) + styling polish
+
+Current Project Status (assessment):
+- Site fully built and stable from prior session. Dev server on :3000, lint clean.
+- QA via agent-browser confirmed: nav, tabs, login (admin+player), quest acceptance, profile, grimoire unlock, admin CRUD all functional. No real app bugs — earlier "tab not switching" was a broken agent-browser session (restarting browser fixed it).
+- VLM visual review: 5/5 atmosphere on dark theme. Found ONE styling bug: the "Редактировать" button used shadcn `variant="outline"` which paints `bg-background` (dark grimoire color) — on a parchment card it became a black rectangle.
+
+Work Log (this round):
+- Bug fix: created dedicated fantasy button utilities (`.btn-parchment`, `.btn-gold`, `.btn-wine-solid`) in globals.css that work correctly on light parchment backgrounds. Replaced the broken outline button in profile.tsx. VLM-confirmed fix: button now renders red text + red border on cream, high contrast.
+- Bug fix (latent): removed a side-effect-in-render in AppShell (`setView("hall")` called during render for unauthorized views) → moved to a `useEffect` guard.
+- Feature: Global Omnisearch (Ctrl/Cmd+K) — command-palette dialog indexing all lore (countries, personalities, gods, legends, systems, grimoire). Typing filters live; selecting navigates to the relevant section. Header "Искать" button + keyboard shortcut.
+- Feature: Dark/Light theme toggle ("Зажечь рассвет" / "Задуть свечи") via next-themes. Added full Dawn (light) palette to `:root`, kept grimoire dark in `.dark`. Made `.bg-grimoire` and `.vignette` theme-aware via `--ambient-*` tokens. ThemeProvider wired in providers.tsx.
+- Feature: Player quest completion — profile quest journal now shows "Завершить подвиг" + "Оставить" buttons for ASSIGNED quests. Calls assign API with COMPLETED/FAILED status. Verified end-to-end: accept → complete → XP +500 (DEADLY) → status "✓ Завершено" with date, stats updated (0→1 completed, 640→1140 XP), toast shown.
+- Styling polish: added `.animate-page-enter` (fade+rise+blur) view transitions keyed by view name; `.animate-fade-rise` staggered children; `FlourishDivider` SVG filigree component with ink-draw animation; `CornerFlourish` decorative corners; `EmptyPortal` themed empty-state component; `.flourish-stroke` color token.
+
+Verification Results:
+- Lint: clean (resolved React 19 setState-in-effect lint by using useSyncExternalStore for mounted detection).
+- Dev server: 200, compiles cleanly, no runtime errors in console.
+- agent-browser: omnisearch opens, filters "Эльдрион"→2 hits, theme toggle switches html class dark↔light (computed bg lab(95%) confirmed), quest complete POST 200 + XP increment confirmed, button fix VLM-confirmed.
+- VLM dark theme: 5/5 atmosphere, gold/magic effects visible, drop cap praised.
+
+Unresolved / Next-phase priorities:
+- Polish light theme further (some secondary text contrast could be higher) — low priority since dark is the signature look.
+- Add character portrait image upload (currently portrait field unused).
+- Grimoire auto-unlock by condition (e.g. auto-unlock page I when quest X completed) — currently manual admin toggle.
+- Search: include quests + characters in omnisearch index.
+- Production: NEXTAUTH_SECRET to Vercel env, switch SQLite→Postgres for serverless.

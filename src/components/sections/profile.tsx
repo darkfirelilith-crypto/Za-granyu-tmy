@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Award, Sword, Star, Edit3, Save, X, ScrollText, Trophy } from "lucide-react";
+import { Award, Sword, Star, Edit3, Save, X, ScrollText, Trophy, Flag, Ban } from "lucide-react";
 
 export function ProfileView() {
   const { data, isLoading } = useQuery<any>({
@@ -38,6 +38,28 @@ export function ProfileView() {
       toast({ title: "Свиток обновлён", description: "Изменения вписаны в Книгу." });
       setEditing(false);
       qc.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+
+  const completeQuestMut = useMutation({
+    mutationFn: async ({ questId, status }: { questId: string; status: string }) =>
+      fetch(`/api/guild/quests/${questId}/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ characterId: data.character.id, status }),
+      }).then((r) => r.json()),
+    onSuccess: (_data, vars) => {
+      if (vars.status === "COMPLETED") {
+        toast({
+          title: "✦ Задание завершено!",
+          description: "Слава записана в летопись. Награда получена.",
+        });
+      } else {
+        toast({ title: "Задание оставлено", description: "Путь героя извилист." });
+      }
+      qc.invalidateQueries({ queryKey: ["me"] });
+      qc.invalidateQueries({ queryKey: ["quests"] });
+      qc.invalidateQueries({ queryKey: ["characters"] });
     },
   });
 
@@ -104,15 +126,15 @@ export function ProfileView() {
               </div>
               {editing ? (
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="bg-primary text-primary-foreground btn-rune">
+                  <Button size="sm" onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="btn-wine-solid h-8 px-3">
                     <Save className="w-3.5 h-3.5 mr-1" /> Сохранить
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setForm(null); }} className="parchment-muted">
+                  <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setForm(null); }} className="btn-parchment h-8 px-3">
                     <X className="w-3.5 h-3.5 mr-1" /> Отмена
                   </Button>
                 </div>
               ) : (
-                <Button size="sm" variant="outline" onClick={() => { setForm(char); setEditing(true); }} className="border-wine/30 text-wine hover:bg-wine/10 btn-rune">
+                <Button size="sm" onClick={() => { setForm(char); setEditing(true); }} className="btn-parchment h-8 px-3">
                   <Edit3 className="w-3.5 h-3.5 mr-1" /> Редактировать
                 </Button>
               )}
@@ -234,18 +256,45 @@ export function ProfileView() {
           </OrnamentTitle>
           <div className="grid gap-3">
             {quests.map((q: any) => (
-              <ParchmentCard key={q.questId} className="flex items-center justify-between gap-3">
-                <div>
-                  <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{q.quest.title}</h4>
-                  <p className="parchment-muted text-sm">{q.quest.description}</p>
+              <ParchmentCard key={q.questId} className="space-y-2">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{q.quest.title}</h4>
+                    <p className="parchment-muted text-sm">{q.quest.description}</p>
+                  </div>
+                  <Badge variant="outline" className={
+                    q.status === "COMPLETED" ? "border-green-600/30 text-green-700" :
+                    q.status === "FAILED" ? "border-red-700/30 text-red-700" :
+                    "border-amber-700/30 text-amber-700"
+                  }>
+                    {q.status === "COMPLETED" ? "✓ Завершено" : q.status === "FAILED" ? "✗ Провалено" : "⚔ В работе"}
+                  </Badge>
                 </div>
-                <Badge variant="outline" className={
-                  q.status === "COMPLETED" ? "border-green-600/30 text-green-700" :
-                  q.status === "FAILED" ? "border-red-700/30 text-red-700" :
-                  "border-amber-700/30 text-amber-700"
-                }>
-                  {q.status === "COMPLETED" ? "✓ Завершено" : q.status === "FAILED" ? "✗ Провалено" : "⚔ В работе"}
-                </Badge>
+                {q.status === "ASSIGNED" && (
+                  <div className="flex gap-2 pt-2 border-t border-parchment-dark/20">
+                    <Button
+                      size="sm"
+                      onClick={() => completeQuestMut.mutate({ questId: q.questId, status: "COMPLETED" })}
+                      disabled={completeQuestMut.isPending}
+                      className="btn-wine-solid h-8 px-3"
+                    >
+                      <Flag className="w-3.5 h-3.5 mr-1" /> Завершить подвиг
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => completeQuestMut.mutate({ questId: q.questId, status: "FAILED" })}
+                      disabled={completeQuestMut.isPending}
+                      className="btn-parchment h-8 px-3"
+                    >
+                      <Ban className="w-3.5 h-3.5 mr-1" /> Оставить
+                    </Button>
+                  </div>
+                )}
+                {q.status === "COMPLETED" && q.completedAt && (
+                  <p className="text-xs parchment-muted italic pt-1">
+                    Завершено: {new Date(q.completedAt).toLocaleDateString("ru-RU")}
+                  </p>
+                )}
               </ParchmentCard>
             ))}
           </div>
