@@ -1,0 +1,192 @@
+// Prisma schema for the D&D Campaign site "Хроники Эльдриона"
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===== Auth & Users =====
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String
+  password  String
+  role      String    @default("PLAYER") // ADMIN (Божество) | PLAYER (Приключенец)
+  character Character?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// ===== Characters & Achievements =====
+
+model Character {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  race        String?
+  charClass   String?
+  level       Int      @default(1)
+  xp          Int      @default(0)
+  bio         String?  // character lore / backstory
+  portrait    String?
+  guildRankId String?
+  guildRank   GuildRank? @relation(fields: [guildRankId], references: [id])
+  achievements CharacterAchievement[]
+  questProgress QuestProgress[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  icon        String?  // emoji or lucide icon name
+  rarity      String   @default("COMMON") // COMMON | RARE | EPIC | LEGENDARY | MYTHIC
+  category    String?  // e.g. "Боевые", "Исследования", "Социальные"
+  autoGrant   Boolean  @default(false)
+  characters  CharacterAchievement[]
+  createdAt   DateTime @default(now())
+}
+
+model CharacterAchievement {
+  characterId   String
+  achievementId String
+  grantedAt     DateTime @default(now())
+  grantedBy     String?  // admin userId or "auto"
+  character     Character   @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@id([characterId, achievementId])
+}
+
+// ===== Knowledge Base (База Знаний) =====
+
+model Country {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  banner      String?  // image url
+  emblem      String?  // emoji or symbol
+  capital     String?
+  government  String?
+  population  String?
+  culture     String?
+  climate     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Personality {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  title       String?
+  description String
+  portrait    String?
+  affiliation String?  // country name / faction
+  role        String?  // king, archmage, etc.
+  status      String   @default("alive") // alive | deceased | missing
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CountryRelation {
+  id           String  @id @default(cuid())
+  countryAName String
+  countryBName String
+  relationType String  // ally | enemy | neutral | trade | vassal
+  description  String?
+  createdAt    DateTime @default(now())
+}
+
+model WorldSystem {
+  id          String   @id @default(cuid())
+  title       String   @unique
+  category    String   // POLITICS | ECONOMY | MILITARY | MAGIC | RELIGION | LAW
+  description String
+  icon        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model God {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  title       String?
+  domain      String   // war, love, death, knowledge, etc.
+  description String
+  symbol      String?  // emoji
+  alignment   String?  // good | neutral | evil
+  pantheon    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Legend {
+  id          String   @id @default(cuid())
+  title       String   @unique
+  content     String
+  era         String?
+  icon        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ===== Adventurer's Guild (Гильдия Авантюристов) =====
+
+model GuildRank {
+  id          String   @id @default(cuid())
+  name        String
+  level       Int      @unique
+  description String?
+  icon        String?  // emoji
+  minXp       Int      @default(0)
+  members     Character[]
+  createdAt   DateTime @default(now())
+}
+
+model Quest {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  difficulty  String   @default("MEDIUM") // TRIVIAL | EASY | MEDIUM | HARD | DEADLY
+  reward      String?
+  location    String?
+  status      String   @default("OPEN") // OPEN | ASSIGNED | COMPLETED | FAILED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  progress    QuestProgress[]
+}
+
+model QuestProgress {
+  questId     String
+  characterId String
+  status      String   @default("ASSIGNED") // ASSIGNED | COMPLETED | FAILED
+  acceptedAt  DateTime @default(now())
+  completedAt DateTime?
+  quest       Quest     @relation(fields: [questId], references: [id], onDelete: Cascade)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@id([questId, characterId])
+}
+
+// ===== Grimoire (Гримуар) — encrypted lore =====
+
+model GrimoireEntry {
+  id             String   @id @default(cuid())
+  title          String   @unique
+  encodedContent String   // cipher-like text shown when locked
+  realContent    String   // actual lore shown when unlocked
+  unlocked       Boolean  @default(false)
+  unlockHint     String?  // hint shown when locked
+  category       String   @default("SECRETS") // SECRETS | RITUALS | PROPHECY | HISTORY | BEASTIARY
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
