@@ -80,3 +80,30 @@ Unresolved / Next-phase priorities:
 - Grimoire auto-unlock by condition (e.g. auto-unlock page I when quest X completed) — currently manual admin toggle.
 - Search: include quests + characters in omnisearch index.
 - Production: NEXTAUTH_SECRET to Vercel env, switch SQLite→Postgres for serverless.
+
+---
+Task ID: user-request-2
+Agent: main
+Task: Rename world to "За гранью тьмы", allow editing all content, hide grimoire chapter titles when sealed, add "Лаборатория Алого" section (custom mechanics)
+
+Work Log:
+- Rename: site title "Хроники Эльдриона" → "За гранью тьмы" in layout.tsx metadata, AppShell h1, footer, Hall hero text, "О мире" section, knowledge subtitle, omnisearch title, admin intro. The seed country "Эльдрион" kept (it's a country, not the world).
+- Editing capability: confirmed the admin "Чертог Божества" already lets the DM add/edit/delete ALL content (countries, personalities, relations, systems, gods, legends, ranks, quests, grimoire chapters, achievements, characters). Added a prominent hint banner in the admin panel: "✦ Всё, что видишь в этом мире, ты можешь изменить".
+- Grimoire chapter titles hidden: added `encodedTitle` field to GrimoireEntry schema. When sealed, the UI shows the encoded cipher title (e.g. "◈ Гл. III — ◼◼◼◼ ◼◼◼ ◼◼◼◼◼ ◼◼ ◼◼◼◼◼ ◼◼ ◼◼◼ ◼ ◼◼◼ ◼") instead of the real chapter title. Real title only shown once unlocked. Renamed all "Страница"→"Глава" wording (counters use Russian plural: глава/главы/глав). Updated grimoire UI, admin list + form (new "Зашифрованное название" field). Seeded encodedTitle on the 4 existing chapters.
+- New section "Лаборатория Алого":
+  - Schema: new `LabEntry` model (kind: RACE|CLASS|SUBCLASS|SPELL|ITEM, name, subtitle, description, details, icon, rarity, order).
+  - API: GET (public, it's world lore) + POST/PUT/DELETE (admin-only) at /api/lab and /api/lab/[id].
+  - Frontend: new LabView component with 5 tabs (Расы/Классы/Подклассы/Заклинания/Магические предметы), live search, rarity badges, kind badges, rune-seal cards with staggered fade-in animation, themed empty state. Added nav button "Лаборатория Алого" with FlaskConical icon. Wired into AppShell router with page transitions.
+  - Admin: new "Лаборатория" tab in Чертог Божества with full CRUD (LabEditor + LabFormDialog). Form has type selector, name, subtitle, icon, rarity, description, multi-line details, order.
+  - Seed: 10 demo entries (2 races, 2 classes, 2 subclasses, 2 spells, 2 items) with rich D&D-flavored details (Dragonborn of Shadow, Shardborn, Ash Reaper, Rune Warden, Order of Silver Flame, Path of Blood Storm, Whisper of the Dead, Crimson Tractate, Heart of Morgant, Tear of Aetar).
+
+Verification Results:
+- Lint: clean.
+- Dev server: 200, compiles cleanly. Fixed two issues during dev: (a) EmptyPortal import path, (b) Prisma client needed regeneration after schema change (restarted dev), (c) Lab POST needed default kind="RACE" in payload.
+- agent-browser: title "За гранью тьмы" confirmed in header. Grimoire shows sealed chapters with cipher titles ("◈ Запечатанная глава ◈" fallback) + "1 глава открыто / 3 главы запечатано" counters. Lab view loads 10 entries, counts 2/2/2/2/2. Admin Lab CRUD verified: created "Кровавый Голем" entry → POST 201 → appears in list → deleted via API.
+- VLM Lab review: excellent dark-gold atmosphere, cards readable, rarity badges (RARE blue, EPIC purple) clearly visible, type labels visible.
+
+Unresolved / Next-phase priorities:
+- Re-lock grimoire chapters or add more demo conditions for showcase.
+- Lab: add filters by rarity, sortable columns.
+- Production: NEXTAUTH_SECRET to Vercel env, switch SQLite→Postgres for serverless.

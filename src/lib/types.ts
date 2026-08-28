@@ -1,13 +1,16 @@
-// Shared domain types for the Eldrin Chronicles
+// Shared domain types for the world beyond the darkness
 
 export type View =
   | "hall"
   | "knowledge"
   | "guild"
   | "grimoire"
+  | "lab"
   | "profile"
   | "admin"
   | "login";
+
+export type LabKind = "RACE" | "CLASS" | "SUBCLASS" | "SPELL" | "ITEM";
 
 export type KnowledgeTab =
   | "countries"
@@ -127,6 +130,7 @@ export interface Quest {
 export interface GrimoireEntry {
   id: string;
   title: string;
+  encodedTitle?: string | null;
   encodedContent: string;
   realContent: string;
   unlocked: boolean;
@@ -136,4 +140,16 @@ export interface GrimoireEntry {
   order: number;
   conditionType?: string | null;
   conditionValue?: string | null;
+}
+
+export interface LabEntry {
+  id: string;
+  kind: string; // RACE | CLASS | SUBCLASS | SPELL | ITEM
+  name: string;
+  subtitle: string | null;
+  description: string;
+  details: string | null;
+  icon: string | null;
+  rarity: string | null;
+  order: number;
 }

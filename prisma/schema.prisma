@@ -179,16 +179,17 @@ model QuestProgress {
   @@id([questId, characterId])
 }
 
-// ===== Grimoire (Гримуар) — encrypted lore =====
+// ===== Grimoire (Гримуар) — encrypted lore, chapters with hidden titles =====
 
 model GrimoireEntry {
   id             String   @id @default(cuid())
-  title          String   @unique
-  encodedContent String   // cipher-like text shown when locked
-  realContent    String   // actual lore shown when unlocked
+  title          String   @unique          // real chapter title (hidden when sealed)
+  encodedTitle   String?                   // cipher-like title shown when sealed
+  encodedContent String                     // cipher-like text shown when sealed
+  realContent    String                     // actual lore shown when unsealed
   unlocked       Boolean  @default(false)
-  autoUnlocked   Boolean  @default(false) // true if unlocked by condition (vs manual)
-  unlockHint     String?  // hint shown when locked
+  autoUnlocked   Boolean  @default(false)   // true if unsealed by condition (vs manual)
+  unlockHint     String?                    // hint shown when sealed
   category       String   @default("SECRETS") // SECRETS | RITUALS | PROPHECY | HISTORY | BEASTIARY
   order          Int      @default(0)
   // Auto-unlock condition: conditionType in {QUEST_COMPLETED, XP_THRESHOLD, RANK_REACHED, ACHIEVEMENT_EARNED, MANUAL}
@@ -197,3 +198,20 @@ model GrimoireEntry {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
+
+// ===== Crimson Laboratory (Лаборатория Алого) — custom homebrew mechanics =====
+
+model LabEntry {
+  id          String   @id @default(cuid())
+  kind        String   // RACE | CLASS | SUBCLASS | SPELL | ITEM
+  name        String   @unique
+  subtitle    String?  // e.g. "Подкласс Паладина", "Заклинание 3 круга"
+  description String   // main text
+  details     String?  // structured extra info (traits, stats, components, etc.)
+  icon        String?  // emoji
+  rarity      String?  // for items/spells: COMMON..MYTHIC or spell level
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+

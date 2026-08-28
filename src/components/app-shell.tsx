@@ -11,10 +11,11 @@ import { HallView } from "@/components/sections/hall";
 import { KnowledgeView } from "@/components/sections/knowledge";
 import { GuildView } from "@/components/sections/guild";
 import { GrimoireView } from "@/components/sections/grimoire";
+import { LabView } from "@/components/sections/lab";
 import { ProfileView } from "@/components/sections/profile";
 import { AdminView } from "@/components/sections/admin";
 import { Button } from "@/components/ui/button";
-import { ScrollText, BookOpen, Sword, Sparkles, User, Crown, LogOut, Flame, Search, Moon, Sun } from "lucide-react";
+import { ScrollText, BookOpen, Sword, Sparkles, User, Crown, LogOut, Flame, Search, Moon, Sun, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { PageTransition } from "@/components/fantasy/page-transition";
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { key: "knowledge", label: "База Знаний", icon: BookOpen },
   { key: "guild", label: "Гильдия", icon: Sword },
   { key: "grimoire", label: "Гримуар", icon: Sparkles },
+  { key: "lab", label: "Лаборатория Алого", icon: FlaskConical },
 ] as const;
 
 export function AppShell() {
@@ -79,7 +81,7 @@ export function AppShell() {
               <div className="flex items-center gap-3">
                 <span className="text-gold text-2xl animate-flicker">❦</span>
                 <h1 className="font-[family-name:var(--font-cinzel-decorative)] text-2xl md:text-4xl shimmer-gold tracking-wide">
-                  Хроники Эльдриона
+                  За гранью тьмы
                 </h1>
                 <span className="text-gold text-2xl animate-flicker">❦</span>
               </div>
@@ -210,6 +212,9 @@ export function AppShell() {
           {view === "grimoire" && (
             <PageTransition viewKey="grimoire"><GrimoireView /></PageTransition>
           )}
+          {view === "lab" && (
+            <PageTransition viewKey="lab"><LabView /></PageTransition>
+          )}
           {view === "profile" && isPlayer && (
             <PageTransition viewKey="profile"><ProfileView /></PageTransition>
           )}
@@ -225,7 +230,7 @@ export function AppShell() {
               <span className="text-gold">❦</span>
             </div>
             <p className="text-gold/60 text-xs font-[family-name:var(--font-cinzel)] tracking-[0.2em] uppercase">
-              Хроники Эльдриона · Сага D&D
+              За гранью тьмы · Сага D&D
             </p>
             <p className="text-foreground/40 text-xs mt-1 font-[family-name:var(--font-garamond)] italic">
               «Что записано — не забыто. Что забыто — найдётся вновь.»

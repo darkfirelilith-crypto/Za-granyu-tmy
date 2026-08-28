@@ -123,7 +123,7 @@ export function Omnisearch({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="parchment gold-frame p-0 overflow-hidden max-w-xl">
-        <DialogTitle className="sr-only">Поиск по миру Эльдрион</DialogTitle>
+        <DialogTitle className="sr-only">Поиск по миру за гранью тьмы</DialogTitle>
         <Command className="bg-transparent" loop>
           <div className="flex items-center gap-2 px-4 py-3 border-b border-parchment-dark/30">
             <Sparkles className="w-4 h-4 text-gold animate-flicker shrink-0" />

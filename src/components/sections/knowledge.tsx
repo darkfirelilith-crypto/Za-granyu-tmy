@@ -22,7 +22,7 @@ export function KnowledgeView() {
         База Знаний
       </OrnamentTitle>
       <p className="text-center text-foreground/70 font-[family-name:var(--font-garamond)] italic max-w-2xl mx-auto">
-        Древняя библиотека Эльдриона. Каждая страница — осколок истины, сохранённый
+        Древняя библиотека мира за гранью тьмы. Каждая страница — осколок истины, сохранённый
         летописцами ордена Серебряного Пламени.
       </p>
 

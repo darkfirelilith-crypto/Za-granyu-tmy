@@ -56,16 +56,16 @@ export function GrimoireView() {
         </OrnamentTitle>
         <p className="text-foreground/70 font-[family-name:var(--font-garamond)] italic max-w-2xl mx-auto">
           Древний кодекс, написанный на языке, которого больше не существует.
-          Страницы его покрыты шифром и запечатаны магией. Лишь исполнив условия
-          сюжета, удостоишься снять печать и прочесть то, что сокрыто от
-          непосвящённых.
+          Главы его запечатаны магией — сокрыты не только слова, но и сами названия.
+          Лишь исполнив условия сюжета, удостоишься снять печать и узнать, о чём
+          была глава, и прочесть то, что сокрыто от непосвящённых.
         </p>
         <div className="flex justify-center gap-2">
           <Badge variant="outline" className="border-gold/30 text-gold/70 font-[family-name:var(--font-cinzel)]">
-            <Unlock className="w-3 h-3 mr-1" /> {unlockedCount} открыто
+            <Unlock className="w-3 h-3 mr-1" /> {unlockedCount} {pluralChapter(unlockedCount)} открыто
           </Badge>
           <Badge variant="outline" className="border-gold/30 text-gold/70 font-[family-name:var(--font-cinzel)]">
-            <Lock className="w-3 h-3 mr-1" /> {entries.length - unlockedCount} запечатано
+            <Lock className="w-3 h-3 mr-1" /> {entries.length - unlockedCount} {pluralChapter(entries.length - unlockedCount)} запечатано
           </Badge>
         </div>
       </div>
@@ -127,12 +127,18 @@ function GrimoirePage({
               <RuneSeal icon={<Lock className="w-6 h-6 text-foreground/50" />} size="sm" className="opacity-70" />
             )}
             <div>
-              <h3 className={`font-[family-name:var(--font-cinzel)] text-xl ${entry.unlocked ? "parchment-heading" : "text-foreground/60"}`}>
-                {entry.title}
-              </h3>
+              {entry.unlocked ? (
+                <h3 className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">
+                  {entry.title}
+                </h3>
+              ) : (
+                <h3 className="font-[family-name:var(--font-cinzel)] text-xl cipher-strong">
+                  {entry.encodedTitle || "◈ Запечатанная глава ◈"}
+                </h3>
+              )}
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="outline" className={`text-xs ${entry.unlocked ? "border-gold/30 text-gold/70" : "border-foreground/20 text-foreground/40"}`}>
-                  {CAT_LABEL[entry.category] ?? entry.category}
+                  {entry.unlocked ? (CAT_LABEL[entry.category] ?? entry.category) : "Запечатано"}
                 </Badge>
                 {entry.unlocked && entry.autoUnlocked && (
                   <Badge variant="outline" className="text-xs border-magic-glow/40 text-magic-glow/80">
@@ -179,11 +185,19 @@ function GrimoirePage({
               </div>
             )}
             <p className="text-center text-foreground/40 text-xs italic pt-2">
-              ✦ Страница запечатана. Исполни условия, чтобы открыть её. ✦
+              ✦ Глава запечатана. Исполни условия, чтобы снять печать. ✦
             </p>
           </div>
         )}
       </div>
     </ParchmentCard>
   );
+}
+
+function pluralChapter(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "глава";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return "главы";
+  return "глав";
 }

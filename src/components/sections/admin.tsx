@@ -8,13 +8,14 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Users, Sword, Sparkles, Scale, Sun, BookMarked, Link2, Trophy, Star } from "lucide-react";
+import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Users, Sword, Sparkles, Scale, Sun, BookMarked, Link2, Trophy, Star, FlaskConical } from "lucide-react";
 
 const ENTITIES = {
   countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries", fields: ["name","description","emblem","capital","government","population","culture","climate"] },
@@ -39,9 +40,12 @@ export function AdminView() {
           Чертог Божества
         </OrnamentTitle>
         <p className="text-foreground/70 font-[family-name:var(--font-garamond)] italic max-w-2xl mx-auto">
-          Здесь ты властвуешь над миром Эльдрион. Твори страны, изрекай легенды,
+          Здесь ты властвуешь над миром за гранью тьмы. Твори страны, изрекай легенды,
           раздавай достижения и приподнимай печати Гримуара для своих героев.
         </p>
+        <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-md border border-gold/30 bg-gold/5 text-gold/80 text-xs font-[family-name:var(--font-cinzel)] tracking-wide animate-fade-rise">
+          ✦ Всё, что видишь в этом мире, ты можешь изменить — добавляй, редактируй и удаляй записи во всех разделах ниже.
+        </div>
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="w-full">
@@ -61,6 +65,7 @@ export function AdminView() {
             <TabsTrigger value="quests" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold"><Sword className="w-3.5 h-3.5 mr-1" /> Задания</TabsTrigger>
             <TabsTrigger value="grimoire" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold"><Sparkles className="w-3.5 h-3.5 mr-1" /> Гримуар</TabsTrigger>
             <TabsTrigger value="achievements" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold"><Award className="w-3.5 h-3.5 mr-1" /> Достижения</TabsTrigger>
+            <TabsTrigger value="lab" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold"><FlaskConical className="w-3.5 h-3.5 mr-1" /> Лаборатория</TabsTrigger>
             <TabsTrigger value="characters" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold"><Users className="w-3.5 h-3.5 mr-1" /> Герои</TabsTrigger>
           </TabsList>
         </div>
@@ -75,6 +80,7 @@ export function AdminView() {
         <TabsContent value="quests" className="mt-6"><QuestsEditor /></TabsContent>
         <TabsContent value="grimoire" className="mt-6"><GrimoireEditor /></TabsContent>
         <TabsContent value="achievements" className="mt-6"><AchievementsEditor /></TabsContent>
+        <TabsContent value="lab" className="mt-6"><LabEditor /></TabsContent>
         <TabsContent value="characters" className="mt-6"><CharactersEditor /></TabsContent>
       </Tabs>
     </div>
@@ -445,15 +451,15 @@ function GrimoireEditor() {
       if (id) return fetch(`/api/grimoire/${id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(rest)}).then(r=>r.json());
       return fetch("/api/grimoire",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({order:0,...rest})}).then(r=>r.json());
     },
-    onSuccess:()=>{setOpen(false);qc.invalidateQueries({queryKey:["grimoire"]});toast({title:"Страница переписана"});},
+    onSuccess:()=>{setOpen(false);qc.invalidateQueries({queryKey:["grimoire"]});toast({title:"Глава переписана"});},
   });
-  const del = useMutation({ mutationFn:(id:string)=>fetch(`/api/grimoire/${id}`,{method:"DELETE"}).then(r=>r.json()), onSuccess:()=>{qc.invalidateQueries({queryKey:["grimoire"]});toast({title:"Страница стёрта"});} });
+  const del = useMutation({ mutationFn:(id:string)=>fetch(`/api/grimoire/${id}`,{method:"DELETE"}).then(r=>r.json()), onSuccess:()=>{qc.invalidateQueries({queryKey:["grimoire"]});toast({title:"Глава стёрта"});} });
   const unlock = useMutation({ mutationFn:(id:string)=>fetch(`/api/grimoire/${id}/unlock`,{method:"POST"}).then(r=>r.json()), onSuccess:()=>{qc.invalidateQueries({queryKey:["grimoire"]});} });
   const items = (data ?? []).sort((a,b)=>a.order-b.order);
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="font-[family-name:var(--font-cinzel)] text-lg text-gold">Страницы Гримуара</h3>
+        <h3 className="font-[family-name:var(--font-cinzel)] text-lg text-gold">Главы Гримуара</h3>
         <Button onClick={()=>{setEditing({});setOpen(true);}} className="btn-rune bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-1"/> Создать</Button>
       </div>
       <div className="space-y-2">
@@ -462,7 +468,9 @@ function GrimoireEditor() {
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {g.unlocked ? <Unlock className="w-5 h-5 text-gold shrink-0"/> : <Lock className="w-5 h-5 text-foreground/50 shrink-0"/>}
               <div className="min-w-0">
-                <p className="font-[family-name:var(--font-cinzel)] parchment-heading truncate">{g.title}</p>
+                <p className="font-[family-name:var(--font-cinzel)] parchment-heading truncate">
+                  {g.unlocked ? g.title : (g.encodedTitle || "◈ Запечатанная глава ◈")}
+                </p>
                 <p className="parchment-muted text-xs">{g.category} · {g.unlocked?"открыто":"запечатано"}</p>
               </div>
             </div>
@@ -489,9 +497,10 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="parchment gold-frame max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id?"Редактировать":"Создать"} страницу</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id?"Редактировать":"Создать"} главу</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <div><Label className="parchment-heading text-sm">Заголовок</Label><Input value={getVal("title")} onChange={e=>setVal("title",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
+          <div><Label className="parchment-heading text-sm">Истинное название главы (видно когда открыто)</Label><Input value={getVal("title")} onChange={e=>setVal("title",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
+          <div><Label className="parchment-heading text-sm">Зашифрованное название (видно когда запечатано)</Label><Input value={getVal("encodedTitle") ?? ""} onChange={e=>setVal("encodedTitle",e.target.value)} placeholder="напр. ◈ Гл. III — Драконьи Шёпоты ◈" className="bg-parchment/60 border-parchment-dark/40"/></div>
           <div><Label className="parchment-heading text-sm">Категория</Label>
             <Select value={getVal("category")} onValueChange={v=>setVal("category",v)}>
               <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue/></SelectTrigger>
@@ -733,5 +742,112 @@ function CharactersEditor() {
         {(data ?? []).length === 0 && <p className="col-span-full text-center parchment-muted italic py-8">Героев пока нет.</p>}
       </div>
     </div>
+  );
+}
+
+/* ===== LAB EDITOR (Лаборатория Алого) ===== */
+const LAB_KIND_LABEL: Record<string, string> = {
+  RACE: "Раса", CLASS: "Класс", SUBCLASS: "Подкласс", SPELL: "Заклинание", ITEM: "Предмет",
+};
+
+function LabEditor() {
+  const { data } = useQuery<any[]>({ queryKey: ["lab"], queryFn: () => fetch("/api/lab").then((r) => r.json()) });
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [editing, setEditing] = useState<any>(null);
+  const [open, setOpen] = useState(false);
+
+  const save = useMutation({
+    mutationFn: async (item: any) => {
+      const { id, ...rest } = item;
+      if (id) return fetch(`/api/lab/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rest) }).then((r) => r.json());
+      return fetch("/api/lab", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: 0, kind: "RACE", ...rest }) }).then((r) => r.json());
+    },
+    onSuccess: () => { setOpen(false); qc.invalidateQueries({ queryKey: ["lab"] }); toast({ title: "Свиток Алого записан" }); },
+  });
+  const del = useMutation({ mutationFn: (id: string) => fetch(`/api/lab/${id}`, { method: "DELETE" }).then((r) => r.json()), onSuccess: () => { qc.invalidateQueries({ queryKey: ["lab"] }); toast({ title: "Свиток стёрт" }); } });
+
+  const items = (data ?? []).sort((a, b) => (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : a.order - b.order));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="font-[family-name:var(--font-cinzel)] text-lg text-gold">Лаборатория Алого</h3>
+        <Button onClick={() => { setEditing({}); setOpen(true); }} className="btn-rune bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-1" /> Создать</Button>
+      </div>
+      <div className="grid md:grid-cols-2 gap-3">
+        {items.map((e) => (
+          <ParchmentCard key={e.id} className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className="border-wine/30 text-wine text-[10px]">{LAB_KIND_LABEL[e.kind] ?? e.kind}</Badge>
+                <span className="text-lg">{e.icon ?? "🜂"}</span>
+                <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading truncate">{e.name}</h4>
+              </div>
+              {e.subtitle && <p className="parchment-heading text-xs uppercase tracking-wider">{e.subtitle}</p>}
+              <p className="parchment-muted text-sm line-clamp-2 mt-1">{e.description}</p>
+            </div>
+            <div className="flex gap-1 shrink-0">
+              <Button size="icon" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }} className="text-wine"><Pencil className="w-4 h-4" /></Button>
+              <Button size="icon" variant="ghost" onClick={() => del.mutate(e.id)} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
+            </div>
+          </ParchmentCard>
+        ))}
+        {items.length === 0 && <p className="col-span-full text-center parchment-muted italic py-8">Свиток Алого пока пуст. Создай первую запись.</p>}
+      </div>
+      <LabFormDialog open={open} onOpenChange={setOpen} item={editing} onSave={(it) => save.mutate(it)} pending={save.isPending} />
+    </div>
+  );
+}
+
+function LabFormDialog({ open, onOpenChange, item, onSave, pending }: { open: boolean; onOpenChange: (v: boolean) => void; item: any; onSave: (i: any) => void; pending: boolean }) {
+  const current = item ?? {};
+  const [form, setForm] = useState<any>({});
+  const getVal = (f: string) => (form[f] !== undefined ? form[f] : current[f] ?? "");
+  const setVal = (f: string, v: any) => setForm({ ...form, [f]: v });
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="parchment gold-frame max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id ? "Редактировать" : "Создать"} запись Лаборатории</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label className="parchment-heading text-sm">Тип</Label>
+            <Select value={getVal("kind") || "RACE"} onValueChange={(v) => setVal("kind", v)}>
+              <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue /></SelectTrigger>
+              <SelectContent className="parchment">
+                <SelectItem value="RACE">🧬 Раса</SelectItem>
+                <SelectItem value="CLASS">⚔️ Класс</SelectItem>
+                <SelectItem value="SUBCLASS">🔱 Подкласс</SelectItem>
+                <SelectItem value="SPELL">✨ Заклинание</SelectItem>
+                <SelectItem value="ITEM">💎 Магический предмет</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label className="parchment-heading text-sm">Название</Label><Input value={getVal("name")} onChange={(e) => setVal("name", e.target.value)} className="bg-parchment/60 border-parchment-dark/40" /></div>
+          <div><Label className="parchment-heading text-sm">Подзаголовок (напр. «Подкласс Паладина», «Заклинание 3 круга»)</Label><Input value={getVal("subtitle") || ""} onChange={(e) => setVal("subtitle", e.target.value)} className="bg-parchment/60 border-parchment-dark/40" /></div>
+          <div><Label className="parchment-heading text-sm">Иконка (эмодзи)</Label><Input value={getVal("icon") || ""} onChange={(e) => setVal("icon", e.target.value)} placeholder="🜂" className="bg-parchment/60 border-parchment-dark/40" /></div>
+          <div>
+            <Label className="parchment-heading text-sm">Редкость / уровень (для предметов и заклинаний)</Label>
+            <Select value={getVal("rarity") || ""} onValueChange={(v) => setVal("rarity", v)}>
+              <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue placeholder="(необязательно)" /></SelectTrigger>
+              <SelectContent className="parchment">
+                <SelectItem value="COMMON">Common</SelectItem>
+                <SelectItem value="RARE">Rare</SelectItem>
+                <SelectItem value="EPIC">Epic</SelectItem>
+                <SelectItem value="LEGENDARY">Legendary</SelectItem>
+                <SelectItem value="MYTHIC">Mythic</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label className="parchment-heading text-sm">Описание</Label><Textarea value={getVal("description")} onChange={(e) => setVal("description", e.target.value)} rows={3} className="bg-parchment/60 border-parchment-dark/40" /></div>
+          <div><Label className="parchment-heading text-sm">Подробности (черты, параметры, компоненты — каждое с новой строки)</Label><Textarea value={getVal("details") || ""} onChange={(e) => setVal("details", e.target.value)} rows={5} className="bg-parchment/60 border-parchment-dark/40" /></div>
+          <div><Label className="parchment-heading text-sm">Порядок</Label><Input type="number" value={getVal("order") || 0} onChange={(e) => setVal("order", Number(e.target.value))} className="bg-parchment/60 border-parchment-dark/40" /></div>
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="parchment-muted">Отмена</Button>
+          <Button onClick={() => onSave({ ...current, ...form })} disabled={pending} className="bg-primary text-primary-foreground btn-rune">{pending ? "Пишем..." : "Сохранить"}</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
