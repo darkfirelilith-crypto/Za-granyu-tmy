@@ -11,7 +11,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { MapPin, Crown, Sun, BookMarked, Scale, Sparkles, Link2 } from "lucide-react";
+import { MapPin, Crown, Sun, BookMarked, Scale, Sparkles, Link2, Sword, User } from "lucide-react";
 import type { View } from "@/lib/types";
 
 interface SearchHit {
@@ -35,15 +35,17 @@ export function Omnisearch({
   const { data } = useQuery({
     queryKey: ["omnisearch-all"],
     queryFn: async () => {
-      const [countries, personalities, gods, legends, systems, grimoire] = await Promise.all([
+      const [countries, personalities, gods, legends, systems, grimoire, quests, characters] = await Promise.all([
         fetch("/api/lore/countries").then((r) => r.json()).catch(() => []),
         fetch("/api/lore/personalities").then((r) => r.json()).catch(() => []),
         fetch("/api/lore/gods").then((r) => r.json()).catch(() => []),
         fetch("/api/lore/legends").then((r) => r.json()).catch(() => []),
         fetch("/api/lore/systems").then((r) => r.json()).catch(() => []),
         fetch("/api/grimoire").then((r) => r.json()).catch(() => []),
+        fetch("/api/guild/quests").then((r) => r.json()).catch(() => []),
+        fetch("/api/characters").then((r) => (r.ok ? r.json() : [])).catch(() => []),
       ]);
-      return { countries, personalities, gods, legends, systems, grimoire };
+      return { countries, personalities, gods, legends, systems, grimoire, quests, characters };
     },
     enabled: open,
   });
@@ -85,6 +87,18 @@ export function Omnisearch({
       hits.push({
         id: g.id, label: g.title, sub: g.unlocked ? "Открыто" : "Запечатано",
         icon: <Sparkles className="w-4 h-4 text-magic-glow" />, view: "grimoire",
+      })
+    );
+    data.quests?.forEach((q: any) =>
+      hits.push({
+        id: q.id, label: q.title, sub: `Задание · ${q.difficulty}`,
+        icon: <Sword className="w-4 h-4 text-wine" />, view: "guild",
+      })
+    );
+    data.characters?.forEach((c: any) =>
+      hits.push({
+        id: c.id, label: c.name, sub: `${c.race ?? "—"} · ${c.charClass ?? "—"} · Ур.${c.level}`,
+        icon: <User className="w-4 h-4 text-gold" />, view: "guild",
       })
     );
   }

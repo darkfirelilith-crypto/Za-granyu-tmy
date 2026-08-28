@@ -130,7 +130,10 @@ export interface GrimoireEntry {
   encodedContent: string;
   realContent: string;
   unlocked: boolean;
+  autoUnlocked?: boolean;
   unlockHint: string | null;
   category: string;
   order: number;
+  conditionType?: string | null;
+  conditionValue?: string | null;
 }

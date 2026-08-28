@@ -53,6 +53,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         await db.character.update({ where: { id: characterId }, data: { guildRankId: newRank.id, level: { increment: 1 } } });
       }
     }
+
+    // Evaluate auto-unlock conditions (grimoire pages + achievements)
+    try {
+      const { evaluateConditions } = await import("@/lib/conditions");
+      const result = await evaluateConditions(characterId, id);
+      return NextResponse.json({
+        ...progress,
+        xpAwarded: xpReward,
+        autoUnlocked: result.unlockedGrimoire,
+        autoGranted: result.grantedAchievements,
+      });
+    } catch (e) {
+      // Conditions engine failure must not break quest completion
+      console.error("conditions engine error:", e);
+    }
   }
 
   return NextResponse.json(progress);

@@ -503,6 +503,24 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
           <div><Label className="parchment-heading text-sm">Подсказка для разблокировки</Label><Input value={getVal("unlockHint")??""} onChange={e=>setVal("unlockHint",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
           <div><Label className="parchment-heading text-sm">Порядок</Label><Input type="number" value={getVal("order")??0} onChange={e=>setVal("order",Number(e.target.value))} className="bg-parchment/60 border-parchment-dark/40"/></div>
           {item?.id && <div className="flex items-center gap-2"><input type="checkbox" id="unl" checked={!!getVal("unlocked")} onChange={e=>setVal("unlocked",e.target.checked)} /><Label htmlFor="unl" className="parchment-heading text-sm">Открыто</Label></div>}
+          <div className="pt-3 border-t border-parchment-dark/30">
+            <p className="parchment-heading text-sm mb-2">⚗ Условие авто-снятия печати</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={getVal("conditionType") || "MANUAL"} onValueChange={(v) => setVal("conditionType", v === "MANUAL" ? null : v)}>
+                <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue/></SelectTrigger>
+                <SelectContent className="parchment">
+                  <SelectItem value="MANUAL">Вручную</SelectItem>
+                  <SelectItem value="QUEST_COMPLETED">Задание завершено</SelectItem>
+                  <SelectItem value="QUEST_COUNT">Число заданий</SelectItem>
+                  <SelectItem value="XP_THRESHOLD">Порог опыта</SelectItem>
+                  <SelectItem value="RANK_REACHED">Достигнут ранг</SelectItem>
+                  <SelectItem value="ACHIEVEMENT_EARNED">Получено достижение</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input value={getVal("conditionValue")??""} onChange={e=>setVal("conditionValue",e.target.value)} placeholder="значение (ID/число)" className="bg-parchment/60 border-parchment-dark/40" disabled={!getVal("conditionType")||getVal("conditionType")==="MANUAL"}/>
+            </div>
+            <p className="parchment-muted text-xs mt-1 italic">При исполнении условия печать снимется автоматически для всех героев.</p>
+          </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={()=>onOpenChange(false)} className="parchment-muted">Отмена</Button>
@@ -614,6 +632,23 @@ function AchFormDialog({ open,onOpenChange,item,onSave,pending }:{open:boolean;o
             </Select>
           </div>
           <div><Label className="parchment-heading text-sm">Категория</Label><Input value={getVal("category")??""} onChange={e=>setVal("category",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
+          <div className="pt-3 border-t border-parchment-dark/30">
+            <p className="parchment-heading text-sm mb-2">⚗ Условие авто-выдачи</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={getVal("conditionType") || "MANUAL"} onValueChange={(v) => setVal("conditionType", v === "MANUAL" ? null : v)}>
+                <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue/></SelectTrigger>
+                <SelectContent className="parchment">
+                  <SelectItem value="MANUAL">Вручную</SelectItem>
+                  <SelectItem value="QUEST_COMPLETED">Задание завершено</SelectItem>
+                  <SelectItem value="QUEST_COUNT">Число заданий</SelectItem>
+                  <SelectItem value="XP_THRESHOLD">Порог опыта</SelectItem>
+                  <SelectItem value="RANK_REACHED">Достигнут ранг</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input value={getVal("conditionValue") || ""} onChange={(e) => setVal("conditionValue", e.target.value)} placeholder="значение (ID/число)" className="bg-parchment/60 border-parchment-dark/40" disabled={!getVal("conditionType") || getVal("conditionType") === "MANUAL"} />
+            </div>
+            <p className="parchment-muted text-xs mt-1 italic">Достижение вручится само, когда условие исполнится.</p>
+          </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={()=>onOpenChange(false)} className="parchment-muted">Отмена</Button>

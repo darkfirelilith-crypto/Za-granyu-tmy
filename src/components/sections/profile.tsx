@@ -42,17 +42,43 @@ export function ProfileView() {
   });
 
   const completeQuestMut = useMutation({
-    mutationFn: async ({ questId, status }: { questId: string; status: string }) =>
-      fetch(`/api/guild/quests/${questId}/assign`, {
+    mutationFn: async ({ questId, status }: { questId: string; status: string }) => {
+      const res = await fetch(`/api/guild/quests/${questId}/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ characterId: data.character.id, status }),
-      }).then((r) => r.json()),
-    onSuccess: (_data, vars) => {
+      });
+      return (await res.json()) as {
+        xpAwarded?: number;
+        autoUnlocked?: { id: string; title: string }[];
+        autoGranted?: { id: string; name: string; icon: string | null }[];
+      };
+    },
+    onSuccess: (result, vars) => {
       if (vars.status === "COMPLETED") {
         toast({
           title: "✦ Задание завершено!",
-          description: "Слава записана в летопись. Награда получена.",
+          description: result.xpAwarded
+            ? `Слава записана в летопись. Получено ${result.xpAwarded} опыта.`
+            : "Слава записана в летопись. Награда получена.",
+        });
+        // Celebrate auto-unlocked grimoire pages
+        result.autoUnlocked?.forEach((g, i) => {
+          setTimeout(() => {
+            toast({
+              title: "🔮 Печать Гримуара снята!",
+              description: `Страница открыта: «${g.title}». Тайна ждёт твоего прочтения.`,
+            });
+          }, 300 + i * 600);
+        });
+        // Celebrate auto-granted achievements
+        result.autoGranted?.forEach((a, i) => {
+          setTimeout(() => {
+            toast({
+              title: `${a.icon ?? "🏅"} Достижение получено!`,
+              description: `«${a.name}» — божество отметило твой подвиг.`,
+            });
+          }, 600 + i * 600);
         });
       } else {
         toast({ title: "Задание оставлено", description: "Путь героя извилист." });
@@ -60,6 +86,7 @@ export function ProfileView() {
       qc.invalidateQueries({ queryKey: ["me"] });
       qc.invalidateQueries({ queryKey: ["quests"] });
       qc.invalidateQueries({ queryKey: ["characters"] });
+      if (result.autoUnlocked?.length) qc.invalidateQueries({ queryKey: ["grimoire"] });
     },
   });
 

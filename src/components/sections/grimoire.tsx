@@ -130,9 +130,21 @@ function GrimoirePage({
               <h3 className={`font-[family-name:var(--font-cinzel)] text-xl ${entry.unlocked ? "parchment-heading" : "text-foreground/60"}`}>
                 {entry.title}
               </h3>
-              <Badge variant="outline" className={`text-xs ${entry.unlocked ? "border-gold/30 text-gold/70" : "border-foreground/20 text-foreground/40"}`}>
-                {CAT_LABEL[entry.category] ?? entry.category}
-              </Badge>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className={`text-xs ${entry.unlocked ? "border-gold/30 text-gold/70" : "border-foreground/20 text-foreground/40"}`}>
+                  {CAT_LABEL[entry.category] ?? entry.category}
+                </Badge>
+                {entry.unlocked && entry.autoUnlocked && (
+                  <Badge variant="outline" className="text-xs border-magic-glow/40 text-magic-glow/80">
+                    ✦ Снято судьбой
+                  </Badge>
+                )}
+                {!entry.unlocked && entry.conditionType && (
+                  <Badge variant="outline" className="text-xs border-amber-600/40 text-amber-600/80">
+                    ⚗ Условие есть
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
           {isAdmin && (

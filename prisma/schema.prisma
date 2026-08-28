@@ -51,6 +51,9 @@ model Achievement {
   rarity      String   @default("COMMON") // COMMON | RARE | EPIC | LEGENDARY | MYTHIC
   category    String?  // e.g. "Боевые", "Исследования", "Социальные"
   autoGrant   Boolean  @default(false)
+  // Auto-grant condition: conditionType in {QUEST_COMPLETED, XP_THRESHOLD, RANK_REACHED, QUEST_COUNT, MANUAL}
+  conditionType  String?
+  conditionValue String?
   characters  CharacterAchievement[]
   createdAt   DateTime @default(now())
 }
@@ -184,9 +187,13 @@ model GrimoireEntry {
   encodedContent String   // cipher-like text shown when locked
   realContent    String   // actual lore shown when unlocked
   unlocked       Boolean  @default(false)
+  autoUnlocked   Boolean  @default(false) // true if unlocked by condition (vs manual)
   unlockHint     String?  // hint shown when locked
   category       String   @default("SECRETS") // SECRETS | RITUALS | PROPHECY | HISTORY | BEASTIARY
   order          Int      @default(0)
+  // Auto-unlock condition: conditionType in {QUEST_COMPLETED, XP_THRESHOLD, RANK_REACHED, ACHIEVEMENT_EARNED, MANUAL}
+  conditionType  String?
+  conditionValue String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }

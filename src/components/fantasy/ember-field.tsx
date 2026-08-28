@@ -1,18 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 
-/** Floating ember/dust particles for atmospheric background */
+/** Floating ember/dust particles for atmospheric background.
+ *  Positions are generated only on the client (via useSyncExternalStore's
+ *  client snapshot) to avoid SSR hydration mismatch with Math.random. */
 export function EmberField({ count = 14 }: { count?: number }) {
-  const [embers] = useState(() =>
-    Array.from({ length: count }, (_, i) => ({
-      id: i,
-      left: Math.random() * 100,
-      delay: Math.random() * 14,
-      duration: 10 + Math.random() * 10,
-      size: 2 + Math.random() * 3,
-      hue: Math.random() > 0.5 ? 70 : 40,
-    }))
+  const embers = useSyncExternalStore(
+    subscribeNoop,
+    () => getEmbers(count),
+    () => EMPTY
   );
 
   return (
@@ -33,4 +30,41 @@ export function EmberField({ count = 14 }: { count?: number }) {
       ))}
     </div>
   );
+}
+
+interface Ember {
+  id: number;
+  left: number;
+  delay: number;
+  duration: number;
+  size: number;
+  hue: number;
+}
+
+const EMPTY: Ember[] = [];
+const cacheByCount = new Map<number, Ember[]>();
+
+function getEmbers(count: number): Ember[] {
+  let cached = cacheByCount.get(count);
+  if (!cached) {
+    cached = generateEmbers(count);
+    cacheByCount.set(count, cached);
+  }
+  return cached;
+}
+
+function generateEmbers(count: number): Ember[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    delay: Math.random() * 14,
+    duration: 10 + Math.random() * 10,
+    size: 2 + Math.random() * 3,
+    hue: Math.random() > 0.5 ? 70 : 40,
+  }));
+}
+
+function subscribeNoop() {
+  // Embers are static after first generation; no subscription needed.
+  return () => {};
 }
