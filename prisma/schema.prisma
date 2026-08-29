@@ -32,14 +32,30 @@ model Character {
   name        String
   race        String?
   charClass   String?
+  alignment   String?  // мировоззрение (Lawful Good, Chaotic Neutral, etc.)
   level       Int      @default(1)
   xp          Int      @default(0)
-  bio         String?  // character lore / backstory
-  portrait    String?
+  bio         String?  // предыстория / backstory
+  traits      String?  // черты характера
+  ideals      String?  // идеалы
+  motives     String?  // мотивы
+  portrait    String?  // base64 image
   guildRankId String?
   guildRank   GuildRank? @relation(fields: [guildRankId], references: [id])
   achievements CharacterAchievement[]
   questProgress QuestProgress[]
+  notes       Note[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Personal journal notes owned by a character
+model Note {
+  id          String   @id @default(cuid())
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  title       String?
+  content     String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -210,6 +226,7 @@ model LabEntry {
   description String   // main text
   details     String?  // structured extra info (traits, stats, components, etc.)
   icon        String?  // emoji
+  image       String?  // base64 image (illustration / symbol)
   rarity      String?  // for items/spells: COMMON..MYTHIC or spell level
   order       Int      @default(0)
   createdAt   DateTime @default(now())

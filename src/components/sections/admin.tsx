@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { OrnamentTitle } from "@/components/fantasy/ornament-title";
 import { ParchmentCard, RuneSeal, RarityBadge, DifficultyBadge } from "@/components/fantasy/ui";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,11 +14,12 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Users, Sword, Sparkles, Scale, Sun, BookMarked, Link2, Trophy, Star, FlaskConical } from "lucide-react";
+import { ImageUpload } from "@/components/fantasy/image-upload";
+import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Users as UsersIcon, Sword, Sparkles, Scale, Sun, BookMarked, Link2, Trophy, Star, FlaskConical, ShieldCheck, UserPlus, KeyRound } from "lucide-react";
 
 const ENTITIES = {
-  countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries", fields: ["name","description","emblem","capital","government","population","culture","climate"] },
-  personalities: { label: "Личности", icon: Users, api: "/api/lore/personalities", fields: ["name","title","description","affiliation","role","status"] },
+  countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries", fields: ["name","description","emblem","banner","capital","government","population","culture","climate"] },
+  personalities: { label: "Личности", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","description","portrait","affiliation","role","status"] },
   relations: { label: "Отношения", icon: Link2, api: "/api/lore/relations", fields: ["countryAName","countryBName","relationType","description"] },
   systems: { label: "Мир. Система", icon: Scale, api: "/api/lore/systems", fields: ["title","category","description","icon"] },
   gods: { label: "Пантеон", icon: Sun, api: "/api/lore/gods", fields: ["name","title","domain","description","symbol","alignment","pantheon"] },
@@ -28,10 +28,34 @@ const ENTITIES = {
 
 type EntityKey = keyof typeof ENTITIES;
 
+// Sections in the admin sidebar — grouped by site section.
+const SECTIONS = [
+  { key: "overview", label: "Обзор", icon: Crown },
+  { key: "knowledge", label: "База Знаний", icon: BookOpen, sub: [
+    { key: "countries", label: "Страны" },
+    { key: "personalities", label: "Личности" },
+    { key: "relations", label: "Отношения" },
+    { key: "systems", label: "Мир. Система" },
+    { key: "gods", label: "Пантеон" },
+    { key: "legends", label: "Легенды" },
+  ]},
+  { key: "guild", label: "Гильдия", icon: Sword, sub: [
+    { key: "ranks", label: "Ранги" },
+    { key: "quests", label: "Задания" },
+    { key: "characters", label: "Герои" },
+  ]},
+  { key: "grimoire", label: "Гримуар", icon: Sparkles },
+  { key: "lab", label: "Лаборатория Алого", icon: FlaskConical },
+  { key: "achievements", label: "Достижения", icon: Award },
+  { key: "users", label: "Пользователи", icon: ShieldCheck },
+] as const;
+
 export function AdminView() {
-  const [tab, setTab] = useState("overview");
+  const [section, setSection] = useState<string>("overview");
+  const [sub, setSub] = useState<string>("countries");
+
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-6 py-10 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 md:px-6 py-10 space-y-6">
       <div className="text-center space-y-2">
         <div className="flex justify-center">
           <RuneSeal icon={<Crown className="w-8 h-8 text-gold" />} size="lg" glow />
@@ -40,49 +64,66 @@ export function AdminView() {
           Чертог Божества
         </OrnamentTitle>
         <p className="text-foreground/70 font-[family-name:var(--font-garamond)] italic max-w-2xl mx-auto">
-          Здесь ты властвуешь над миром за гранью тьмы. Твори страны, изрекай легенды,
-          раздавай достижения и приподнимай печати Гримуара для своих героев.
+          Здесь ты властвуешь над миром за гранью тьмы. Выбери раздел слева — затем подраздел — и твори.
         </p>
         <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-md border border-gold/30 bg-gold/5 text-gold/80 text-xs font-[family-name:var(--font-cinzel)] tracking-wide animate-fade-rise">
-          ✦ Всё, что видишь в этом мире, ты можешь изменить — добавляй, редактируй и удаляй записи во всех разделах ниже.
+          ✦ Всё, что видишь в этом мире, ты можешь изменить — добавляй, редактируй и удаляй записи.
         </div>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab} className="w-full">
-        <div className="flex justify-center overflow-x-auto pb-2">
-          <TabsList className="bg-background/40 border border-gold/20 flex flex-wrap h-auto">
-            <TabsTrigger value="overview" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold">Обзор</TabsTrigger>
-            {(Object.keys(ENTITIES) as EntityKey[]).map((k) => {
-              const E = ENTITIES[k];
-              const Icon = E.icon;
-              return (
-                <TabsTrigger key={k} value={k} className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold">
-                  <Icon className="w-3.5 h-3.5 mr-1" /> {E.label}
-                </TabsTrigger>
-              );
-            })}
-            <TabsTrigger value="ranks" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold"><Trophy className="w-3.5 h-3.5 mr-1" /> Ранги</TabsTrigger>
-            <TabsTrigger value="quests" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold"><Sword className="w-3.5 h-3.5 mr-1" /> Задания</TabsTrigger>
-            <TabsTrigger value="grimoire" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold"><Sparkles className="w-3.5 h-3.5 mr-1" /> Гримуар</TabsTrigger>
-            <TabsTrigger value="achievements" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold"><Award className="w-3.5 h-3.5 mr-1" /> Достижения</TabsTrigger>
-            <TabsTrigger value="lab" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold"><FlaskConical className="w-3.5 h-3.5 mr-1" /> Лаборатория</TabsTrigger>
-            <TabsTrigger value="characters" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold"><Users className="w-3.5 h-3.5 mr-1" /> Герои</TabsTrigger>
-          </TabsList>
-        </div>
+      <div className="grid lg:grid-cols-[220px_1fr] gap-6">
+        {/* Sidebar — разделы */}
+        <aside className="lg:sticky lg:top-4 lg:self-start space-y-1">
+          {SECTIONS.map((s) => {
+            const Icon = s.icon;
+            const active = section === s.key;
+            return (
+              <div key={s.key}>
+                <button
+                  onClick={() => setSection(s.key)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-md font-[family-name:var(--font-cinzel)] text-sm tracking-wide transition-all ${
+                    active ? "text-gold bg-gold/10 magic-glow" : "text-foreground/70 hover:text-gold hover:bg-gold/5"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {s.label}
+                </button>
+                {/* Sub-items */}
+                {active && "sub" in s && s.sub && (
+                  <div className="ml-4 mt-1 space-y-0.5 border-l border-gold/20 pl-2">
+                    {s.sub.map((subItem) => (
+                      <button
+                        key={subItem.key}
+                        onClick={() => setSub(subItem.key)}
+                        className={`w-full text-left px-3 py-1.5 rounded text-sm font-[family-name:var(--font-garamond)] transition-all ${
+                          sub === subItem.key ? "text-gold bg-gold/5" : "text-foreground/60 hover:text-gold"
+                        }`}
+                      >
+                        {subItem.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </aside>
 
-        <TabsContent value="overview" className="mt-6"><Overview /></TabsContent>
-        {(Object.keys(ENTITIES) as EntityKey[]).map((k) => (
-          <TabsContent key={k} value={k} className="mt-6">
-            <EntityEditor entityKey={k} />
-          </TabsContent>
-        ))}
-        <TabsContent value="ranks" className="mt-6"><RanksEditor /></TabsContent>
-        <TabsContent value="quests" className="mt-6"><QuestsEditor /></TabsContent>
-        <TabsContent value="grimoire" className="mt-6"><GrimoireEditor /></TabsContent>
-        <TabsContent value="achievements" className="mt-6"><AchievementsEditor /></TabsContent>
-        <TabsContent value="lab" className="mt-6"><LabEditor /></TabsContent>
-        <TabsContent value="characters" className="mt-6"><CharactersEditor /></TabsContent>
-      </Tabs>
+        {/* Content */}
+        <div className="min-h-[400px]">
+          {section === "overview" && <Overview />}
+          {section === "knowledge" && (ENTITIES[sub as EntityKey] ? <EntityEditor entityKey={sub as EntityKey} /> : <Overview />)}
+          {section === "guild" && (
+            sub === "ranks" ? <RanksEditor /> :
+            sub === "quests" ? <QuestsEditor /> :
+            sub === "characters" ? <CharactersEditor /> : <RanksEditor />
+          )}
+          {section === "grimoire" && <GrimoireEditor />}
+          {section === "lab" && <LabEditor />}
+          {section === "achievements" && <AchievementsEditor />}
+          {section === "users" && <UsersEditor />}
+        </div>
+      </div>
     </div>
   );
 }
@@ -116,7 +157,7 @@ function Overview() {
   });
   const stats = [
     { label: "Страны", value: data?.countries, icon: MapPin },
-    { label: "Личности", value: data?.personalities, icon: Users },
+    { label: "Личности", value: data?.personalities, icon: UsersIcon },
     { label: "Отношения", value: data?.relations, icon: Link2 },
     { label: "Мир. системы", value: data?.systems, icon: Scale },
     { label: "Боги", value: data?.gods, icon: Sun },
@@ -125,7 +166,7 @@ function Overview() {
     { label: "Задания", value: data?.quests, icon: Sword },
     { label: "Гримуар", value: data?.grimoire ? `${data.grimoireUnlocked}/${data.grimoire}` : null, icon: Sparkles },
     { label: "Достижения", value: data?.achievements, icon: Award },
-    { label: "Герои", value: data?.characters, icon: Users },
+    { label: "Герои", value: data?.characters, icon: UsersIcon },
   ];
   return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -146,11 +187,12 @@ function Overview() {
 }
 
 /* ===== GENERIC ENTITY EDITOR ===== */
-const FIELD_META: Record<string, { type: "text"|"textarea"|"select"; options?: string[]; label: string }> = {
+const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"; options?: string[]; label: string }> = {
   name: { type: "text", label: "Название" },
   title: { type: "text", label: "Титул" },
   description: { type: "textarea", label: "Описание" },
   emblem: { type: "text", label: "Символ (эмодзи)" },
+  banner: { type: "image", label: "Знамя / карта (изображение)" },
   capital: { type: "text", label: "Столица" },
   government: { type: "text", label: "Правление" },
   population: { type: "text", label: "Население" },
@@ -158,6 +200,7 @@ const FIELD_META: Record<string, { type: "text"|"textarea"|"select"; options?: s
   climate: { type: "textarea", label: "Климат" },
   affiliation: { type: "text", label: "Принадлежность" },
   role: { type: "text", label: "Должность" },
+  portrait: { type: "image", label: "Портрет (изображение)" },
   status: { type: "select", label: "Статус", options: ["alive","deceased","missing"] },
   countryAName: { type: "text", label: "Страна A" },
   countryBName: { type: "text", label: "Страна B" },
@@ -236,6 +279,7 @@ function EntityEditor({ entityKey }: { entityKey: EntityKey }) {
       </div>
 
       <EntityFormDialog
+        key={editing?.id ?? "new"}
         open={open}
         onOpenChange={setOpen}
         fields={meta.fields}
@@ -279,6 +323,18 @@ function EntityFormDialog({
           {fields.map((f) => {
             const meta = FIELD_META[f];
             if (!meta) return null;
+            if (meta.type === "image") {
+              return (
+                <div key={f} className="space-y-1">
+                  <ImageUpload
+                    label={meta.label}
+                    value={getVal(f) || null}
+                    onChange={(v) => setVal(f, v)}
+                    aspect="aspect-video"
+                  />
+                </div>
+              );
+            }
             return (
               <div key={f} className="space-y-1">
                 <Label className="parchment-heading text-sm">{meta.label}</Label>
@@ -397,7 +453,7 @@ function QuestsEditor() {
           </ParchmentCard>
         ))}
       </div>
-      <QuestFormDialog open={open} onOpenChange={setOpen} item={editing} onSave={(it)=>save.mutate(it)} pending={save.isPending} />
+      <QuestFormDialog key={editing?.id ?? "new"} open={open} onOpenChange={setOpen} item={editing} onSave={(it)=>save.mutate(it)} pending={save.isPending} />
     </div>
   );
 }
@@ -484,7 +540,7 @@ function GrimoireEditor() {
           </ParchmentCard>
         ))}
       </div>
-      <GrimoireFormDialog open={open} onOpenChange={setOpen} item={editing} onSave={(it)=>save.mutate(it)} pending={save.isPending} />
+      <GrimoireFormDialog key={editing?.id ?? "new"} open={open} onOpenChange={setOpen} item={editing} onSave={(it)=>save.mutate(it)} pending={save.isPending} />
     </div>
   );
 }
@@ -595,7 +651,7 @@ function AchievementsEditor() {
         ))}
       </div>
 
-      <AchFormDialog open={open} onOpenChange={setOpen} item={editing} onSave={(it)=>save.mutate(it)} pending={save.isPending} />
+      <AchFormDialog key={editing?.id ?? "new"} open={open} onOpenChange={setOpen} item={editing} onSave={(it)=>save.mutate(it)} pending={save.isPending} />
 
       {/* Grant dialog */}
       <Dialog open={!!grant} onOpenChange={(v)=>!v && setGrant(null)}>
@@ -795,7 +851,7 @@ function LabEditor() {
         ))}
         {items.length === 0 && <p className="col-span-full text-center parchment-muted italic py-8">Свиток Алого пока пуст. Создай первую запись.</p>}
       </div>
-      <LabFormDialog open={open} onOpenChange={setOpen} item={editing} onSave={(it) => save.mutate(it)} pending={save.isPending} />
+      <LabFormDialog key={editing?.id ?? "new"} open={open} onOpenChange={setOpen} item={editing} onSave={(it) => save.mutate(it)} pending={save.isPending} />
     </div>
   );
 }
@@ -826,6 +882,7 @@ function LabFormDialog({ open, onOpenChange, item, onSave, pending }: { open: bo
           <div><Label className="parchment-heading text-sm">Название</Label><Input value={getVal("name")} onChange={(e) => setVal("name", e.target.value)} className="bg-parchment/60 border-parchment-dark/40" /></div>
           <div><Label className="parchment-heading text-sm">Подзаголовок (напр. «Подкласс Паладина», «Заклинание 3 круга»)</Label><Input value={getVal("subtitle") || ""} onChange={(e) => setVal("subtitle", e.target.value)} className="bg-parchment/60 border-parchment-dark/40" /></div>
           <div><Label className="parchment-heading text-sm">Иконка (эмодзи)</Label><Input value={getVal("icon") || ""} onChange={(e) => setVal("icon", e.target.value)} placeholder="🜂" className="bg-parchment/60 border-parchment-dark/40" /></div>
+          <ImageUpload label="Иллюстрация (изображение)" value={getVal("image") || null} onChange={(v) => setVal("image", v)} aspect="aspect-video" />
           <div>
             <Label className="parchment-heading text-sm">Редкость / уровень (для предметов и заклинаний)</Label>
             <Select value={getVal("rarity") || ""} onValueChange={(v) => setVal("rarity", v)}>
@@ -849,5 +906,136 @@ function LabFormDialog({ open, onOpenChange, item, onSave, pending }: { open: bo
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ===== USERS EDITOR (управление пользователями) ===== */
+function UsersEditor() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const { data: users } = useQuery<any[]>({
+    queryKey: ["admin-users"],
+    queryFn: () => fetch("/api/admin/users").then((r) => r.json()),
+  });
+  const [creating, setCreating] = useState(false);
+
+  const createMut = useMutation({
+    mutationFn: async (body: any) =>
+      fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json()),
+    onSuccess: (res) => {
+      if (res.error) { toast({ title: "Ошибка", description: res.error, variant: "destructive" }); return; }
+      toast({ title: "Герой рождён", description: "Пользователь создан." });
+      setCreating(false);
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+  });
+
+  const updateMut = useMutation({
+    mutationFn: async ({ id, role, password }: { id: string; role?: string; password?: string }) =>
+      fetch(`/api/admin/users/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role, password }) }).then((r) => r.json()),
+    onSuccess: (res) => {
+      if (res.error) { toast({ title: "Ошибка", description: res.error, variant: "destructive" }); return; }
+      toast({ title: "Обновлено" });
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+  });
+
+  const delMut = useMutation({
+    mutationFn: (id: string) => fetch(`/api/admin/users/${id}`, { method: "DELETE" }).then((r) => r.json()),
+    onSuccess: (res) => {
+      if (res.error) { toast({ title: "Ошибка", description: res.error, variant: "destructive" }); return; }
+      toast({ title: "Странник покинул мир" });
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="font-[family-name:var(--font-cinzel)] text-lg text-gold">Пользователи мира</h3>
+        <Button onClick={() => setCreating(true)} className="btn-rune bg-primary text-primary-foreground"><UserPlus className="w-4 h-4 mr-1" /> Создать</Button>
+      </div>
+      <p className="parchment-muted text-sm italic">Здесь ты создаёшь аккаунты героев и Божеств, назначаешь роли и сбрасываешь пароли.</p>
+      <div className="grid md:grid-cols-2 gap-3">
+        {(users ?? []).map((u) => (
+          <ParchmentCard key={u.id} className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading truncate">{u.name}</h4>
+                <p className="parchment-muted text-xs truncate">{u.email}</p>
+              </div>
+              <Badge variant="outline" className={u.role === "ADMIN" ? "border-gold/40 text-gold" : "border-wine/30 text-wine"}>
+                {u.role === "ADMIN" ? "✦ Божество" : "⚔ Авантюрист"}
+              </Badge>
+            </div>
+            {u.character && (
+              <p className="text-xs parchment-muted">Герой: {u.character.name} · Ур.{u.character.level} · {u.character.xp} XP</p>
+            )}
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-parchment-dark/20">
+              <Button size="sm" variant="outline" onClick={() => {
+                const newRole = u.role === "ADMIN" ? "PLAYER" : "ADMIN";
+                updateMut.mutate({ id: u.id, role: newRole });
+              }} className="btn-parchment h-8 px-3 text-xs">
+                Сделать {u.role === "ADMIN" ? "Авантюристом" : "Божеством"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => {
+                const pw = prompt(`Новый пароль для ${u.name} (мин. 6 символов):`);
+                if (pw && pw.length >= 6) updateMut.mutate({ id: u.id, password: pw });
+                else if (pw) toast({ title: "Слишком короткий", variant: "destructive" });
+              }} className="btn-parchment h-8 px-3 text-xs">
+                <KeyRound className="w-3.5 h-3.5 mr-1" /> Сбросить пароль
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => {
+                if (confirm(`Удалить ${u.name}? Все его данные будут стёрты.`)) delMut.mutate(u.id);
+              }} className="text-destructive hover:bg-destructive/10 h-8 px-3 text-xs">
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> Удалить
+              </Button>
+            </div>
+          </ParchmentCard>
+        ))}
+        {(users ?? []).length === 0 && <p className="col-span-full text-center parchment-muted italic py-8">Загрузка...</p>}
+      </div>
+
+      {/* Create user dialog */}
+      <Dialog open={creating} onOpenChange={setCreating}>
+        <DialogContent className="parchment gold-frame max-w-md">
+          <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">Создать пользователя</DialogTitle></DialogHeader>
+          <CreateUserForm onSave={(body) => createMut.mutate(body)} pending={createMut.isPending} />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function CreateUserForm({ onSave, pending }: { onSave: (body: any) => void; pending: boolean }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("PLAYER");
+  const [characterName, setCharacterName] = useState("");
+  return (
+    <div className="space-y-3">
+      <div><Label className="parchment-heading text-sm">Имя (игрок или персонаж)</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="bg-parchment/60 border-parchment-dark/40" /></div>
+      <div><Label className="parchment-heading text-sm">Email (знак для входа)</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-parchment/60 border-parchment-dark/40" /></div>
+      <div><Label className="parchment-heading text-sm">Пароль (мин. 6 символов)</Label><Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-parchment/60 border-parchment-dark/40" /></div>
+      <div>
+        <Label className="parchment-heading text-sm">Роль</Label>
+        <Select value={role} onValueChange={setRole}>
+          <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue /></SelectTrigger>
+          <SelectContent className="parchment">
+            <SelectItem value="PLAYER">⚔ Авантюрист (игрок)</SelectItem>
+            <SelectItem value="ADMIN">✦ Божество (админ)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {role === "PLAYER" && (
+        <div><Label className="parchment-heading text-sm">Имя персонажа (необязательно)</Label><Input value={characterName} onChange={(e) => setCharacterName(e.target.value)} placeholder="напр. Тэодрик Зорестрелец" className="bg-parchment/60 border-parchment-dark/40" /></div>
+      )}
+      <div className="flex justify-end gap-2 pt-2">
+        <Button onClick={() => onSave({ name, email, password, role, characterName: characterName || undefined })} disabled={pending || !name || !email || !password} className="bg-primary text-primary-foreground btn-rune">
+          {pending ? "Создаём..." : "Создать"}
+        </Button>
+      </div>
+    </div>
   );
 }

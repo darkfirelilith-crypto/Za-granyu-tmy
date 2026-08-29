@@ -41,7 +41,11 @@ export async function PUT(req: NextRequest) {
         name: data.name,
         race: data.race,
         charClass: data.charClass,
+        alignment: data.alignment,
         bio: data.bio,
+        traits: data.traits,
+        ideals: data.ideals,
+        motives: data.motives,
         portrait: data.portrait,
       };
 

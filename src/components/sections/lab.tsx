@@ -146,6 +146,11 @@ function LabGrid({ items, kind }: { items: LabEntry[]; kind: LabKind }) {
                 {e.subtitle && <p className="parchment-heading text-xs uppercase tracking-wider mt-0.5">{e.subtitle}</p>}
               </div>
             </div>
+            {e.image && (
+              <div className="h-40 rounded-lg overflow-hidden gold-frame">
+                <img src={e.image} alt={e.name} className="w-full h-full object-cover" />
+              </div>
+            )}
             <p className="parchment-muted text-sm leading-relaxed">{e.description}</p>
             {e.details && (
               <div className="pt-3 border-t border-parchment-dark/20">

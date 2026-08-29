@@ -107,14 +107,28 @@ export interface Character {
   name: string;
   race: string | null;
   charClass: string | null;
+  alignment?: string | null;
   level: number;
   xp: number;
   bio: string | null;
+  traits?: string | null;
+  ideals?: string | null;
+  motives?: string | null;
   portrait: string | null;
   guildRankId: string | null;
   guildRank?: GuildRank | null;
   achievements?: { achievement: Achievement; grantedAt: string; grantedBy: string | null }[];
   questProgress?: { quest: Quest; status: string; acceptedAt: string; completedAt: string | null }[];
+  notes?: Note[];
+}
+
+export interface Note {
+  id: string;
+  characterId: string;
+  title: string | null;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Quest {
@@ -150,6 +164,7 @@ export interface LabEntry {
   description: string;
   details: string | null;
   icon: string | null;
+  image?: string | null;
   rarity: string | null;
   order: number;
 }

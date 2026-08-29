@@ -25,6 +25,7 @@ export async function getCurrentCharacter(userId: string) {
       guildRank: true,
       achievements: { include: { achievement: true } },
       questProgress: { include: { quest: true } },
+      notes: { orderBy: { createdAt: "desc" } },
     },
   });
 }

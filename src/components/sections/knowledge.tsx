@@ -103,6 +103,11 @@ function CountriesTab({ search }: { search: string }) {
       </div>
       {sel && (
         <ParchmentCard key={sel.id} className="animate-reveal">
+          {sel.banner && (
+            <div className="mb-4 -mx-5 -mt-5 md:-mx-6 md:-mt-6 h-40 md:h-52 overflow-hidden rounded-t-lg gold-frame">
+              <img src={sel.banner} alt={sel.name} className="w-full h-full object-cover" />
+            </div>
+          )}
           <div className="flex items-start gap-4 mb-4">
             <RuneSeal icon={<span className="text-3xl">{sel.emblem ?? "🗺️"}</span>} size="lg" />
             <div>
@@ -159,7 +164,13 @@ function PersonalitiesTab({ search }: { search: string }) {
       {sel && (
         <ParchmentCard key={sel.id} className="animate-reveal">
           <div className="flex items-start gap-4 mb-4">
-            <RuneSeal icon={<span className="text-3xl">{getPersonIcon(sel)}</span>} size="lg" />
+            {sel.portrait ? (
+              <div className="w-24 h-32 rounded-lg overflow-hidden gold-frame shrink-0">
+                <img src={sel.portrait} alt={sel.name} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <RuneSeal icon={<span className="text-3xl">{getPersonIcon(sel)}</span>} size="lg" />
+            )}
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.name}</h3>

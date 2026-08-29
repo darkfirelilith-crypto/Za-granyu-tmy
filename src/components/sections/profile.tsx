@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { OrnamentTitle } from "@/components/fantasy/ornament-title";
 import { ParchmentCard, RuneSeal, RarityBadge } from "@/components/fantasy/ui";
+import { ImageUpload } from "@/components/fantasy/image-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Award, Sword, Star, Edit3, Save, X, ScrollText, Trophy, Flag, Ban } from "lucide-react";
+import { Award, Sword, Star, Edit3, Save, X, Trophy, Flag, Ban, BookOpen, Plus, Trash2, Pencil } from "lucide-react";
 
 export function ProfileView() {
   const { data, isLoading } = useQuery<any>({
@@ -62,23 +63,11 @@ export function ProfileView() {
             ? `Слава записана в летопись. Получено ${result.xpAwarded} опыта.`
             : "Слава записана в летопись. Награда получена.",
         });
-        // Celebrate auto-unlocked grimoire pages
         result.autoUnlocked?.forEach((g, i) => {
-          setTimeout(() => {
-            toast({
-              title: "🔮 Печать Гримуара снята!",
-              description: `Страница открыта: «${g.title}». Тайна ждёт твоего прочтения.`,
-            });
-          }, 300 + i * 600);
+          setTimeout(() => toast({ title: "🔮 Печать Гримуара снята!", description: `Глава открыта: «${g.title}».` }), 300 + i * 600);
         });
-        // Celebrate auto-granted achievements
         result.autoGranted?.forEach((a, i) => {
-          setTimeout(() => {
-            toast({
-              title: `${a.icon ?? "🏅"} Достижение получено!`,
-              description: `«${a.name}» — божество отметило твой подвиг.`,
-            });
-          }, 600 + i * 600);
+          setTimeout(() => toast({ title: `${a.icon ?? "🏅"} Достижение получено!`, description: `«${a.name}» — божество отметило твой подвиг.` }), 600 + i * 600);
         });
       } else {
         toast({ title: "Задание оставлено", description: "Путь героя извилист." });
@@ -122,6 +111,7 @@ export function ProfileView() {
     : 100;
   const achievements = char.achievements ?? [];
   const quests = char.questProgress ?? [];
+  const notes = char.notes ?? [];
 
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-10 space-y-8">
@@ -129,10 +119,32 @@ export function ProfileView() {
         Свиток Героя
       </OrnamentTitle>
 
-      {/* Hero card */}
+      {/* Hero card — portrait + name + class + alignment + rank */}
       <ParchmentCard className="space-y-5">
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-          <RuneSeal icon={<span className="text-3xl">{rank?.icon ?? "🛡️"}</span>} size="lg" glow />
+        <div className="flex flex-col sm:flex-row gap-5">
+          {/* Portrait */}
+          <div className="shrink-0 mx-auto sm:mx-0">
+            {editing ? (
+              <div className="w-40">
+                <ImageUpload
+                  value={current.portrait || null}
+                  onChange={(v) => setForm({ ...current, portrait: v })}
+                  aspect="aspect-[3/4]"
+                  rounded="rounded-lg"
+                  maxDim={600}
+                />
+              </div>
+            ) : (
+              <div className="w-40 h-52 rounded-lg overflow-hidden gold-frame bg-parchment-dark/20 flex items-center justify-center">
+                {char.portrait ? (
+                  <img src={char.portrait} alt={char.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-5xl">{rank?.icon ?? "🛡️"}</span>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="flex-1 w-full space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
@@ -147,9 +159,6 @@ export function ProfileView() {
                     {char.name}
                   </h2>
                 )}
-                <p className="parchment-muted text-sm">
-                  {char.race ?? "Неизвестно"} · {char.charClass ?? "Без класса"} · Уровень {char.level}
-                </p>
               </div>
               {editing ? (
                 <div className="flex gap-2">
@@ -167,21 +176,15 @@ export function ProfileView() {
               )}
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-3">
+            <div className="grid sm:grid-cols-3 gap-3">
+              <Field label="Раса" editing={editing} value={current.race} onChange={(v) => setForm({ ...current, race: v })} display={char.race} />
+              <Field label="Класс" editing={editing} value={current.charClass} onChange={(v) => setForm({ ...current, charClass: v })} display={char.charClass} />
               <div>
-                <Label className="parchment-heading text-xs uppercase tracking-wider">Раса</Label>
+                <Label className="parchment-heading text-xs uppercase tracking-wider">Мировоззрение</Label>
                 {editing ? (
-                  <Input value={current.race ?? ""} onChange={(e) => setForm({ ...current, race: e.target.value })} className="bg-parchment/60 border-parchment-dark/40" />
+                  <Input value={current.alignment ?? ""} onChange={(e) => setForm({ ...current, alignment: e.target.value })} placeholder="напр. Законопослушный Добрый" className="bg-parchment/60 border-parchment-dark/40" />
                 ) : (
-                  <p className="parchment-text">{char.race ?? "—"}</p>
-                )}
-              </div>
-              <div>
-                <Label className="parchment-heading text-xs uppercase tracking-wider">Класс</Label>
-                {editing ? (
-                  <Input value={current.charClass ?? ""} onChange={(e) => setForm({ ...current, charClass: e.target.value })} className="bg-parchment/60 border-parchment-dark/40" />
-                ) : (
-                  <p className="parchment-text">{char.charClass ?? "—"}</p>
+                  <p className="parchment-text">{char.alignment ?? "—"}</p>
                 )}
               </div>
             </div>
@@ -190,7 +193,7 @@ export function ProfileView() {
             <div className="space-y-1.5 pt-2 border-t border-parchment-dark/20">
               <div className="flex justify-between text-sm">
                 <span className="parchment-heading flex items-center gap-1.5">
-                  <Trophy className="w-4 h-4 text-gold" /> {rank?.name ?? "Без ранга"}
+                  <Trophy className="w-4 h-4 text-gold" /> {rank?.name ?? "Без ранга"} · Ур.{char.level}
                 </span>
                 <span className="parchment-muted">{char.xp} XP {nextRank && `→ ${nextRank.minXp} XP`}</span>
               </div>
@@ -204,22 +207,47 @@ export function ProfileView() {
           </div>
         </div>
 
-        {/* Bio */}
-        <div className="pt-3 border-t border-parchment-dark/20">
-          <Label className="parchment-heading text-sm">История героя</Label>
-          {editing ? (
-            <Textarea
-              value={current.bio ?? ""}
-              onChange={(e) => setForm({ ...current, bio: e.target.value })}
-              rows={5}
-              className="bg-parchment/60 border-parchment-dark/40 mt-1"
-              placeholder="Расскажи о происхождении и цели своего героя..."
-            />
-          ) : (
-            <p className="parchment-text lore-prose drop-cap mt-1">
-              {char.bio ?? "История ещё не написана..."}
-            </p>
-          )}
+        {/* Backstory */}
+        <SectionField
+          label="Предыстория"
+          editing={editing}
+          value={current.bio}
+          onChange={(v) => setForm({ ...current, bio: v })}
+          display={char.bio}
+          placeholder="Расскажи о происхождении и цели своего героя..."
+          dropCap
+          rows={5}
+        />
+
+        {/* Traits / Ideals / Motives */}
+        <div className="grid md:grid-cols-3 gap-4 pt-3 border-t border-parchment-dark/20">
+          <SectionField
+            label="Черты характера"
+            editing={editing}
+            value={current.traits}
+            onChange={(v) => setForm({ ...current, traits: v })}
+            display={char.traits}
+            placeholder="Что отличает твоего героя? Привычки, манеры..."
+            rows={3}
+          />
+          <SectionField
+            label="Идеалы"
+            editing={editing}
+            value={current.ideals}
+            onChange={(v) => setForm({ ...current, ideals: v })}
+            display={char.ideals}
+            placeholder="Во что герой верит свыше всего?"
+            rows={3}
+          />
+          <SectionField
+            label="Мотивы"
+            editing={editing}
+            value={current.motives}
+            onChange={(v) => setForm({ ...current, motives: v })}
+            display={char.motives}
+            placeholder="Что движет героем вперёд?"
+            rows={3}
+          />
         </div>
       </ParchmentCard>
 
@@ -238,21 +266,20 @@ export function ProfileView() {
           <p className="parchment-muted text-sm">Завершено заданий</p>
         </ParchmentCard>
         <ParchmentCard className="text-center space-y-1">
-          <Star className="w-7 h-7 text-gold mx-auto" />
-          <p className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{char.xp}</p>
-          <p className="parchment-muted text-sm">Опыт</p>
+          <BookOpen className="w-7 h-7 text-gold mx-auto" />
+          <p className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{notes.length}</p>
+          <p className="parchment-muted text-sm">Заметок в журнале</p>
         </ParchmentCard>
       </div>
 
       {/* Achievements */}
       <div className="space-y-4">
-        <OrnamentTitle size="md" flourish="✦">
-          Достижения
-        </OrnamentTitle>
+        <OrnamentTitle size="md" flourish="✦">Достижения</OrnamentTitle>
         {achievements.length === 0 ? (
-          <ParchmentCard className="text-center parchment-muted italic py-8">
-            <ScrollText className="w-8 h-8 mx-auto mb-2 text-gold/40" />
-            Достижений пока нет. Божество ещё не отметило твои деяния.
+          <ParchmentCard className="empty-portal">
+            <Award className="w-10 h-10 text-gold/40 mx-auto mb-2" />
+            <p className="font-[family-name:var(--font-garamond)] italic text-lg">Достижений пока нет.</p>
+            <p className="text-sm mt-1 opacity-70">Божество ещё не отметило твои деяния.</p>
           </ParchmentCard>
         ) : (
           <div className="grid sm:grid-cols-2 gap-3">
@@ -275,12 +302,13 @@ export function ProfileView() {
         )}
       </div>
 
-      {/* Quest progress */}
+      {/* Personal notes / journal */}
+      <NotesSection characterId={char.id} notes={notes} />
+
+      {/* Quest journal */}
       {quests.length > 0 && (
         <div className="space-y-4">
-          <OrnamentTitle size="md" flourish="⚔️">
-            Журнал заданий
-          </OrnamentTitle>
+          <OrnamentTitle size="md" flourish="⚔️">Журнал заданий</OrnamentTitle>
           <div className="grid gap-3">
             {quests.map((q: any) => (
               <ParchmentCard key={q.questId} className="space-y-2">
@@ -291,42 +319,167 @@ export function ProfileView() {
                   </div>
                   <Badge variant="outline" className={
                     q.status === "COMPLETED" ? "border-green-600/30 text-green-700" :
-                    q.status === "FAILED" ? "border-red-700/30 text-red-700" :
-                    "border-amber-700/30 text-amber-700"
+                    q.status === "FAILED" ? "border-red-700/30 text-red-700" : "border-amber-700/30 text-amber-700"
                   }>
                     {q.status === "COMPLETED" ? "✓ Завершено" : q.status === "FAILED" ? "✗ Провалено" : "⚔ В работе"}
                   </Badge>
                 </div>
                 {q.status === "ASSIGNED" && (
                   <div className="flex gap-2 pt-2 border-t border-parchment-dark/20">
-                    <Button
-                      size="sm"
-                      onClick={() => completeQuestMut.mutate({ questId: q.questId, status: "COMPLETED" })}
-                      disabled={completeQuestMut.isPending}
-                      className="btn-wine-solid h-8 px-3"
-                    >
+                    <Button size="sm" onClick={() => completeQuestMut.mutate({ questId: q.questId, status: "COMPLETED" })} disabled={completeQuestMut.isPending} className="btn-wine-solid h-8 px-3">
                       <Flag className="w-3.5 h-3.5 mr-1" /> Завершить подвиг
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => completeQuestMut.mutate({ questId: q.questId, status: "FAILED" })}
-                      disabled={completeQuestMut.isPending}
-                      className="btn-parchment h-8 px-3"
-                    >
+                    <Button size="sm" onClick={() => completeQuestMut.mutate({ questId: q.questId, status: "FAILED" })} disabled={completeQuestMut.isPending} className="btn-parchment h-8 px-3">
                       <Ban className="w-3.5 h-3.5 mr-1" /> Оставить
                     </Button>
                   </div>
-                )}
-                {q.status === "COMPLETED" && q.completedAt && (
-                  <p className="text-xs parchment-muted italic pt-1">
-                    Завершено: {new Date(q.completedAt).toLocaleDateString("ru-RU")}
-                  </p>
                 )}
               </ParchmentCard>
             ))}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ===== helpers ===== */
+function Field({ label, editing, value, onChange, display }: { label: string; editing: boolean; value: any; onChange: (v: string) => void; display: any }) {
+  return (
+    <div>
+      <Label className="parchment-heading text-xs uppercase tracking-wider">{label}</Label>
+      {editing ? (
+        <Input value={value ?? ""} onChange={(e) => onChange(e.target.value)} className="bg-parchment/60 border-parchment-dark/40" />
+      ) : (
+        <p className="parchment-text">{display ?? "—"}</p>
+      )}
+    </div>
+  );
+}
+
+function SectionField({ label, editing, value, onChange, display, placeholder, rows = 3, dropCap }: {
+  label: string; editing: boolean; value: any; onChange: (v: string) => void; display: any; placeholder?: string; rows?: number; dropCap?: boolean;
+}) {
+  return (
+    <div>
+      <Label className="parchment-heading text-sm">{label}</Label>
+      {editing ? (
+        <Textarea value={value ?? ""} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} className="bg-parchment/60 border-parchment-dark/40 mt-1" />
+      ) : display ? (
+        <p className={`parchment-text mt-1 whitespace-pre-line ${dropCap ? "lore-prose drop-cap" : ""}`}>{display}</p>
+      ) : (
+        <p className="parchment-muted italic mt-1 text-sm">Не записано...</p>
+      )}
+    </div>
+  );
+}
+
+/* ===== Notes section (journal) ===== */
+function NotesSection({ characterId, notes }: { characterId: string; notes: any[] }) {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [draft, setDraft] = useState<{ title: string; content: string } | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
+
+  const createMut = useMutation({
+    mutationFn: async (body: { title: string; content: string }) =>
+      fetch("/api/notes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ characterId, ...body }) }).then((r) => r.json()),
+    onSuccess: () => { setDraft(null); qc.invalidateQueries({ queryKey: ["me"] }); toast({ title: "Заметка записана" }); },
+  });
+  const updateMut = useMutation({
+    mutationFn: async (body: { id: string; title: string; content: string }) =>
+      fetch(`/api/notes/${body.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: body.title, content: body.content }) }).then((r) => r.json()),
+    onSuccess: () => { setEditId(null); qc.invalidateQueries({ queryKey: ["me"] }); toast({ title: "Заметка обновлена" }); },
+  });
+  const delMut = useMutation({
+    mutationFn: (id: string) => fetch(`/api/notes/${id}`, { method: "DELETE" }).then((r) => r.json()),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["me"] }); toast({ title: "Заметка стёрта" }); },
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <OrnamentTitle size="md" flourish="📖">Журнал героя</OrnamentTitle>
+        {!draft && (
+          <Button size="sm" onClick={() => setDraft({ title: "", content: "" })} className="btn-parchment h-8 px-3">
+            <Plus className="w-3.5 h-3.5 mr-1" /> Новая заметка
+          </Button>
+        )}
+      </div>
+      <p className="parchment-muted text-sm italic -mt-2">
+        Здесь ты записываешь свои наблюдения, загадки и догадки — то, что важно сохранить между сессиями.
+      </p>
+
+      {draft && (
+        <ParchmentCard className="space-y-2 border-t-2 border-gold/40">
+          <Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Заголовок (необязательно)" className="bg-parchment/60 border-parchment-dark/40" />
+          <Textarea value={draft.content} onChange={(e) => setDraft({ ...draft, content: e.target.value })} rows={4} placeholder="Что ты хочешь запомнить?" className="bg-parchment/60 border-parchment-dark/40" />
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => createMut.mutate(draft)} disabled={!draft.content.trim() || createMut.isPending} className="btn-wine-solid h-8 px-3">
+              <Save className="w-3.5 h-3.5 mr-1" /> Записать
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setDraft(null)} className="btn-parchment h-8 px-3">
+              <X className="w-3.5 h-3.5 mr-1" /> Отмена
+            </Button>
+          </div>
+        </ParchmentCard>
+      )}
+
+      <div className="grid gap-3">
+        {notes.map((n) => (
+          <ParchmentCard key={n.id} className="space-y-1">
+            {editId === n.id ? (
+              <NoteEditForm note={n} onSave={(body) => updateMut.mutate(body)} onCancel={() => setEditId(null)} pending={updateMut.isPending} />
+            ) : (
+              <>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    {n.title && <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{n.title}</h4>}
+                    <p className="parchment-text text-sm whitespace-pre-line">{n.content}</p>
+                    <p className="text-xs parchment-muted/60 italic mt-1">
+                      {new Date(n.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
+                    </p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button size="icon" variant="ghost" onClick={() => setEditId(n.id)} className="text-wine hover:bg-wine/10 h-7 w-7">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Стереть заметку?")) delMut.mutate(n.id); }} className="text-destructive hover:bg-destructive/10 h-7 w-7">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </ParchmentCard>
+        ))}
+        {notes.length === 0 && !draft && (
+          <ParchmentCard className="empty-portal">
+            <BookOpen className="w-10 h-10 text-gold/40 mx-auto mb-2" />
+            <p className="font-[family-name:var(--font-garamond)] italic text-lg">Журнал пуст.</p>
+            <p className="text-sm mt-1 opacity-70">Нажми «Новая заметка», чтобы записать первое наблюдение.</p>
+          </ParchmentCard>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NoteEditForm({ note, onSave, onCancel, pending }: { note: any; onSave: (b: any) => void; onCancel: () => void; pending: boolean }) {
+  const [title, setTitle] = useState(note.title ?? "");
+  const [content, setContent] = useState(note.content);
+  return (
+    <div className="space-y-2">
+      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Заголовок" className="bg-parchment/60 border-parchment-dark/40" />
+      <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={4} className="bg-parchment/60 border-parchment-dark/40" />
+      <div className="flex gap-2">
+        <Button size="sm" onClick={() => onSave({ id: note.id, title, content })} disabled={pending || !content.trim()} className="btn-wine-solid h-8 px-3">
+          <Save className="w-3.5 h-3.5 mr-1" /> Сохранить
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onCancel} className="btn-parchment h-8 px-3">
+          <X className="w-3.5 h-3.5 mr-1" /> Отмена
+        </Button>
+      </div>
     </div>
   );
 }

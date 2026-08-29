@@ -107,3 +107,27 @@ Unresolved / Next-phase priorities:
 - Re-lock grimoire chapters or add more demo conditions for showcase.
 - Lab: add filters by rarity, sortable columns.
 - Production: NEXTAUTH_SECRET to Vercel env, switch SQLite→Postgres for serverless.
+
+---
+Task ID: user-request-3 (images + admin restructure + profile rebuild)
+Agent: main
+Task: Image upload, fix admin add bug, restructure admin (grouped by site section), admin user management, rebuild player profile (portrait, alignment, traits, ideals, motives, notes)
+
+Work Log:
+- Schema: added Character fields (alignment, traits, ideals, motives), new Note model (personal journal), LabEntry.image field. Regenerated schema.local.prisma from current main schema (was stale, caused "Unknown relation notes" error).
+- Image upload: new ImageUpload component (client-side canvas resize to 800px, JPEG 0.82, base64). Works on Vercel read-only FS. Used in: profile portrait, country banner, personality portrait, lab image.
+- API: /api/notes (GET/POST) + /api/notes/[id] (PUT/DELETE) — owner-scoped; /api/admin/users (GET/POST) + /api/admin/users/[id] (PUT role/password, DELETE with last-admin guard). Updated /api/characters PUT to accept alignment/traits/ideals/motives for players. getCurrentCharacter now includes notes.
+- Admin restructure: replaced flat Tabs with two-level sidebar (Обзор / База Знаний →6 lore / Гильдия → Ранги+Задания+Герои / Гримуар / Лаборатория Алого / Достижения / Пользователи). Clear hierarchy matching site sections.
+- Admin add bug fix: all form dialogs now have `key={item?.id ?? "new"}` → React remounts on item change → form state resets properly (the root cause of "add doesn't work").
+- Admin users section (new): list all users with role badges, create user dialog (name/email/password/role/characterName), toggle ADMIN↔PLAYER, reset password (prompt), delete (with last-admin guard).
+- Profile rebuild: portrait (upload + display), name, race, class, alignment, rank progress, backstory (drop-cap), traits/ideals/motives (3-col), achievements grid, NEW "Журнал героя" notes section (create/edit/delete notes via /api/notes), quest journal kept.
+- Views: Knowledge country detail shows banner image (top hero), personality detail shows portrait. Lab cards show image illustration.
+
+Verification:
+- Lint clean. Server 200.
+- agent-browser: admin sidebar navigation works (База Знаний → Личности shows editor + СОЗДАТЬ). Created "Леди Морриган" personality → POST 201 → appears in list → deleted. Created test user "Игрок Тест" → POST 201 → appears → deleted. Profile shows all new fields (Мировоззрение, Предыстория, Черты, Идеалы, Мотивы, Журнал героя). Created a note → POST 201 → appears → deleted. Portrait upload label present in edit mode.
+- Fixed runtime crash: Overview used `Users` icon after rename to `UsersIcon` (2 refs) — corrected.
+
+Unresolved / Next-phase:
+- New ZIP at download/za-granyu-tmy.zip (280KB) — user needs to re-download and redeploy (git add/commit/push, then Vercel auto-deploys). Also needs `npx prisma db push` for the new columns + Note table on Neon.
+- Light theme polish, grimoire auto-unlock conditions UI, more seed lore.
