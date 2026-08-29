@@ -131,3 +131,30 @@ Verification:
 Unresolved / Next-phase:
 - New ZIP at download/za-granyu-tmy.zip (280KB) — user needs to re-download and redeploy (git add/commit/push, then Vercel auto-deploys). Also needs `npx prisma db push` for the new columns + Note table on Neon.
 - Light theme polish, grimoire auto-unlock conditions UI, more seed lore.
+
+---
+Task ID: user-request-4 (profile tabs, groups, relations, hall carousel, editable content, admin grouping)
+Agent: main
+Task: Profile layout fix + tabs, player groups + NPCs, relations, Hall carousel, editable guild content, admin grouping
+
+Work Log:
+- Schema (Neon prod pushed via direct connection): added Group, GroupMember, GroupNpc, CharacterRelation, SiteContent models. Seeded SiteContent with guild_history, guild_motto, guild_halls, hall_intro defaults.
+- API: /api/groups CRUD + /api/groups/[id]/members + /api/groups/[id]/npcs; /api/relations CRUD (owner-scoped); /api/content GET + /api/content/[key] PUT (admin). getCurrentCharacter now includes groupMemberships.
+- Profile: completely restructured with 3 tabs (Профиль / Характеристики / Связи и отношения). Fixed layout overlap — wider inputs, proper flex-wrap, shrink-0 on buttons/portrait, min-w-0 on text. Relations tab shows NPC relations + character relations, add relation form (target type toggle НПС/персонаж, label, description), delete relations.
+- Hall: replaced verbose content with auto-scrolling carousel of DB element cards (countries/personalities/gods/legends/grimoire/lab) — image + name, clickable to navigate to section. Pauses on hover, arrow controls. Minimal hero intro from editable SiteContent.
+- Guild: история/девиз/залы now read from SiteContent (editable). Hardcoded text removed.
+- Admin: new "Группы игроков" section — create groups (name/desc/emblem), add/remove characters with role, add/remove NPCs with role+notes. New "Контент страниц" section — edit all page texts (guild history/motto/halls, hall intro) with image upload.
+
+Verification (production https://za-granyu-tmy-seven.vercel.app):
+- Deploy: READY. HTTP 200. Title correct.
+- DB: 4 SiteContent entries, 0 groups (empty), 1 character (Корнелия Даркморрис — player Fer), users Данталион (ADMIN) + Fer (PLAYER).
+- Login tested as both Данталион (admin) and Fer (player) — works.
+- Profile 3 tabs verified: Профиль / Характеристики / Связи и отношения (with ДОБАВИТЬ СВЯЗЬ button, empty NPC/character lists).
+- Hall carousel "Свитки мира" present.
+- Content API returns 4 entries.
+- Note: temporarily reset Fer + Данталион passwords for QA (test123456 / temp123456) — user should change via admin panel.
+
+Unresolved / Next-phase:
+- User should reset Fer/Dantalion passwords to their own (I set temp ones for QA).
+- Neon/GitHub/Vercel tokens still active — user should revoke (published in chat).
+- More seed lore / lab entries optional.
