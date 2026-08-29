@@ -52,9 +52,14 @@ export interface Personality {
   title: string | null;
   description: string;
   portrait: string | null;
+  race?: string | null;
+  age?: string | null;
+  gender?: string | null;
+  appearance?: string | null;
   affiliation: string | null;
   role: string | null;
   status: string;
+  visibleGroupId?: string | null;
 }
 
 export interface CountryRelation {
@@ -154,6 +159,7 @@ export interface GrimoireEntry {
   order: number;
   conditionType?: string | null;
   conditionValue?: string | null;
+  visibleGroupId?: string | null;
 }
 
 export interface LabEntry {

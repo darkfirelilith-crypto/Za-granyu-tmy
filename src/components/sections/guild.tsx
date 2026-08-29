@@ -18,15 +18,15 @@ const DIFF_REWARD: Record<string, string> = {
 };
 
 export function GuildView() {
+  const { data: content } = useQuery<any[]>({ queryKey: ["site-content"], queryFn: () => fetch("/api/content").then((r) => r.json()).catch(() => []) });
+  const intro = (Array.isArray(content) ? content : []).find((c) => c.key === "guild_intro");
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-10 space-y-8">
       <OrnamentTitle size="lg" flourish="⚔️">
         Гильдия Авантюристов
       </OrnamentTitle>
       <p className="text-center text-foreground/70 font-[family-name:var(--font-garamond)] italic max-w-2xl mx-auto">
-        «С мечом и магией — через тьму к славе.» Обитель всех, кто избрал путь
-        искателя приключений. Здесь — ранги, братья по оружию и задания, ждущие
-        героя.
+        {intro?.body || "Обитель всех, кто избрал путь искателя приключений."}
       </p>
 
       <Tabs defaultValue="info" className="w-full">

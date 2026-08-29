@@ -15,6 +15,8 @@ import { Search, MapPin, Crown, Link2, Scale, Sun, BookMarked, Globe2 } from "lu
 export function KnowledgeView() {
   const { knowledgeTab, setKnowledgeTab } = useAppStore();
   const [search, setSearch] = useState("");
+  const { data: content } = useQuery<any[]>({ queryKey: ["site-content"], queryFn: () => fetch("/api/content").then((r) => r.json()).catch(() => []) });
+  const intro = (Array.isArray(content) ? content : []).find((c) => c.key === "knowledge_intro");
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-10 space-y-8">
@@ -22,8 +24,7 @@ export function KnowledgeView() {
         База Знаний
       </OrnamentTitle>
       <p className="text-center text-foreground/70 font-[family-name:var(--font-garamond)] italic max-w-2xl mx-auto">
-        Древняя библиотека мира за гранью тьмы. Каждая страница — осколок истины, сохранённый
-        летописцами ордена Серебряного Пламени.
+        {intro?.body || "Древняя библиотека мира за гранью тьмы."}
       </p>
 
       <Tabs value={knowledgeTab} onValueChange={(v) => setKnowledgeTab(v as any)} className="w-full">

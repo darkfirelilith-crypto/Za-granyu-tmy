@@ -25,6 +25,8 @@ export function GrimoireView() {
     queryKey: ["grimoire"],
     queryFn: () => fetch("/api/grimoire").then((r) => r.json()),
   });
+  const { data: content } = useQuery<any[]>({ queryKey: ["site-content"], queryFn: () => fetch("/api/content").then((r) => r.json()).catch(() => []) });
+  const intro = (Array.isArray(content) ? content : []).find((c: any) => c.key === "grimoire_intro");
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -55,10 +57,7 @@ export function GrimoireView() {
           Тайный Гримуар
         </OrnamentTitle>
         <p className="text-foreground/70 font-[family-name:var(--font-garamond)] italic max-w-2xl mx-auto">
-          Древний кодекс, написанный на языке, которого больше не существует.
-          Главы его запечатаны магией — сокрыты не только слова, но и сами названия.
-          Лишь исполнив условия сюжета, удостоишься снять печать и узнать, о чём
-          была глава, и прочесть то, что сокрыто от непосвящённых.
+          {intro?.body || "Древний кодекс, главы которого запечатаны магией — сокрыты не только слова, но и сами названия."}
         </p>
         <div className="flex justify-center gap-2">
           <Badge variant="outline" className="border-gold/30 text-gold/70 font-[family-name:var(--font-cinzel)]">
@@ -148,6 +147,11 @@ function GrimoirePage({
                 {!entry.unlocked && entry.conditionType && (
                   <Badge variant="outline" className="text-xs border-amber-600/40 text-amber-600/80">
                     ⚗ Условие есть
+                  </Badge>
+                )}
+                {isAdmin && entry.visibleGroupId && (
+                  <Badge variant="outline" className="text-xs border-purple-600/40 text-purple-600/80">
+                    👥 Только группа
                   </Badge>
                 )}
               </div>

@@ -19,7 +19,7 @@ import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Use
 
 const ENTITIES = {
   countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries", fields: ["name","description","emblem","banner","capital","government","population","culture","climate"] },
-  personalities: { label: "Личности", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","description","portrait","affiliation","role","status"] },
+  personalities: { label: "Личности", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","race","age","gender","appearance","description","portrait","affiliation","role","status"] },
   relations: { label: "Отношения", icon: Link2, api: "/api/lore/relations", fields: ["countryAName","countryBName","relationType","description"] },
   systems: { label: "Мир. Система", icon: Scale, api: "/api/lore/systems", fields: ["title","category","description","icon"] },
   gods: { label: "Пантеон", icon: Sun, api: "/api/lore/gods", fields: ["name","title","domain","description","symbol","alignment","pantheon"] },
@@ -204,6 +204,10 @@ const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"; opt
   climate: { type: "textarea", label: "Климат" },
   affiliation: { type: "text", label: "Принадлежность" },
   role: { type: "text", label: "Должность" },
+  race: { type: "text", label: "Раса" },
+  age: { type: "text", label: "Возраст" },
+  gender: { type: "text", label: "Пол" },
+  appearance: { type: "textarea", label: "Описание внешности" },
   portrait: { type: "image", label: "Портрет (изображение)" },
   status: { type: "select", label: "Статус", options: ["alive","deceased","missing"] },
   countryAName: { type: "text", label: "Страна A" },
@@ -318,54 +322,103 @@ function EntityFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="parchment gold-frame max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="parchment gold-frame max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{title}</DialogTitle>
+          <DialogTitle className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{title}</DialogTitle>
           <DialogDescription className="parchment-muted">Внеси изменения в свиток</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          {fields.map((f) => {
+        <div className="space-y-4">
+          {/* Group image fields separately (full width) */}
+          {fields.filter((f) => FIELD_META[f]?.type === "image").map((f) => {
             const meta = FIELD_META[f];
-            if (!meta) return null;
-            if (meta.type === "image") {
-              return (
-                <div key={f} className="space-y-1">
-                  <ImageUpload
-                    label={meta.label}
-                    value={getVal(f) || null}
-                    onChange={(v) => setVal(f, v)}
-                    aspect="aspect-video"
-                  />
-                </div>
-              );
-            }
             return (
               <div key={f} className="space-y-1">
-                <Label className="parchment-heading text-sm">{meta.label}</Label>
-                {meta.type === "textarea" ? (
-                  <Textarea value={getVal(f)} onChange={(e) => setVal(f, e.target.value)} rows={3} className="bg-parchment/60 border-parchment-dark/40" />
-                ) : meta.type === "select" ? (
+                <ImageUpload
+                  label={meta.label}
+                  value={getVal(f) || null}
+                  onChange={(v) => setVal(f, v)}
+                  aspect="aspect-video"
+                />
+              </div>
+            );
+          })}
+
+          {/* Text + select fields — 2-column grid for compact, 1-column for textarea/select */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {fields.filter((f) => FIELD_META[f]?.type === "text").map((f) => {
+              const meta = FIELD_META[f];
+              return (
+                <div key={f} className="space-y-1">
+                  <Label className="parchment-heading text-sm">{meta.label}</Label>
+                  <Input value={getVal(f)} onChange={(e) => setVal(f, e.target.value)} className="bg-parchment/60 border-parchment-dark/40 h-10" />
+                </div>
+              );
+            })}
+            {fields.filter((f) => FIELD_META[f]?.type === "select").map((f) => {
+              const meta = FIELD_META[f];
+              return (
+                <div key={f} className="space-y-1">
+                  <Label className="parchment-heading text-sm">{meta.label}</Label>
                   <Select value={getVal(f)} onValueChange={(v) => setVal(f, v)}>
-                    <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue placeholder="Выбери..." /></SelectTrigger>
+                    <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 h-10"><SelectValue placeholder="Выбери..." /></SelectTrigger>
                     <SelectContent className="parchment">
                       {meta.options!.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                ) : (
-                  <Input value={getVal(f)} onChange={(e) => setVal(f, e.target.value)} className="bg-parchment/60 border-parchment-dark/40" />
-                )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Textareas — full width */}
+          {fields.filter((f) => FIELD_META[f]?.type === "textarea").map((f) => {
+            const meta = FIELD_META[f];
+            return (
+              <div key={f} className="space-y-1">
+                <Label className="parchment-heading text-sm">{meta.label}</Label>
+                <Textarea value={getVal(f)} onChange={(e) => setVal(f, e.target.value)} rows={4} className="bg-parchment/60 border-parchment-dark/40" />
               </div>
             );
           })}
+
+          {/* Visibility selector for personality entity */}
+          {fields.includes("status") && (
+            <VisibilitySelector
+              label="Видимость для группы"
+              value={getVal("visibleGroupId") || ""}
+              onChange={(v) => setVal("visibleGroupId", v || null)}
+            />
+          )}
         </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="parchment-muted">Отмена</Button>
+        <div className="flex justify-end gap-2 pt-2 sticky bottom-0 bg-parchment/90 backdrop-blur-sm pb-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="btn-parchment">Отмена</Button>
           <Button onClick={() => onSave({ ...current, ...form })} disabled={pending} className="bg-primary text-primary-foreground btn-rune">
             {pending ? "Пишем..." : "Сохранить"}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* Visibility selector — picks a group (or "all") for personality/grimoire */
+function VisibilitySelector({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const { data: groups } = useQuery<any[]>({ queryKey: ["groups"], queryFn: () => fetch("/api/groups").then((r) => r.json()) });
+  return (
+    <div className="space-y-1 pt-3 border-t border-parchment-dark/30">
+      <Label className="parchment-heading text-sm">{label}</Label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text h-10"
+      >
+        <option value="">Всем (без ограничения)</option>
+        {(Array.isArray(groups) ? groups : []).map((g) => (
+          <option key={g.id} value={g.id}>{g.name}</option>
+        ))}
+      </select>
+      <p className="parchment-muted text-xs italic">Если выбрать группу — запись увидят только члены этой группы. Иначе — все.</p>
+    </div>
   );
 }
 
@@ -556,27 +609,73 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
   const setVal = (f:string,v:any) => setForm({...form,[f]:v});
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="parchment gold-frame max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id?"Редактировать":"Создать"} главу</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          <div><Label className="parchment-heading text-sm">Истинное название главы (видно когда открыто)</Label><Input value={getVal("title")} onChange={e=>setVal("title",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
-          <div><Label className="parchment-heading text-sm">Зашифрованное название (видно когда запечатано)</Label><Input value={getVal("encodedTitle") ?? ""} onChange={e=>setVal("encodedTitle",e.target.value)} placeholder="напр. ◈ Гл. III — Драконьи Шёпоты ◈" className="bg-parchment/60 border-parchment-dark/40"/></div>
-          <div><Label className="parchment-heading text-sm">Категория</Label>
-            <Select value={getVal("category")} onValueChange={v=>setVal("category",v)}>
-              <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue/></SelectTrigger>
-              <SelectContent className="parchment">{["SECRETS","RITUALS","PROPHECY","HISTORY","BEASTIARY"].map(o=><SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-            </Select>
+      <DialogContent className="parchment gold-frame max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{item?.id?"Редактировать":"Создать"} главу</DialogTitle></DialogHeader>
+
+        <div className="space-y-5">
+          {/* Секция 1: Основное */}
+          <div className="space-y-3 pb-3 border-b border-parchment-dark/30">
+            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Основное</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className="parchment-heading text-sm">Истинное название главы</Label>
+                <Input value={getVal("title")} onChange={e=>setVal("title",e.target.value)} placeholder="напр. Глава 1: Падение с Неба" className="bg-parchment/60 border-parchment-dark/40 h-10" />
+                <p className="parchment-muted text-xs italic mt-0.5">Видно, когда глава открыта</p>
+              </div>
+              <div>
+                <Label className="parchment-heading text-sm">Зашифрованное название</Label>
+                <Input value={getVal("encodedTitle") ?? ""} onChange={e=>setVal("encodedTitle",e.target.value)} placeholder="напр. ◈ Гл. I — ◼◼◼◼ ◼◼◼ ◼◼◼◼ ◼◼ ◼◼◼ ◼" className="bg-parchment/60 border-parchment-dark/40 h-10" />
+                <p className="parchment-muted text-xs italic mt-0.5">Видно, когда запечатана</p>
+              </div>
+              <div>
+                <Label className="parchment-heading text-sm">Категория</Label>
+                <Select value={getVal("category")} onValueChange={v=>setVal("category",v)}>
+                  <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 h-10"><SelectValue/></SelectTrigger>
+                  <SelectContent className="parchment">{["SECRETS","RITUALS","PROPHECY","HISTORY","BEASTIARY"].map(o=><SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="parchment-heading text-sm">Порядок</Label>
+                <Input type="number" value={getVal("order")??0} onChange={e=>setVal("order",Number(e.target.value))} className="bg-parchment/60 border-parchment-dark/40 h-10" />
+              </div>
+            </div>
+            {item?.id && (
+              <label className="flex items-center gap-2 cursor-pointer pt-1">
+                <input type="checkbox" id="unl" checked={!!getVal("unlocked")} onChange={e=>setVal("unlocked",e.target.checked)} className="w-4 h-4" />
+                <Label htmlFor="unl" className="parchment-heading text-sm">Глава открыта (печать снята)</Label>
+              </label>
+            )}
           </div>
-          <div><Label className="parchment-heading text-sm">Зашифрованный текст (виден когда запечатано)</Label><Textarea value={getVal("encodedContent")} onChange={e=>setVal("encodedContent",e.target.value)} rows={3} className="bg-parchment/60 border-parchment-dark/40"/></div>
-          <div><Label className="parchment-heading text-sm">Истинный текст (виден когда открыто)</Label><Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={4} className="bg-parchment/60 border-parchment-dark/40"/></div>
-          <div><Label className="parchment-heading text-sm">Подсказка для разблокировки</Label><Input value={getVal("unlockHint")??""} onChange={e=>setVal("unlockHint",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
-          <div><Label className="parchment-heading text-sm">Порядок</Label><Input type="number" value={getVal("order")??0} onChange={e=>setVal("order",Number(e.target.value))} className="bg-parchment/60 border-parchment-dark/40"/></div>
-          {item?.id && <div className="flex items-center gap-2"><input type="checkbox" id="unl" checked={!!getVal("unlocked")} onChange={e=>setVal("unlocked",e.target.checked)} /><Label htmlFor="unl" className="parchment-heading text-sm">Открыто</Label></div>}
-          <div className="pt-3 border-t border-parchment-dark/30">
-            <p className="parchment-heading text-sm mb-2">⚗ Условие авто-снятия печати</p>
-            <div className="grid grid-cols-2 gap-2">
+
+          {/* Секция 2: Содержание */}
+          <div className="space-y-3 pb-3 border-b border-parchment-dark/30">
+            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Содержание</p>
+            <div>
+              <Label className="parchment-heading text-sm">Зашифрованный текст</Label>
+              <Textarea value={getVal("encodedContent")} onChange={e=>setVal("encodedContent",e.target.value)} rows={4} placeholder="Cipher-текст, виден когда запечатано" className="bg-parchment/60 border-parchment-dark/40" />
+            </div>
+            <div>
+              <Label className="parchment-heading text-sm">Истинный текст главы</Label>
+              <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={6} placeholder="Настоящее содержание, виден когда глава открыта" className="bg-parchment/60 border-parchment-dark/40" />
+            </div>
+            <div>
+              <Label className="parchment-heading text-sm">Подсказка для разблокировки</Label>
+              <Input value={getVal("unlockHint")??""} onChange={e=>setVal("unlockHint",e.target.value)} placeholder="напр. Заверши три задания гильдии" className="bg-parchment/60 border-parchment-dark/40 h-10" />
+            </div>
+          </div>
+
+          {/* Секция 3: Видимость */}
+          <div className="space-y-2 pb-3 border-b border-parchment-dark/30">
+            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Видимость для групп</p>
+            <VisibilitySelector label="Какая группа видит главу" value={getVal("visibleGroupId") || ""} onChange={(v) => setVal("visibleGroupId", v || null)} />
+          </div>
+
+          {/* Секция 4: Условие авто-снятия */}
+          <div className="space-y-2">
+            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Условие авто-снятия печати</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select value={getVal("conditionType") || "MANUAL"} onValueChange={(v) => setVal("conditionType", v === "MANUAL" ? null : v)}>
-                <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue/></SelectTrigger>
+                <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 h-10"><SelectValue/></SelectTrigger>
                 <SelectContent className="parchment">
                   <SelectItem value="MANUAL">Вручную</SelectItem>
                   <SelectItem value="QUEST_COMPLETED">Задание завершено</SelectItem>
@@ -586,13 +685,14 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
                   <SelectItem value="ACHIEVEMENT_EARNED">Получено достижение</SelectItem>
                 </SelectContent>
               </Select>
-              <Input value={getVal("conditionValue")??""} onChange={e=>setVal("conditionValue",e.target.value)} placeholder="значение (ID/число)" className="bg-parchment/60 border-parchment-dark/40" disabled={!getVal("conditionType")||getVal("conditionType")==="MANUAL"}/>
+              <Input value={getVal("conditionValue")??""} onChange={e=>setVal("conditionValue",e.target.value)} placeholder="значение (ID/число)" className="bg-parchment/60 border-parchment-dark/40 h-10" disabled={!getVal("conditionType")||getVal("conditionType")==="MANUAL"}/>
             </div>
-            <p className="parchment-muted text-xs mt-1 italic">При исполнении условия печать снимется автоматически для всех героев.</p>
+            <p className="parchment-muted text-xs italic">При исполнении условия печать снимется автоматически для героев, видящих главу.</p>
           </div>
         </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={()=>onOpenChange(false)} className="parchment-muted">Отмена</Button>
+
+        <div className="flex justify-end gap-2 pt-3 sticky bottom-0 bg-parchment/90 backdrop-blur-sm pb-2">
+          <Button variant="ghost" onClick={()=>onOpenChange(false)} className="btn-parchment">Отмена</Button>
           <Button onClick={()=>onSave({...current,...form})} disabled={pending} className="bg-primary text-primary-foreground btn-rune">{pending?"Пишем...":"Сохранить"}</Button>
         </div>
       </DialogContent>
@@ -1209,10 +1309,20 @@ function GroupForm({ onSave, pending }: { onSave: (b: any) => void; pending: boo
 
 /* ===== CONTENT EDITOR (редактируемые тексты страниц) ===== */
 const CONTENT_KEYS = [
-  { key: "guild_history", label: "История Гильдии" },
-  { key: "guild_motto", label: "Девиз Гильдии" },
-  { key: "guild_halls", label: "Залы Гильдии" },
-  { key: "hall_intro", label: "Описание Зала (главная)" },
+  // Зал (главная)
+  { key: "hall_intro", label: "Зал — вступительный текст", section: "Зал" },
+  // Гильдия
+  { key: "guild_history", label: "Гильдия — история", section: "Гильдия" },
+  { key: "guild_motto", label: "Гильдия — девиз", section: "Гильдия" },
+  { key: "guild_halls", label: "Гильдия — залы", section: "Гильдия" },
+  { key: "guild_intro", label: "Гильдия — вступление", section: "Гильдия" },
+  { key: "guild_ranks_intro", label: "Гильдия — вступление к рангам", section: "Гильдия" },
+  // База Знаний
+  { key: "knowledge_intro", label: "База Знаний — вступление", section: "База Знаний" },
+  // Гримуар
+  { key: "grimoire_intro", label: "Гримуар — вступление", section: "Гримуар" },
+  // Лаборатория Алого
+  { key: "lab_intro", label: "Лаборатория Алого — вступление", section: "Лаборатория Алого" },
 ];
 
 function ContentEditor() {
@@ -1229,34 +1339,48 @@ function ContentEditor() {
   });
 
   return (
-    <div className="space-y-4">
-      <h3 className="font-[family-name:var(--font-cinzel)] text-lg text-gold">Контент страниц</h3>
-      <p className="parchment-muted text-sm italic">Здесь ты редактируешь все тексты на страницах сайта — историю гильдии, девиз, залы, описание главной. Изменения видны мгновенно.</p>
-      {CONTENT_KEYS.map((ck) => {
-        const cur = map[ck.key];
-        const draft = drafts[ck.key];
-        const title = draft ? draft.title : (cur?.title ?? "");
-        const body = draft ? draft.body : (cur?.body ?? "");
-        const image = draft ? draft.image : (cur?.image ?? null);
-        const changed = draft && (draft.title !== (cur?.title ?? "") || draft.body !== (cur?.body ?? "") || draft.image !== (cur?.image ?? null));
-        return (
-          <ParchmentCard key={ck.key} className="space-y-3">
-            <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{ck.label}</h4>
-            <div>
-              <Label className="parchment-heading text-xs">Заголовок</Label>
-              <Input value={title} onChange={(e) => setDrafts({ ...drafts, [ck.key]: { title: e.target.value, body, image } })} className="bg-parchment/60 border-parchment-dark/40" />
-            </div>
-            <div>
-              <Label className="parchment-heading text-xs">Текст</Label>
-              <Textarea value={body} onChange={(e) => setDrafts({ ...drafts, [ck.key]: { title, body: e.target.value, image } })} rows={5} className="bg-parchment/60 border-parchment-dark/40" />
-            </div>
-            <ImageUpload label="Изображение (опц.)" value={image} onChange={(v) => setDrafts({ ...drafts, [ck.key]: { title: title, body: body, image: v } })} aspect="aspect-video" />
-            <div className="flex justify-end">
-              <Button size="sm" onClick={() => { saveMut.mutate({ key: ck.key, title, body, image }); setDrafts({ ...drafts, [ck.key]: { title, body, image } }); }} disabled={!changed || saveMut.isPending} className="btn-wine-solid h-9 px-3">Сохранить</Button>
-            </div>
-          </ParchmentCard>
-        );
-      })}
+    <div className="space-y-6">
+      <div>
+        <h3 className="font-[family-name:var(--font-cinzel)] text-lg text-gold">Контент страниц</h3>
+        <p className="parchment-muted text-sm italic">Здесь ты редактируешь все вступительные тексты на страницах сайта. Изменения видны мгновенно.</p>
+      </div>
+      {/* Группировка по секциям */}
+      {Object.entries(
+        CONTENT_KEYS.reduce<Record<string, typeof CONTENT_KEYS>>((acc, ck) => {
+          const s = ck.section || "Прочее";
+          (acc[s] = acc[s] || []).push(ck);
+          return acc;
+        }, {})
+      ).map(([section, keys]) => (
+        <div key={section} className="space-y-3">
+          <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ {section}</p>
+          {keys.map((ck) => {
+            const cur = map[ck.key];
+            const draft = drafts[ck.key];
+            const title = draft ? draft.title : (cur?.title ?? "");
+            const body = draft ? draft.body : (cur?.body ?? "");
+            const image = draft ? draft.image : (cur?.image ?? null);
+            const changed = draft && (draft.title !== (cur?.title ?? "") || draft.body !== (cur?.body ?? "") || draft.image !== (cur?.image ?? null));
+            return (
+              <ParchmentCard key={ck.key} className="space-y-3">
+                <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading text-base">{ck.label}</h4>
+                <div>
+                  <Label className="parchment-heading text-xs">Заголовок</Label>
+                  <Input value={title} onChange={(e) => setDrafts({ ...drafts, [ck.key]: { title: e.target.value, body, image } })} className="bg-parchment/60 border-parchment-dark/40 h-10" />
+                </div>
+                <div>
+                  <Label className="parchment-heading text-xs">Текст</Label>
+                  <Textarea value={body} onChange={(e) => setDrafts({ ...drafts, [ck.key]: { title, body: e.target.value, image } })} rows={5} className="bg-parchment/60 border-parchment-dark/40" />
+                </div>
+                <ImageUpload label="Изображение (опц.)" value={image} onChange={(v) => setDrafts({ ...drafts, [ck.key]: { title: title, body: body, image: v } })} aspect="aspect-video" />
+                <div className="flex justify-end">
+                  <Button size="sm" onClick={() => { saveMut.mutate({ key: ck.key, title, body, image }); setDrafts({ ...drafts, [ck.key]: { title, body, image } }); }} disabled={!changed || saveMut.isPending} className="btn-wine-solid h-9 px-3">Сохранить</Button>
+                </div>
+              </ParchmentCard>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }

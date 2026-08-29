@@ -27,6 +27,8 @@ export function LabView() {
     queryKey: ["lab"],
     queryFn: () => fetch("/api/lab").then((r) => r.json()),
   });
+  const { data: content } = useQuery<any[]>({ queryKey: ["site-content"], queryFn: () => fetch("/api/content").then((r) => r.json()).catch(() => []) });
+  const intro = (Array.isArray(content) ? content : []).find((c: any) => c.key === "lab_intro");
 
   const all = Array.isArray(data) ? data : [];
   const items = all
@@ -57,10 +59,7 @@ export function LabView() {
           Лаборатория Алого
         </OrnamentTitle>
         <p className="text-foreground/70 font-[family-name:var(--font-garamond)] italic max-w-2xl mx-auto">
-          Здесь Божество записывает свои авторские механики — кастомные расы,
-          классы и подклассы, оригинальные заклинания и магические предметы, что
-          существуют лишь в этом мире. Всё, что рождено фантазией Мастера, обретает
-          плоть в этих свитках.
+          {intro?.body || "Здесь Божество записывает свои авторские механики — кастомные расы, классы, заклинания и магические предметы."}
         </p>
       </div>
 

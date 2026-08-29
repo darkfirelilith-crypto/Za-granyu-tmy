@@ -112,9 +112,15 @@ model Personality {
   title       String?
   description String
   portrait    String?
+  race        String?  // раса (человек, эльф, гном, ...)
+  age         String?  // возраст (строка — может быть "неизвестно" или "~300 лет")
+  gender      String?  // пол
+  appearance  String?  // описание внешности
   affiliation String?  // country name / faction
   role        String?  // king, archmage, etc.
   status      String   @default("alive") // alive | deceased | missing
+  // Visibility: null = visible to everyone; otherwise only visible to members of the listed group
+  visibleGroupId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   groupNpcs       GroupNpc[]
@@ -217,6 +223,8 @@ model GrimoireEntry {
   // Auto-unlock condition: conditionType in {QUEST_COMPLETED, XP_THRESHOLD, RANK_REACHED, ACHIEVEMENT_EARNED, MANUAL}
   conditionType  String?
   conditionValue String?
+  // Visibility: null = visible to everyone; otherwise only visible to members of this group
+  visibleGroupId String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
