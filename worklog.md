@@ -158,3 +158,28 @@ Unresolved / Next-phase:
 - User should reset Fer/Dantalion passwords to their own (I set temp ones for QA).
 - Neon/GitHub/Vercel tokens still active — user should revoke (published in chat).
 - More seed lore / lab entries optional.
+
+---
+Task ID: user-request-5 (groups visibility, NPC fields, large forms, editable content all pages)
+Agent: main
+Task: Player groups for visibility, NPC personality fields, bigger split forms, editable content on all pages
+
+Work Log:
+- Schema (Neon prod pushed via direct connection): Personality +race/age/gender/appearance/visibleGroupId; GrimoireEntry +visibleGroupId. All columns verified in prod.
+- API: /api/grimoire and /api/lore/personalities now filter by group membership for players (admin sees all). visibleGroupId null = visible to everyone.
+- Admin forms: EntityFormDialog rebuilt — max-w-3xl, 2-column grid for text/select fields, full-width for image/textarea, h-10 inputs, section headers, sticky save bar. GrimoireFormDialog — 4 sections (❖ Основное / Содержание / Видимость / Условие), visibility group selector.
+- Admin: VisibilitySelector component — picks group for personality/grimoire visibility.
+- SiteContent: 9 keys now (hall_intro, guild_history/motto/halls/intro/ranks_intro, knowledge_intro, grimoire_intro, lab_intro). Seeded all on Neon.
+- Views: Knowledge/Guild/Grimoire/Lab read their intros from SiteContent.
+- Grimoire UI: "👥 Только группа" badge for admin when visibleGroupId set.
+- Code pushed to GitHub (commit c78dd79). Vercel auto-deploy triggered.
+
+Status / Verification:
+- Neon DB: all new columns present and verified.
+- GitHub: c78dd79 on main, pushed successfully.
+- Vercel auto-deploy: site returns HTTP 200, but Prisma client on Vercel still uses OLD generated client (missing new fields) — POST with new fields (race/age) returns 500; minimal POST returns 201 but response lacks new fields. This means Vercel needs a fresh rebuild (postinstall: prisma generate) — the build cache may be stale. User needs to manually Redeploy with "Use existing build cache" UNCHECKED, OR provide a new Vercel token so I can trigger via API.
+
+Action needed from user:
+1. Either: Go to Vercel → Deployments → last deploy → ... → Redeploy → UNCHECK "Use existing build cache" → Redeploy. This forces a fresh `prisma generate`.
+2. Or: Provide a fresh Vercel token (previous one revoked) so I can trigger via API.
+3. After redeploy: login as admin, test creating a personality with race/age — should work and return new fields.
