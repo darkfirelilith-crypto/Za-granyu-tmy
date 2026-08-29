@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ImageUpload } from "@/components/fantasy/image-upload";
-import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Users as UsersIcon, Sword, Sparkles, Scale, Sun, BookMarked, Link2, Trophy, Star, FlaskConical, ShieldCheck, UserPlus, KeyRound } from "lucide-react";
+import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Users as UsersIcon, Sword, Sparkles, Scale, Sun, BookMarked, Link2, Trophy, Star, FlaskConical, ShieldCheck, UserPlus, KeyRound, Users, FileText, X } from "lucide-react";
 
 const ENTITIES = {
   countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries", fields: ["name","description","emblem","banner","capital","government","population","culture","climate"] },
@@ -47,6 +47,8 @@ const SECTIONS = [
   { key: "grimoire", label: "Гримуар", icon: Sparkles },
   { key: "lab", label: "Лаборатория Алого", icon: FlaskConical },
   { key: "achievements", label: "Достижения", icon: Award },
+  { key: "groups", label: "Группы игроков", icon: Users },
+  { key: "content", label: "Контент страниц", icon: FileText },
   { key: "users", label: "Пользователи", icon: ShieldCheck },
 ] as const;
 
@@ -121,6 +123,8 @@ export function AdminView() {
           {section === "grimoire" && <GrimoireEditor />}
           {section === "lab" && <LabEditor />}
           {section === "achievements" && <AchievementsEditor />}
+          {section === "groups" && <GroupsEditor />}
+          {section === "content" && <ContentEditor />}
           {section === "users" && <UsersEditor />}
         </div>
       </div>
@@ -1036,6 +1040,223 @@ function CreateUserForm({ onSave, pending }: { onSave: (body: any) => void; pend
           {pending ? "Создаём..." : "Создать"}
         </Button>
       </div>
+    </div>
+  );
+}
+
+/* ===== GROUPS EDITOR (группы игроков + НПС) ===== */
+function GroupsEditor() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const { data: groups } = useQuery<any[]>({ queryKey: ["groups"], queryFn: () => fetch("/api/groups").then((r) => r.json()) });
+  const { data: characters } = useQuery<any[]>({ queryKey: ["characters"], queryFn: () => fetch("/api/characters").then((r) => r.json()) });
+  const { data: personalities } = useQuery<any[]>({ queryKey: ["personalities"], queryFn: () => fetch("/api/lore/personalities").then((r) => r.json()) });
+  const [creating, setCreating] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [addMemberGroup, setAddMemberGroup] = useState<string | null>(null);
+  const [addNpcGroup, setAddNpcGroup] = useState<string | null>(null);
+
+  const createMut = useMutation({
+    mutationFn: async (b: any) => fetch("/api/groups", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) => r.json()),
+    onSuccess: (res) => { if (res.error) { toast({ title: "Ошибка", description: res.error, variant: "destructive" }); return; } setCreating(false); qc.invalidateQueries({ queryKey: ["groups"] }); toast({ title: "Группа создана" }); },
+  });
+  const delMut = useMutation({ mutationFn: (id: string) => fetch(`/api/groups/${id}`, { method: "DELETE" }).then((r) => r.json()), onSuccess: () => { qc.invalidateQueries({ queryKey: ["groups"] }); toast({ title: "Группа распущена" }); } });
+
+  const addMemberMut = useMutation({
+    mutationFn: async ({ groupId, characterId, role }: any) => fetch(`/api/groups/${groupId}/members`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ characterId, role }) }).then((r) => r.json()),
+    onSuccess: () => { setAddMemberGroup(null); qc.invalidateQueries({ queryKey: ["groups"] }); toast({ title: "Игрок добавлен" }); },
+  });
+  const removeMemberMut = useMutation({
+    mutationFn: async ({ groupId, characterId }: any) => fetch(`/api/groups/${groupId}/members?characterId=${characterId}`, { method: "DELETE" }).then((r) => r.json()),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["groups"] }); toast({ title: "Игрок исключён" }); },
+  });
+  const addNpcMut = useMutation({
+    mutationFn: async ({ groupId, personalityId, role, notes }: any) => fetch(`/api/groups/${groupId}/npcs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ personalityId, role, notes }) }).then((r) => r.json()),
+    onSuccess: () => { setAddNpcGroup(null); qc.invalidateQueries({ queryKey: ["groups"] }); toast({ title: "НПС приписан" }); },
+  });
+  const removeNpcMut = useMutation({
+    mutationFn: async ({ groupId, personalityId }: any) => fetch(`/api/groups/${groupId}/npcs?personalityId=${personalityId}`, { method: "DELETE" }).then((r) => r.json()),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["groups"] }); toast({ title: "НПС убран" }); },
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="font-[family-name:var(--font-cinzel)] text-lg text-gold">Группы игроков</h3>
+        <Button onClick={() => setCreating(true)} className="btn-rune bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-1" /> Создать группу</Button>
+      </div>
+      <p className="parchment-muted text-sm italic">Группируй игроков одной кампании. К группе можно приписать НПС, с которыми группа встретилась и контактировала.</p>
+
+      {(groups ?? []).map((g) => (
+        <ParchmentCard key={g.id} className="space-y-3">
+          <div className="flex items-start justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-lg overflow-hidden gold-frame shrink-0 bg-parchment-dark/20 flex items-center justify-center">
+                {g.image ? <img src={g.image} alt={g.name} className="w-full h-full object-cover" /> : <span className="text-2xl">⚔️</span>}
+              </div>
+              <div>
+                <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading text-lg">{g.name}</h4>
+                {g.description && <p className="parchment-muted text-sm">{g.description}</p>}
+              </div>
+            </div>
+            <div className="flex gap-1">
+              <Button size="sm" variant="ghost" onClick={() => setExpanded(expanded === g.id ? null : g.id)} className="btn-parchment h-8 px-3 text-xs">{expanded === g.id ? "Свернуть" : "Открыть"}</Button>
+              <Button size="icon" variant="ghost" onClick={() => { if (confirm("Распустить группу?")) delMut.mutate(g.id); }} className="text-destructive hover:bg-destructive/10 h-8 w-8"><Trash2 className="w-4 h-4" /></Button>
+            </div>
+          </div>
+
+          {expanded === g.id && (
+            <div className="pt-3 border-t border-parchment-dark/20 space-y-4">
+              {/* Members */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="parchment-heading text-sm">Игроки ({g.members?.length || 0})</p>
+                  <Button size="sm" variant="ghost" onClick={() => setAddMemberGroup(g.id)} className="btn-parchment h-7 px-2 text-xs"><Plus className="w-3 h-3 mr-1" /> Добавить</Button>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {(g.members ?? []).map((m: any) => (
+                    <div key={m.id} className="flex items-center gap-2 p-2 rounded border border-parchment-dark/20 bg-parchment/40">
+                      <div className="w-8 h-8 rounded overflow-hidden bg-parchment-dark/20 shrink-0 flex items-center justify-center">
+                        {m.character?.portrait ? <img src={m.character.portrait} alt="" className="w-full h-full object-cover" /> : <span className="text-sm">⚔️</span>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading truncate">{m.character?.name}</p>
+                        <p className="text-xs parchment-muted">{m.role || "Член"} · {m.character?.race} {m.character?.charClass}</p>
+                      </div>
+                      <Button size="icon" variant="ghost" onClick={() => removeMemberMut.mutate({ groupId: g.id, characterId: m.characterId })} className="text-destructive hover:bg-destructive/10 h-6 w-6 shrink-0"><X className="w-3 h-3" /></Button>
+                    </div>
+                  ))}
+                  {(g.members ?? []).length === 0 && <p className="parchment-muted text-xs italic">Игроков пока нет.</p>}
+                </div>
+                {addMemberGroup === g.id && (
+                  <div className="mt-2 flex gap-2 items-end">
+                    <select id={`m-${g.id}`} className="flex-1 px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm">
+                      {(characters ?? []).filter((c) => !(g.members ?? []).some((m: any) => m.characterId === c.id)).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <input id={`r-${g.id}`} placeholder="роль" className="px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm w-28" />
+                    <Button size="sm" onClick={() => { const sel = document.getElementById(`m-${g.id}`) as HTMLSelectElement; const role = (document.getElementById(`r-${g.id}`) as HTMLInputElement).value; addMemberMut.mutate({ groupId: g.id, characterId: sel.value, role: role || undefined }); }} className="btn-wine-solid h-8 px-3 text-xs">Добавить</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setAddMemberGroup(null)} className="btn-parchment h-8 px-3 text-xs">Отмена</Button>
+                  </div>
+                )}
+              </div>
+
+              {/* NPCs */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="parchment-heading text-sm">Встреченные НПС ({g.npcs?.length || 0})</p>
+                  <Button size="sm" variant="ghost" onClick={() => setAddNpcGroup(g.id)} className="btn-parchment h-7 px-2 text-xs"><Plus className="w-3 h-3 mr-1" /> Приписать</Button>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {(g.npcs ?? []).map((n: any) => (
+                    <div key={n.id} className="flex items-start gap-2 p-2 rounded border border-parchment-dark/20 bg-parchment/40">
+                      <div className="w-8 h-8 rounded overflow-hidden bg-parchment-dark/20 shrink-0 flex items-center justify-center">
+                        {n.personality?.portrait ? <img src={n.personality.portrait} alt="" className="w-full h-full object-cover" /> : <span className="text-sm">👤</span>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading truncate">{n.personality?.name}</p>
+                        <p className="text-xs parchment-muted">{n.role || "Контакт"}{n.notes ? ` · ${n.notes}` : ""}</p>
+                      </div>
+                      <Button size="icon" variant="ghost" onClick={() => removeNpcMut.mutate({ groupId: g.id, personalityId: n.personalityId })} className="text-destructive hover:bg-destructive/10 h-6 w-6 shrink-0"><X className="w-3 h-3" /></Button>
+                    </div>
+                  ))}
+                  {(g.npcs ?? []).length === 0 && <p className="parchment-muted text-xs italic">НПС пока не приписаны.</p>}
+                </div>
+                {addNpcGroup === g.id && (
+                  <div className="mt-2 space-y-2">
+                    <select id={`npc-${g.id}`} className="w-full px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm">
+                      {(personalities ?? []).filter((p) => !(g.npcs ?? []).some((n: any) => n.personalityId === p.id)).map((p) => <option key={p.id} value={p.id}>{p.name}{p.title ? ` — ${p.title}` : ""}</option>)}
+                    </select>
+                    <input id={`nrole-${g.id}`} placeholder="роль (Союзник/Контакт/Враг...)" className="w-full px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm" />
+                    <input id={`nnotes-${g.id}`} placeholder="заметки" className="w-full px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm" />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => { const npc = (document.getElementById(`npc-${g.id}`) as HTMLSelectElement).value; const role = (document.getElementById(`nrole-${g.id}`) as HTMLInputElement).value; const notes = (document.getElementById(`nnotes-${g.id}`) as HTMLInputElement).value; addNpcMut.mutate({ groupId: g.id, personalityId: npc, role: role || undefined, notes: notes || undefined }); }} className="btn-wine-solid h-8 px-3 text-xs">Приписать</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setAddNpcGroup(null)} className="btn-parchment h-8 px-3 text-xs">Отмена</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </ParchmentCard>
+      ))}
+      {(groups ?? []).length === 0 && <p className="text-center parchment-muted italic py-8">Групп пока нет. Создай первую, чтобы объединить игроков.</p>}
+
+      <Dialog open={creating} onOpenChange={setCreating}>
+        <DialogContent className="parchment gold-frame max-w-md">
+          <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">Создать группу</DialogTitle></DialogHeader>
+          <GroupForm onSave={(b) => createMut.mutate(b)} pending={createMut.isPending} />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function GroupForm({ onSave, pending }: { onSave: (b: any) => void; pending: boolean }) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [image, setImage] = useState<string | null>(null);
+  return (
+    <div className="space-y-3">
+      <div><Label className="parchment-heading text-sm">Название группы</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="напр. Компания «Серебряное Пламя»" className="bg-parchment/60 border-parchment-dark/40" /></div>
+      <div><Label className="parchment-heading text-sm">Описание</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Краткое описание группы" className="bg-parchment/60 border-parchment-dark/40" /></div>
+      <ImageUpload label="Герб / эмблема" value={image} onChange={setImage} aspect="aspect-video" />
+      <div className="flex justify-end gap-2 pt-2">
+        <Button onClick={() => onSave({ name, description, image: image || undefined })} disabled={!name || pending} className="bg-primary text-primary-foreground btn-rune">{pending ? "Создаём..." : "Создать"}</Button>
+      </div>
+    </div>
+  );
+}
+
+/* ===== CONTENT EDITOR (редактируемые тексты страниц) ===== */
+const CONTENT_KEYS = [
+  { key: "guild_history", label: "История Гильдии" },
+  { key: "guild_motto", label: "Девиз Гильдии" },
+  { key: "guild_halls", label: "Залы Гильдии" },
+  { key: "hall_intro", label: "Описание Зала (главная)" },
+];
+
+function ContentEditor() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const { data } = useQuery<any[]>({ queryKey: ["site-content"], queryFn: () => fetch("/api/content").then((r) => r.json()) });
+  const map: Record<string, any> = {};
+  (Array.isArray(data) ? data : []).forEach((c: any) => { map[c.key] = c; });
+  const [drafts, setDrafts] = useState<Record<string, { title: string; body: string; image: string | null }>>({});
+
+  const saveMut = useMutation({
+    mutationFn: async ({ key, title, body, image }: any) => fetch(`/api/content/${key}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, body, image }) }).then((r) => r.json()),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["site-content"] }); toast({ title: "Контент сохранён" }); },
+  });
+
+  return (
+    <div className="space-y-4">
+      <h3 className="font-[family-name:var(--font-cinzel)] text-lg text-gold">Контент страниц</h3>
+      <p className="parchment-muted text-sm italic">Здесь ты редактируешь все тексты на страницах сайта — историю гильдии, девиз, залы, описание главной. Изменения видны мгновенно.</p>
+      {CONTENT_KEYS.map((ck) => {
+        const cur = map[ck.key];
+        const draft = drafts[ck.key];
+        const title = draft ? draft.title : (cur?.title ?? "");
+        const body = draft ? draft.body : (cur?.body ?? "");
+        const image = draft ? draft.image : (cur?.image ?? null);
+        const changed = draft && (draft.title !== (cur?.title ?? "") || draft.body !== (cur?.body ?? "") || draft.image !== (cur?.image ?? null));
+        return (
+          <ParchmentCard key={ck.key} className="space-y-3">
+            <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{ck.label}</h4>
+            <div>
+              <Label className="parchment-heading text-xs">Заголовок</Label>
+              <Input value={title} onChange={(e) => setDrafts({ ...drafts, [ck.key]: { title: e.target.value, body, image } })} className="bg-parchment/60 border-parchment-dark/40" />
+            </div>
+            <div>
+              <Label className="parchment-heading text-xs">Текст</Label>
+              <Textarea value={body} onChange={(e) => setDrafts({ ...drafts, [ck.key]: { title, body: e.target.value, image } })} rows={5} className="bg-parchment/60 border-parchment-dark/40" />
+            </div>
+            <ImageUpload label="Изображение (опц.)" value={image} onChange={(v) => setDrafts({ ...drafts, [ck.key]: { title: title, body: body, image: v } })} aspect="aspect-video" />
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => { saveMut.mutate({ key: ck.key, title, body, image }); setDrafts({ ...drafts, [ck.key]: { title, body, image } }); }} disabled={!changed || saveMut.isPending} className="btn-wine-solid h-9 px-3">Сохранить</Button>
+            </div>
+          </ParchmentCard>
+        );
+      })}
     </div>
   );
 }

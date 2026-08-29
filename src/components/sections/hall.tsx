@@ -2,185 +2,172 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { OrnamentTitle } from "@/components/fantasy/ornament-title";
-import { ParchmentCard, RuneSeal } from "@/components/fantasy/ui";
-import { Button } from "@/components/ui/button";
-import { BookOpen, Sword, Sparkles, ScrollText, MapPin, Users, Crown, Flame } from "lucide-react";
+import { ParchmentCard } from "@/components/fantasy/ui";
+import { useQuery as useRQ } from "@tanstack/react-query";
 import type { View } from "@/lib/types";
+import { useEffect, useRef, useState } from "react";
+import { BookOpen, Sword, Sparkles, FlaskConical, ChevronLeft, ChevronRight } from "lucide-react";
 
 export function HallView({ onNavigate }: { onNavigate: (v: View) => void }) {
-  const { data: counts } = useQuery({
-    queryKey: ["counts"],
+  // Gather all DB elements with image + name
+  const { data } = useQuery<any[]>({
+    queryKey: ["hall-carousel"],
     queryFn: async () => {
-      const [c, p, g, l, q] = await Promise.all([
-        fetch("/api/lore/countries").then((r) => r.json()),
-        fetch("/api/lore/personalities").then((r) => r.json()),
-        fetch("/api/lore/gods").then((r) => r.json()),
-        fetch("/api/lore/legends").then((r) => r.json()),
-        fetch("/api/guild/quests").then((r) => r.json()),
+      const [countries, personalities, gods, legends, grimoire, lab] = await Promise.all([
+        fetch("/api/lore/countries").then((r) => r.json()).catch(() => []),
+        fetch("/api/lore/personalities").then((r) => r.json()).catch(() => []),
+        fetch("/api/lore/gods").then((r) => r.json()).catch(() => []),
+        fetch("/api/lore/legends").then((r) => r.json()).catch(() => []),
+        fetch("/api/grimoire").then((r) => r.json()).catch(() => []),
+        fetch("/api/lab").then((r) => r.json()).catch(() => []),
       ]);
-      return {
-        countries: (c as any[]).length,
-        personalities: (p as any[]).length,
-        gods: (g as any[]).length,
-        legends: (l as any[]).length,
-        quests: (q as any[]).length,
-      };
+      const cards: HallCard[] = [];
+      (Array.isArray(countries) ? countries : []).forEach((c: any) => cards.push({ id: c.id, name: c.name, image: c.banner || null, emoji: c.emblem || "🗺️", kind: "country" as const }));
+      (Array.isArray(personalities) ? personalities : []).forEach((p: any) => cards.push({ id: p.id, name: p.name, image: p.portrait || null, emoji: "👤", kind: "personality" as const }));
+      (Array.isArray(gods) ? gods : []).forEach((g: any) => cards.push({ id: g.id, name: g.name, image: null, emoji: g.symbol || "✨", kind: "god" as const }));
+      (Array.isArray(legends) ? legends : []).forEach((l: any) => cards.push({ id: l.id, name: l.title, image: null, emoji: l.icon || "📖", kind: "legend" as const }));
+      (Array.isArray(grimoire) ? grimoire : []).forEach((g: any) => cards.push({ id: g.id, name: g.unlocked ? g.title : (g.encodedTitle || "◈ Глава ◈"), image: null, emoji: g.unlocked ? "📖" : "🔒", kind: "grimoire" as const }));
+      (Array.isArray(lab) ? lab : []).forEach((l: any) => cards.push({ id: l.id, name: l.name, image: l.image || null, emoji: l.icon || "🜂", kind: "lab" as const }));
+      return cards;
     },
   });
 
+  const cards = data ?? [];
+  const content = useContent();
+
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-6 py-10 md:py-16 space-y-12">
-      {/* Hero */}
-      <section className="text-center space-y-6 animate-reveal">
-        <div className="flex justify-center mb-4">
-          <div className="relative">
-            <RuneSeal icon={<Flame className="w-8 h-8 text-gold" />} size="lg" glow />
-          </div>
-        </div>
-        <OrnamentTitle size="xl" flourish="✦">
-          Добро пожаловать, странник
-        </OrnamentTitle>
+    <div className="max-w-6xl mx-auto px-4 md:px-6 py-10 md:py-14 space-y-10">
+      {/* Hero — minimal intro */}
+      <section className="text-center space-y-4 animate-reveal">
+        <OrnamentTitle size="xl" flourish="✦">За гранью тьмы</OrnamentTitle>
         <p className="max-w-2xl mx-auto text-foreground/80 font-[family-name:var(--font-garamond)] text-lg md:text-xl leading-relaxed italic">
-          Перед тобой — врата в мир, что за гранью тьмы. Здесь, среди пыльных свитков и мерцающих
-          рун, хранятся предания шести народов, деяния героев и тайны, что дремлют
-          за печатью Гримуара. Войди, и пусть перо летописца запишет и твоё имя.
+          {content?.hall_intro || "Перед тобой — врата в мир, что за гранью тьмы. Листай свитки и найди свой путь."}
         </p>
         <div className="flex flex-wrap justify-center gap-3 pt-2">
-          <Button
-            onClick={() => onNavigate("knowledge")}
-            className="btn-rune bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
-            <BookOpen className="w-4 h-4 mr-2" />
-            Открыть Базу Знаний
-          </Button>
-          <Button
-            onClick={() => onNavigate("guild")}
-            variant="outline"
-            className="btn-rune border-gold/40 text-gold hover:bg-gold/10"
-          >
-            <Sword className="w-4 h-4 mr-2" />
-            Войти в Гильдию
-          </Button>
-          <Button
-            onClick={() => onNavigate("grimoire")}
-            variant="ghost"
-            className="btn-rune text-foreground/70 hover:text-gold"
-          >
-            <Sparkles className="w-4 h-4 mr-2" />
-            Тайный Гримуар
-          </Button>
+          <NavBtn icon={BookOpen} label="База Знаний" onClick={() => onNavigate("knowledge")} />
+          <NavBtn icon={Sword} label="Гильдия" onClick={() => onNavigate("guild")} />
+          <NavBtn icon={Sparkles} label="Гримуар" onClick={() => onNavigate("grimoire")} />
+          <NavBtn icon={FlaskConical} label="Лаборатория Алого" onClick={() => onNavigate("lab")} />
         </div>
       </section>
 
-      {/* Three sections cards */}
+      {/* Auto-scrolling carousel of DB element cards */}
       <section>
-        <OrnamentTitle size="lg" className="mb-8">
-          Три Чертога Знания
-        </OrnamentTitle>
-        <div className="grid md:grid-cols-3 gap-6">
-          <ParchmentCard hover className="cursor-pointer text-center space-y-3" >
-            <div onClick={() => onNavigate("knowledge")} className="space-y-3">
-              <RuneSeal icon={<BookOpen className="w-7 h-7 text-wine" />} size="md" className="mx-auto" />
-              <h3 className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">
-                База Знаний
-              </h3>
-              <p className="parchment-muted text-sm leading-relaxed">
-                Древняя библиотека мира: страны и их нравы, личности, чьё имя вписано
-                в историю, союзы и распри, политические устои, пантеон богов и
-                легенды былых эпох.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 pt-2 text-xs parchment-muted">
-                <span className="px-2 py-0.5 rounded-full bg-parchment-dark/20">🗺️ {counts?.countries ?? "…"} стран</span>
-                <span className="px-2 py-0.5 rounded-full bg-parchment-dark/20">👑 {counts?.personalities ?? "…"} личностей</span>
-                <span className="px-2 py-0.5 rounded-full bg-parchment-dark/20">✨ {counts?.gods ?? "…"} богов</span>
-                <span className="px-2 py-0.5 rounded-full bg-parchment-dark/20">📖 {counts?.legends ?? "…"} легенд</span>
-              </div>
-            </div>
+        <OrnamentTitle size="md" flourish="❦" className="mb-6">Свитки мира</OrnamentTitle>
+        {cards.length === 0 ? (
+          <ParchmentCard className="text-center parchment-muted italic py-8">
+            Мир пока пуст. Божество наполнит его свитками — и они появятся здесь.
           </ParchmentCard>
+        ) : (
+          <Carousel cards={cards} onNavigate={onNavigate} />
+        )}
+      </section>
+    </div>
+  );
+}
 
-          <ParchmentCard hover className="cursor-pointer text-center space-y-3" >
-            <div onClick={() => onNavigate("guild")} className="space-y-3">
-              <RuneSeal icon={<Sword className="w-7 h-7 text-wine" />} size="md" className="mx-auto" />
-              <h3 className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">
-                Гильдия Авантюристов
-              </h3>
-              <p className="parchment-muted text-sm leading-relaxed">
-                Сводный дом искателей приключений. Ранги от Железного Искателя до
-                Мифического Чемпиона, задания разной опасности и реестр всех героев,
-                ступивших на путь.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 pt-2 text-xs parchment-muted">
-                <span className="px-2 py-0.5 rounded-full bg-parchment-dark/20">📜 {counts?.quests ?? "…"} заданий</span>
-                <span className="px-2 py-0.5 rounded-full bg-parchment-dark/20">🛡️ 5 рангов</span>
-              </div>
+interface HallCard {
+  id: string;
+  name: string;
+  image: string | null;
+  emoji: string;
+  kind: "country" | "personality" | "god" | "legend" | "grimoire" | "lab";
+}
+
+function NavBtn({ icon: Icon, label, onClick }: { icon: any; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="btn-rune bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md flex items-center gap-2"
+    >
+      <Icon className="w-4 h-4" />
+      {label}
+    </button>
+  );
+}
+
+function useContent() {
+  const { data } = useRQ<any[]>({
+    queryKey: ["site-content"],
+    queryFn: () => fetch("/api/content").then((r) => r.json()).catch(() => []),
+  });
+  const map: Record<string, any> = {};
+  (Array.isArray(data) ? data : []).forEach((c: any) => { map[c.key] = c; });
+  return { hall_intro: map.hall_intro?.body };
+}
+
+function Carousel({ cards, onNavigate }: { cards: HallCard[]; onNavigate: (v: View) => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [paused, setPaused] = useState(false);
+
+  // auto-scroll
+  useEffect(() => {
+    if (paused) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const id = setInterval(() => {
+      if (!el) return;
+      // if at end, jump back to start
+      if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 4) {
+        el.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        el.scrollBy({ left: 280, behavior: "smooth" });
+      }
+    }, 3500);
+    return () => clearInterval(id);
+  }, [paused]);
+
+  const scrollBy = (dir: number) => {
+    const el = scrollRef.current;
+    if (el) el.scrollBy({ left: dir * 320, behavior: "smooth" });
+  };
+
+  const navTarget: Record<HallCard["kind"], View> = {
+    country: "knowledge", personality: "knowledge", god: "knowledge", legend: "knowledge",
+    grimoire: "grimoire", lab: "lab",
+  };
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {/* arrows */}
+      <button onClick={() => scrollBy(-1)} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/80 border border-gold/30 text-gold hover:bg-gold/10 flex items-center justify-center" aria-label="Назад">
+        <ChevronLeft className="w-5 h-5" />
+      </button>
+      <button onClick={() => scrollBy(1)} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/80 border border-gold/30 text-gold hover:bg-gold/10 flex items-center justify-center" aria-label="Вперёд">
+        <ChevronRight className="w-5 h-5" />
+      </button>
+
+      <div
+        ref={scrollRef}
+        className="flex gap-4 overflow-x-auto scroll-smooth pb-2 fantasy-scroll"
+        style={{ scrollbarWidth: "thin" }}
+      >
+        {cards.map((c) => (
+          <button
+            key={`${c.kind}-${c.id}`}
+            onClick={() => onNavigate(navTarget[c.kind])}
+            className="shrink-0 w-64 text-left group"
+          >
+            <div className="h-44 w-64 rounded-lg overflow-hidden gold-frame bg-parchment-dark/20 flex items-center justify-center transition-all group-hover:gold-frame-hover">
+              {c.image ? (
+                <img src={c.image} alt={c.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-6xl">{c.emoji}</span>
+              )}
             </div>
-          </ParchmentCard>
-
-          <ParchmentCard hover className="cursor-pointer text-center space-y-3">
-            <div onClick={() => onNavigate("grimoire")} className="space-y-3">
-              <RuneSeal icon={<Sparkles className="w-7 h-7 text-magic-glow" />} size="md" className="mx-auto animate-magic" />
-              <h3 className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">
-                Тайный Гримуар
-              </h3>
-              <p className="parchment-muted text-sm leading-relaxed">
-                Запечатанный кодекс, страницы которого покрыты шифром. Лишь
-                исполнив условия сюжета, удостоишься снять печать и прочитать тайны,
-                что скрыты от непосвящённых.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 pt-2 text-xs parchment-muted">
-                <span className="px-2 py-0.5 rounded-full bg-parchment-dark/20">🔒 Зашифрован</span>
-              </div>
+            <div className="mt-2 text-center">
+              <p className="font-[family-name:var(--font-cinzel)] text-sm text-gold truncate">{c.name}</p>
             </div>
-          </ParchmentCard>
-        </div>
-      </section>
-
-      {/* World intro */}
-      <section className="max-w-3xl mx-auto">
-        <OrnamentTitle size="lg" className="mb-6">
-          О мире за гранью тьмы
-        </OrnamentTitle>
-        <ParchmentCard className="lore-prose drop-cap space-y-3">
-          <p>
-            <strong>Этот мир, что за гранью тьмы</strong> — древняя земля, сотканная из
-            шести свободных народов: людей королевства Эльдрион, эльфов Сильваниэля,
-            гномов подгорной твердыни Каз-Думар, вольных островитян и проклятых душ
-            Тёмных Пустошей. Триста лет назад мир едва не поглотил Лич-Владыка
-            Моргант, и хотя тьма была отбита, она не мертва — лишь спит.
-          </p>
-          <p>
-            Над землями возвышается пантеон Шестерых богов, а седьмой — изгнанный
-            Ноктюрис — шепчет из тени. Гильдия Авантюристов собирает под свои знамёна
-            всех, кто готов рискнуть жизнью ради чести, золота или истины. А в
-            глубинах тайного Гримуара покоятся пророчества, способные перевернуть
-            судьбу всего сущего.
-          </p>
-          <p className="text-center italic pt-2 parchment-muted">
-            Какую роль в этой саге сыграешь ты?
-          </p>
-        </ParchmentCard>
-      </section>
-
-      {/* Feature row */}
-      <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { icon: Users, title: "Профиль героя", desc: "Имя, лор, достижения" },
-          { icon: Crown, title: "Божество-Мастер", desc: "Управляй миром и игроками" },
-          { icon: MapPin, title: "Живой мир", desc: "Лор, страны, персонажи" },
-          { icon: ScrollText, title: "Достижения", desc: "Вручаются за деяния" },
-        ].map((f) => {
-          const Icon = f.icon;
-          return (
-            <ParchmentCard key={f.title} className="text-center space-y-2">
-              <Icon className="w-6 h-6 text-gold mx-auto" />
-              <h4 className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading">
-                {f.title}
-              </h4>
-              <p className="parchment-muted text-xs">{f.desc}</p>
-            </ParchmentCard>
-          );
-        })}
-      </section>
+          </button>
+        ))}
+      </div>
+      <p className="text-center text-xs parchment-muted/70 italic mt-3">
+        {paused ? "Прокрутка на паузе — наведи, чтобы листать вручную" : "✦ Свитки сменяются сами · наведи курсор, чтобы остановить · кликни, чтобы открыть ✦"}
+      </p>
     </div>
   );
 }

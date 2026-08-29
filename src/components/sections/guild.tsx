@@ -57,38 +57,28 @@ export function GuildView() {
 }
 
 function GuildInfo() {
+  const { data } = useQuery<any[]>({
+    queryKey: ["site-content"],
+    queryFn: () => fetch("/api/content").then((r) => r.json()).catch(() => []),
+  });
+  const map: Record<string, any> = {};
+  (Array.isArray(data) ? data : []).forEach((c: any) => { map[c.key] = c; });
   return (
     <div className="grid md:grid-cols-2 gap-5">
       <ParchmentCard className="lore-prose drop-cap space-y-3">
         <h3 className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">История Гильдии</h3>
-        <p>
-          Гильдия Авантюристов была основана спустя десять лет после Сумеречной
-          Войны, когда стало ясно: разрозненные герои не способны противостоять
-          новым угрозам. Шесть народов подписали <strong>Великий Устав Гильдии</strong>,
-          даровав ей право вербовать, награждать и судить искателей приключений
-          вне границ государств.
-        </p>
-        <p>
-          С тех пор любой, кто желает ступить на путь авантюры, обязан получить
-          <strong> знак Гильдии</strong>. Без него наём вне закона, а помощь в беде —
-          лишь дело доброго сердца, а не долга.
-        </p>
+        <div className="whitespace-pre-line">{map.guild_history?.body || "История ещё не записана Божеством."}</div>
       </ParchmentCard>
       <div className="space-y-4">
         <ParchmentCard className="space-y-2">
           <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">Девиз Гильдии</h3>
           <p className="text-center font-[family-name:var(--font-cinzel-decorative)] text-lg text-wine italic">
-            «Свет не гаснет, пока стоит хоть один»
+            {map.guild_motto?.body || "—"}
           </p>
         </ParchmentCard>
         <ParchmentCard className="space-y-2">
           <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">Залы Гильдии</h3>
-          <ul className="space-y-1.5 parchment-muted text-sm">
-            <li className="flex items-center gap-2"><MapPin className="w-4 h-4 text-wine" /> Аэтерхолд — главный зал</li>
-            <li className="flex items-center gap-2"><MapPin className="w-4 h-4 text-wine" /> Порт-Моррай — морской зал</li>
-            <li className="flex items-center gap-2"><MapPin className="w-4 h-4 text-wine" /> Каз-Думар — подгорный зал</li>
-            <li className="flex items-center gap-2"><MapPin className="w-4 h-4 text-wine" /> Аэнорэль — лесной зал</li>
-          </ul>
+          <div className="parchment-muted text-sm whitespace-pre-line">{map.guild_halls?.body || "Залы ещё не описаны."}</div>
         </ParchmentCard>
       </div>
     </div>

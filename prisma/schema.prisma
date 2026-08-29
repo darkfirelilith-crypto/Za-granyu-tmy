@@ -45,6 +45,9 @@ model Character {
   achievements CharacterAchievement[]
   questProgress QuestProgress[]
   notes       Note[]
+  groupMemberships GroupMember[]
+  relationsOwned   CharacterRelation[] @relation("RelationOwner")
+  relationsAsTarget CharacterRelation[] @relation("RelationTarget")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -114,6 +117,8 @@ model Personality {
   status      String   @default("alive") // alive | deceased | missing
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  groupNpcs       GroupNpc[]
+  characterRelations CharacterRelation[]
 }
 
 model CountryRelation {
@@ -231,5 +236,73 @@ model LabEntry {
   order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// ===== Editable Site Content (история гильдии, девиз, залы, описание зала) =====
+
+model SiteContent {
+  id        String   @id @default(cuid())
+  key       String   @unique // guild_history | guild_motto | guild_halls | hall_intro | hall_world | hall_features
+  title     String?
+  body      String?
+  image     String?  // base64 image (optional)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+// ===== Groups (кампания — объединение игроков + встреченные НПС) =====
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  image       String?  // base64 (герб / эмблема группы)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  members     GroupMember[]
+  npcs        GroupNpc[]
+}
+
+model GroupMember {
+  id          String   @id @default(cuid())
+  groupId     String
+  characterId String
+  role        String?  // напр. "Лидер", "Член", "Гость"
+  joinedAt    DateTime @default(now())
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, characterId])
+}
+
+model GroupNpc {
+  id             String   @id @default(cuid())
+  groupId        String
+  personalityId String
+  role           String?  // напр. "Союзник", "Контакт", "Враг", "Наставник"
+  notes          String?
+  addedAt        DateTime @default(now())
+  group          Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  personality    Personality @relation(fields: [personalityId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, personalityId])
+}
+
+// ===== Character relations (отношения персонажа с НПС и другими персонажами) =====
+
+model CharacterRelation {
+  id                  String   @id @default(cuid())
+  ownerId             String   // character who has the feeling
+  targetCharacterId   String?  // another player's character (nullable)
+  targetPersonalityId String?  // an NPC (nullable)
+  relationLabel       String   // напр. "Друг", "Враг", "Союзник", "Родственник", "Любим", "Ненависть", "Знакомый"
+  description         String?  // свободное описание отношения
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  owner               Character   @relation("RelationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  targetCharacter     Character?  @relation("RelationTarget", fields: [targetCharacterId], references: [id], onDelete: Cascade)
+  targetPersonality   Personality? @relation(fields: [targetPersonalityId], references: [id], onDelete: Cascade)
+
+  // exactly one of targetCharacterId/targetPersonalityId should be set (enforced in app)
 }
 
