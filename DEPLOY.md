@@ -69,37 +69,82 @@ git push -u origin main
 
 ## Шаг 4. Создать таблицы и залить admin-Божество в прод-БД
 
-Vercel не запускает миграции и seed автоматически — это нужно сделать один раз
-**локально, с прод-DATABASE_URL**. Это самый важный шаг.
+Vercel не запускает миграции и seed автоматически — это нужно сделать один раз.
 
-В терминале на твоей машине:
+> **⚠️ Важно для тех, у кого VPN:** локальный `npx prisma db push` может падать с
+> `P1017: Server has closed the connection` — VPN режет TCP-порт 5432. В этом
+> случае **используй Neon SQL Editor в браузере** (он работает по HTTPS,
+> VPN справляется). Инструкция ниже — оба варианта.
+
+---
+
+### Вариант А — через Neon SQL Editor (рекомендуется, если есть VPN)
+
+1. Открой [Neon Console](https://console.neon.tech) → твой проект → **SQL Editor**
+2. Открой файл `download/full-schema-from-scratch.sql` (из архива проекта)
+3. Скопируй **всё** содержимое, вставь в SQL Editor
+4. Нажми **Run** — создаст все 15 таблиц + индексы + внешние ключи
+5. Проверь: выполни в SQL Editor
+   ```sql
+   SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename;
+   ```
+   Должен увидеть ~15 таблиц: User, Character, Note, Achievement, Country, ..., LabEntry.
+
+### Залить admin-Божество (через SQL Editor)
+
+1. В Git Bash на локальной машине посчитай хеш пароля (по умолчанию `divine123`):
+   ```bash
+   node -e "const {scryptSync,randomBytes}=require('crypto');const salt=randomBytes(16).toString('hex');const hash=scryptSync('divine123',salt,64).toString('hex');console.log(salt+':'+hash)"
+   ```
+   Скопируй вывод (длинная строка `salt:hash`).
+
+2. В **Neon SQL Editor** вставь следующий SQL (замени `ВСТАВЬ_ХЕШ` на хеш):
+   ```sql
+   INSERT INTO "User" (id, email, name, password, role, "createdAt", "updatedAt")
+   VALUES ('cmtddeity0000000000000000', 'deity@eldrin.world', 'Аэтериус', 'ВСТАВЬ_ХЕШ', 'ADMIN', NOW(), NOW());
+
+   INSERT INTO "GuildRank" (id, name, level, description, icon, "minXp", "createdAt") VALUES
+   ('cmtrank000000000000000001', 'Железный Искатель', 1, 'Новички гильдии, только вступившие на путь авантюр.', '⚔️', 0, NOW()),
+   ('cmtrank000000000000000002', 'Бронзовый Следопыт', 2, 'Проверенные в первом испытании.', '🛡️', 200, NOW()),
+   ('cmtrank000000000000000003', 'Серебряный Клинок', 3, 'Опытные искатели приключений.', '🗡️', 600, NOW()),
+   ('cmtrank000000000000000004', 'Золотой Защитник', 4, 'Ветераны множества походов.', '🏆', 1500, NOW()),
+   ('cmtrank000000000000000005', 'Мифический Чемпион', 5, 'Легенды гильдии, чьи имена знает весь мир.', '👑', 5000, NOW());
+   ```
+3. Нажми **Run**. Проверь: `SELECT email, role FROM "User";` — должен видеть админа.
+
+> Свой пароль: замени `'divine123'` в node-команде выше на свой, скопируй новый хеш.
+
+---
+
+### Вариант Б — локально через Prisma (если VPN НЕ блокирует)
 
 ```bash
 cd /home/z/my-project
 
-# 1. Временно подставь прод-DATABASE_URL (замени на свой Neon URL):
-export DATABASE_URL="postgresql://neondb_owner:npXy...@ep-cool-name-12345.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+# 1. В .env подставь Neon DIRECT url (без -pooler):
+export DATABASE_URL="postgresql://neondb_owner:npXy...@ep-xxx.neon.tech/neondb?sslmode=require&connect_timeout=300"
 
 # 2. Создать все таблицы в прод-БД:
-bun run db:push
+npx prisma db push
 
 # 3. Залить admin-Божество и 5 рангов гильдии:
-bun run prisma/seed-admin.ts
+npx tsx prisma/seed-admin.ts
 ```
 
-Если хочешь задать свой пароль для Божества (вместо дефолтного `divine123`):
+Если `P1017` — возвращайся к Варианту А (Neon SQL Editor).
 
-```bash
-ADMIN_EMAIL="твой@email" ADMIN_PASSWORD="надёжный_пароль" ADMIN_NAME="Имя Божества" \
-  bun run prisma/seed-admin.ts
-```
+---
 
-После выполнения ты увидишь:
-```
-✓ Deity created — email: deity@eldrin.world
-✓ 5 guild ranks created
-✨ Clean production seed complete.
-```
+### ⬆️ ОБНОВЛЕНИЕ БД (когда выходят новые версии проекта)
+
+Когда ты обновляешь код (новые поля в таблицах или новые таблицы),
+обнови БД через **Neon SQL Editor** скриптом `download/update-to-v2.sql`
+(или следующей версии). Этот скрипт использует `IF NOT EXISTS` — безопасен
+для повторного запуска и не трогает существующие данные.
+
+1. Открой `download/update-to-v2.sql` в VS Code
+2. Скопируй всё, вставь в Neon SQL Editor
+3. **Run** — добавятся новые колонки/таблицы без потери данных
 
 ---
 
@@ -145,17 +190,34 @@ ADMIN_EMAIL="твой@email" ADMIN_PASSWORD="надёжный_пароль" ADMI
 
 ## Если что-то сломалось
 
-### Ошибка `PrismaClientInitializationError` на Vercel
+### `P1017: Server has closed the connection` (локально через VPN)
+Это самая частая проблема. VPN (особенно в Германию/Европу) режет TCP-порт 5432,
+который использует Prisma. Решение — **делай все изменения БД через Neon SQL Editor**
+(работает по HTTPS, VPN справляется):
+1. [Neon Console](https://console.neon.tech) → SQL Editor
+2. Для создания таблиц: вставь `download/full-schema-from-scratch.sql` → Run
+3. Для обновления БД: вставь `download/update-to-v2.sql` → Run
+4. Для залива админа: посчитай хеш пароля локально (`node -e ...`), вставь INSERT-запрос (см. Шаг 4, Вариант А)
+
+### `PrismaClientInitializationError` на Vercel
 - Проверь, что `DATABASE_URL` добавлен в **Environment Variables** на Vercel
 - Проверь, что Neon connection string оканчивается на `?sslmode=require`
 - Убедись, что в `package.json` есть `"postinstall": "prisma generate"` (он там есть)
+- На Vercel используй **pooled** URL (с `-pooler`) — serverless-функции лучше работают через пул
 
 ### Ошибка `NEXTAUTH_SECRET` / «Server error» при логине
 - Проверь, что `NEXTAUTH_SECRET` задан в env на Vercel
 - Проверь, что `NEXTAUTH_URL` точно совпадает с доменом Vercel (с `https://`)
 
-### 500 при создании контента в админке
-- Скорее всего таблицы не созданы. Вернись к Шагу 4 и прогони `bun run db:push`
+### 500 при создании контента в админке (на Vercel)
+- Скорее всего таблицы/колонки не созданы. Открой Neon SQL Editor и прогони
+  `download/update-to-v2.sql` (или `full-schema-from-scratch.sql`, если БД пустая)
+- Проверь в SQL Editor: `SELECT tablename FROM pg_tables WHERE schemaname='public';`
+
+### «Application error» / белый экран
+- Открой DevTools консоль браузера → посмотри ошибку
+- Если `Unknown relation notes` или `Unknown field X` — БД на проде не обновлена
+  под новую схему. Прогони `update-to-v2.sql` в Neon SQL Editor → передеплой Vercel
 
 ### Локальная разработка сломалась
 После переключения schema на `postgresql` локальный SQLite-файл `db/custom.db`
