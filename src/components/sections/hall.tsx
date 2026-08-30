@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { OrnamentTitle } from "@/components/fantasy/ornament-title";
 import { ParchmentCard } from "@/components/fantasy/ui";
+import { WorldMap } from "@/components/fantasy/world-map";
 import { useQuery as useRQ } from "@tanstack/react-query";
 import type { View } from "@/lib/types";
 import { useEffect, useRef, useState } from "react";
@@ -49,6 +50,12 @@ export function HallView({ onNavigate }: { onNavigate: (v: View) => void }) {
           <NavBtn icon={Sparkles} label="Гримуар" onClick={() => onNavigate("grimoire")} />
           <NavBtn icon={FlaskConical} label="Лаборатория Алого" onClick={() => onNavigate("lab")} />
         </div>
+      </section>
+
+      {/* Interactive world map */}
+      <section className="space-y-4">
+        <OrnamentTitle size="md" flourish="🗺️" className="mb-2">Карта мира</OrnamentTitle>
+        <WorldMap />
       </section>
 
       {/* Auto-scrolling carousel of DB element cards */}

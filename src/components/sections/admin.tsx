@@ -244,8 +244,26 @@ function EntityEditor({ entityKey }: { entityKey: EntityKey }) {
   const [editing, setEditing] = useState<any | null>(null);
   const [open, setOpen] = useState(false);
 
+  // Required (non-nullable) fields per entity — validated client-side before save
+  // to give a clear toast instead of a raw Prisma 500.
+  const REQUIRED_FIELDS: Record<string, string[]> = {
+    countries: ["name", "description"],
+    personalities: ["name", "description"],
+    beings: ["name"],
+    relations: ["countryAName", "countryBName", "relationType"],
+    systems: ["title", "category", "description"],
+    gods: ["name", "domain", "description"],
+    legends: ["title", "content"],
+  };
+
   const saveMut = useMutation({
     mutationFn: async (item: any) => {
+      // Client-side validation of required fields
+      const required = REQUIRED_FIELDS[entityKey] ?? [];
+      const missing = required.filter((f) => !item[f] || String(item[f]).trim() === "");
+      if (missing.length > 0) {
+        throw new Error(`Заполни обязательные поля: ${missing.join(", ")}`);
+      }
       const { id, ...rest } = item;
       // Clean undefined/empty-string values — Prisma chokes on undefined
       const clean: any = {};
@@ -320,6 +338,7 @@ function EntityEditor({ entityKey }: { entityKey: EntityKey }) {
         open={open}
         onOpenChange={setOpen}
         fields={meta.fields}
+        requiredFields={REQUIRED_FIELDS[entityKey] ?? []}
         item={editing}
         onSave={(item) => saveMut.mutate(item)}
         pending={saveMut.isPending}
@@ -330,11 +349,12 @@ function EntityEditor({ entityKey }: { entityKey: EntityKey }) {
 }
 
 function EntityFormDialog({
-  open, onOpenChange, fields, item, onSave, pending, title,
+  open, onOpenChange, fields, requiredFields, item, onSave, pending, title,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   fields: readonly string[];
+  requiredFields: readonly string[];
   item: any;
   onSave: (item: any) => void;
   pending: boolean;
@@ -380,18 +400,24 @@ function EntityFormDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {fields.filter((f) => FIELD_META[f]?.type === "text").map((f) => {
               const meta = FIELD_META[f];
+              const req = requiredFields.includes(f);
               return (
                 <div key={f} className="space-y-1">
-                  <Label className="parchment-heading text-sm">{meta.label}</Label>
+                  <Label className="parchment-heading text-sm">
+                    {meta.label}{req && <span className="text-red-700 ml-0.5">*</span>}
+                  </Label>
                   <Input value={getVal(f)} onChange={(e) => setVal(f, e.target.value)} className="bg-parchment/60 border-parchment-dark/40 h-10" />
                 </div>
               );
             })}
             {fields.filter((f) => FIELD_META[f]?.type === "select").map((f) => {
               const meta = FIELD_META[f];
+              const req = requiredFields.includes(f);
               return (
                 <div key={f} className="space-y-1">
-                  <Label className="parchment-heading text-sm">{meta.label}</Label>
+                  <Label className="parchment-heading text-sm">
+                    {meta.label}{req && <span className="text-red-700 ml-0.5">*</span>}
+                  </Label>
                   <Select value={getVal(f)} onValueChange={(v) => setVal(f, v)}>
                     <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 h-10"><SelectValue placeholder="Выбери..." /></SelectTrigger>
                     <SelectContent className="parchment">
@@ -406,9 +432,12 @@ function EntityFormDialog({
           {/* Textareas — full width */}
           {fields.filter((f) => FIELD_META[f]?.type === "textarea").map((f) => {
             const meta = FIELD_META[f];
+            const req = requiredFields.includes(f);
             return (
               <div key={f} className="space-y-1">
-                <Label className="parchment-heading text-sm">{meta.label}</Label>
+                <Label className="parchment-heading text-sm">
+                  {meta.label}{req && <span className="text-red-700 ml-0.5">*</span>}
+                </Label>
                 <Textarea value={getVal(f)} onChange={(e) => setVal(f, e.target.value)} rows={4} className="bg-parchment/60 border-parchment-dark/40" />
               </div>
             );
@@ -513,7 +542,7 @@ function RanksEditor() {
           </ParchmentCard>
         ))}
       </div>
-      <EntityFormDialog open={open} onOpenChange={setOpen} fields={["name","level","description","icon","minXp"]} item={editing}
+      <EntityFormDialog open={open} onOpenChange={setOpen} fields={["name","level","description","icon","minXp"]} requiredFields={["name","level","minXp"]} item={editing}
         onSave={(it)=>save.mutate(it)} pending={save.isPending} title={editing?.id?"Редактировать ранг":"Создать ранг"} />
     </div>
   );
