@@ -109,6 +109,7 @@ const REGION_COLORS: Record<string, { fill: string; stroke: string }> = {
 
 export function WorldMap() {
   const [selected, setSelected] = useState<string | null>(null);
+  const [hoveredCity, setHoveredCity] = useState<{ name: string; x: number; y: number } | null>(null);
   const { data: countries, isLoading } = useQuery<Country[]>({
     queryKey: ["countries"],
     queryFn: () => fetch("/api/lore/countries").then((r) => r.json()),
@@ -220,7 +221,11 @@ export function WorldMap() {
                   className="cursor-pointer"
                   role="button"
                   aria-label={`Город: ${city.name}`}
+                  onMouseEnter={() => setHoveredCity({ name: city.name, x: city.x, y: city.y })}
+                  onMouseLeave={() => setHoveredCity(null)}
                 >
+                  {/* Invisible larger hit area for easier hover */}
+                  <circle cx={city.x} cy={city.y - 2} r="12" fill="transparent" />
                   {/* Pin: a drop shape */}
                   <circle
                     cx={city.x}
@@ -229,7 +234,7 @@ export function WorldMap() {
                     fill={pin}
                     stroke={pinStroke}
                     strokeWidth="1.5"
-                    className="transition-all duration-200 hover:r-8"
+                    className="transition-all duration-200"
                     style={{ filter: "drop-shadow(0 1px 2px oklch(0 0 0 / 0.4))" }}
                   />
                   {/* Pin stem */}
@@ -251,10 +256,6 @@ export function WorldMap() {
                   >
                     {city.icon}
                   </text>
-                  {/* Hover tooltip — visible on hover via CSS group-hover */}
-                  <g className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" style={{ pointerEvents: "none" }}>
-                    <title>{city.name}</title>
-                  </g>
                   {/* Always-visible small label for capital cities (first city in list) */}
                   {city === r.cities[0] && (
                     <text
@@ -272,6 +273,51 @@ export function WorldMap() {
                 </g>
               );
             })
+          )}
+
+          {/* Hover tooltip for city — rendered last so it's on top */}
+          {hoveredCity && (
+            <g pointerEvents="none">
+              {/* Tooltip background box */}
+              {(() => {
+                const tw = hoveredCity.name.length * 6.5 + 16;
+                const th = 22;
+                const tx = hoveredCity.x - tw / 2;
+                const ty = hoveredCity.y - 38;
+                return (
+                  <>
+                    <rect
+                      x={tx}
+                      y={ty}
+                      width={tw}
+                      height={th}
+                      rx={4}
+                      fill="oklch(0.25 0.04 45 / 0.95)"
+                      stroke="oklch(0.65 0.13 75 / 0.6)"
+                      strokeWidth="1"
+                    />
+                    {/* Tooltip stem (little arrow pointing down) */}
+                    <path
+                      d={`M ${hoveredCity.x - 5} ${ty + th} L ${hoveredCity.x} ${ty + th + 6} L ${hoveredCity.x + 5} ${ty + th} Z`}
+                      fill="oklch(0.25 0.04 45 / 0.95)"
+                      stroke="oklch(0.65 0.13 75 / 0.6)"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={hoveredCity.x}
+                      y={ty + 15}
+                      textAnchor="middle"
+                      fontSize="11"
+                      fontWeight="600"
+                      fill="oklch(0.88 0.13 85)"
+                      className="font-[family-name:var(--font-cinzel)] select-none"
+                    >
+                      {hoveredCity.name}
+                    </text>
+                  </>
+                );
+              })()}
+            </g>
           )}
 
           {/* Compass rose — decorative, bottom right */}
