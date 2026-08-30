@@ -704,15 +704,21 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
 
           {/* Секция 2: Тип записи */}
           <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
-            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Тип записи</p>
+            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Тип записи — выбран: {ENTRY_TYPES.find(t=>t.value===entryType)?.label || "Заметка"}</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {ENTRY_TYPES.map((t) => (
                 <button
                   key={t.value}
                   type="button"
                   onClick={() => setVal("entryType", t.value)}
-                  className={`p-4 rounded-lg border-2 text-left transition-all ${entryType === t.value ? "border-wine bg-wine/10" : "border-parchment-dark/30 hover:border-wine/40"}`}
+                  className={`p-4 rounded-lg border-2 text-left transition-all relative ${entryType === t.value
+                    ? "border-wine bg-wine/15 shadow-lg ring-2 ring-wine/30"
+                    : "border-parchment-dark/30 hover:border-wine/40 opacity-60 hover:opacity-100"
+                  }`}
                 >
+                  {entryType === t.value && (
+                    <span className="absolute top-2 right-2 text-wine text-lg">✓</span>
+                  )}
                   <div className="text-3xl mb-1">{t.emoji}</div>
                   <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading">{t.label}</p>
                   <p className="parchment-muted text-xs italic">{t.desc}</p>
@@ -723,14 +729,17 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
 
           {/* Секция 3: Оформление страницы */}
           <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
-            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Оформление страницы</p>
+            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Оформление страницы — выбрано: {PAPER_STYLES.find(ps=>ps.value===(getVal("paperStyle") || "PLAIN"))?.label || "Чистый пергамент"}</p>
             <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
               {PAPER_STYLES.map((ps) => (
                 <button
                   key={ps.value}
                   type="button"
                   onClick={() => setVal("paperStyle", ps.value)}
-                  className={`p-2 rounded-lg border-2 text-center transition-all ${(getVal("paperStyle") || "PLAIN") === ps.value ? "border-wine bg-wine/10" : "border-parchment-dark/30 hover:border-wine/40"}`}
+                  className={`p-2 rounded-lg border-2 text-center transition-all ${(getVal("paperStyle") || "PLAIN") === ps.value
+                    ? "border-wine bg-wine/15 shadow-md ring-2 ring-wine/30"
+                    : "border-parchment-dark/30 hover:border-wine/40 opacity-60 hover:opacity-100"
+                  }`}
                 >
                   <div className="text-2xl mb-0.5">{ps.emoji}</div>
                   <p className="text-[10px] font-[family-name:var(--font-cinzel)] parchment-heading leading-tight">{ps.label}</p>

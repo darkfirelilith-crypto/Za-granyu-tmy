@@ -107,29 +107,34 @@ function CountriesTab({ search }: { search: string }) {
         ))}
       </div>
       {sel && (
-        <ParchmentCard key={sel.id} className="animate-reveal">
+        <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
+          {/* Banner image — full width, proper aspect ratio, no cropping */}
           {sel.banner && (
-            <div className="mb-4 -mx-5 -mt-5 md:-mx-6 md:-mt-6 h-40 md:h-52 overflow-hidden rounded-t-lg gold-frame">
+            <div className="w-full h-48 md:h-64 overflow-hidden mb-4 rounded-lg gold-frame">
               <img src={sel.banner} alt={sel.name} className="w-full h-full object-cover" />
             </div>
           )}
-          <div className="flex items-start gap-4 mb-4">
-            <RuneSeal icon={<span className="text-3xl">{sel.emblem ?? "🗺️"}</span>} size="lg" />
-            <div>
+          {/* Header — emblem + name + capital */}
+          <div className="flex items-start gap-4 mb-5">
+            {!sel.banner && <RuneSeal icon={<span className="text-3xl">{sel.emblem ?? "🗺️"}</span>} size="lg" />}
+            <div className="flex-1 min-w-0">
               <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.name}</h3>
-              {sel.capital && <p className="parchment-muted text-sm">Столица: {sel.capital}</p>}
+              {sel.capital && <p className="parchment-muted text-sm mt-0.5">🏰 Столица: {sel.capital}</p>}
+              {sel.emblem && <p className="text-2xl mt-1">{sel.emblem}</p>}
             </div>
           </div>
-          <p className="lore-prose drop-cap">{sel.description}</p>
-          <div className="grid sm:grid-cols-2 gap-3 mt-5 pt-4 border-t border-parchment-dark/30">
+          {/* Description */}
+          <div className="lore-prose drop-cap text-base leading-relaxed mb-5">{sel.description}</div>
+          {/* Info grid */}
+          <div className="grid sm:grid-cols-3 gap-4 pt-4 border-t border-parchment-dark/30">
             {sel.government && <Field label="Правление" value={sel.government} />}
             {sel.population && <Field label="Население" value={sel.population} />}
             {sel.climate && <Field label="Климат" value={sel.climate} />}
           </div>
           {sel.culture && (
             <div className="mt-4 pt-4 border-t border-parchment-dark/30">
-              <p className="parchment-heading text-sm mb-1">Культура</p>
-              <p className="parchment-muted text-sm">{sel.culture}</p>
+              <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Культура</p>
+              <p className="parchment-muted text-sm whitespace-pre-line">{sel.culture}</p>
             </div>
           )}
         </ParchmentCard>
@@ -167,25 +172,44 @@ function PersonalitiesTab({ search }: { search: string }) {
         ))}
       </div>
       {sel && (
-        <ParchmentCard key={sel.id} className="animate-reveal">
-          <div className="flex items-start gap-4 mb-4">
+        <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
+          {/* Header with portrait — side by side, no cropping */}
+          <div className="flex items-start gap-5 mb-5">
             {sel.portrait ? (
-              <div className="w-24 h-32 rounded-lg overflow-hidden gold-frame shrink-0">
+              <div className="w-28 h-36 md:w-32 md:h-40 rounded-lg overflow-hidden gold-frame shrink-0">
                 <img src={sel.portrait} alt={sel.name} className="w-full h-full object-cover" />
               </div>
             ) : (
-              <RuneSeal icon={<span className="text-3xl">{getPersonIcon(sel)}</span>} size="lg" />
+              <div className="shrink-0">
+                <RuneSeal icon={<span className="text-3xl">{getPersonIcon(sel)}</span>} size="lg" />
+              </div>
             )}
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex-1 min-w-0 pt-1">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
                 <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.name}</h3>
                 <StatusBadge status={sel.status} />
               </div>
-              {sel.title && <p className="parchment-heading text-sm">{sel.title}</p>}
+              {sel.title && <p className="parchment-heading text-sm mb-2">{sel.title}</p>}
+              {/* Race / age / gender info */}
+              <div className="flex flex-wrap gap-3 text-sm parchment-muted">
+                {sel.race && <span>🧬 {sel.race}</span>}
+                {sel.age && <span>📅 {sel.age}</span>}
+                {sel.gender && <span>⚧ {sel.gender}</span>}
+                {sel.affiliation && <span>🏛️ {sel.affiliation}</span>}
+              </div>
             </div>
           </div>
-          <p className="lore-prose drop-cap">{sel.description}</p>
-          <div className="flex flex-wrap gap-3 mt-5 pt-4 border-t border-parchment-dark/30 text-sm">
+          {/* Appearance (if exists) */}
+          {sel.appearance && (
+            <div className="mb-4 p-3 bg-parchment-dark/10 rounded-lg">
+              <p className="parchment-heading text-xs uppercase tracking-wider mb-1">Внешность</p>
+              <p className="parchment-muted text-sm whitespace-pre-line">{sel.appearance}</p>
+            </div>
+          )}
+          {/* Description */}
+          <div className="lore-prose drop-cap text-base leading-relaxed mb-5">{sel.description}</div>
+          {/* Info grid */}
+          <div className="flex flex-wrap gap-4 pt-4 border-t border-parchment-dark/30 text-sm">
             {sel.affiliation && <Field label="Принадлежность" value={sel.affiliation} />}
             {sel.role && <Field label="Должность" value={sel.role} />}
           </div>

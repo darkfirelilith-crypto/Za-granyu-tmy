@@ -395,12 +395,21 @@
 /* ===== DROP CAP for lore text ===== */
 .drop-cap::first-letter {
   font-family: var(--font-cinzel-decorative);
-  font-size: 3.6rem;
-  line-height: 0.8;
+  font-size: 3.2rem;
+  line-height: 1;
   float: left;
-  padding: 0.1rem 0.5rem 0 0;
+  padding: 0.2rem 0.6rem 0 0;
+  margin-top: 0.3rem;
   color: oklch(0.40 0.15 30);
-  text-shadow: 0 0 12px oklch(0.40 0.15 30 / 0.25);
+  text-shadow: 0 0 10px oklch(0.40 0.15 30 / 0.2);
+  /* prevent overlap: clear space around, don't exceed 2 lines */
+  max-height: 2.8rem;
+  overflow: hidden;
+}
+/* When drop-cap is inside a flex/grid container, make sure it has space */
+.drop-cap {
+  overflow: hidden;
+  padding-top: 0.2rem;
 }
 
 /* ===== PROSE for rich text ===== */
@@ -537,92 +546,135 @@
   filter: drop-shadow(0 0 12px oklch(0.72 0.13 75 / 0.2));
 }
 
-/* ===== Grimoire paper decoration styles ===== */
+/* ===== Grimoire paper decoration styles — bold, visible, clean ===== */
 .paper-plain {
   /* just parchment, no extra decoration */
 }
+
+/* BLOOD — dark red stains dripping from top */
 .paper-blood {
-  background-image:
-    radial-gradient(ellipse 30px 18px at 15% 12%, oklch(0.45 0.22 25 / 0.45), transparent 60%),
-    radial-gradient(ellipse 20px 12px at 85% 88%, oklch(0.40 0.20 25 / 0.35), transparent 60%),
-    radial-gradient(ellipse 15px 10px at 70% 20%, oklch(0.45 0.22 25 / 0.25), transparent 60%),
-    var(--parchment);
+  position: relative;
 }
-.paper-blood::after {
+.paper-blood::before {
   content: "";
   position: absolute;
-  top: 8%;
-  right: 10%;
-  width: 40px;
-  height: 60px;
-  background: radial-gradient(ellipse at 50% 0%, oklch(0.40 0.20 25 / 0.5), transparent 70%);
-  transform: rotate(15deg);
+  top: 0; left: 0; right: 0;
+  height: 100%;
+  background:
+    radial-gradient(ellipse 40px 50px at 12% 8%, oklch(0.42 0.22 25 / 0.55), transparent 65%),
+    radial-gradient(ellipse 25px 35px at 80% 5%, oklch(0.40 0.20 25 / 0.45), transparent 65%),
+    radial-gradient(ellipse 30px 40px at 50% 95%, oklch(0.38 0.18 25 / 0.35), transparent 65%),
+    radial-gradient(ellipse 15px 25px at 90% 90%, oklch(0.40 0.20 25 / 0.30), transparent 65%);
   pointer-events: none;
+  z-index: 0;
 }
+
+/* BURNED — dark scorched edges all around */
 .paper-burned {
-  background-image: var(--parchment);
-  box-shadow:
-    inset 0 0 60px oklch(0.30 0.08 40 / 0.35),
-    inset 0 0 120px oklch(0.20 0.05 40 / 0.2);
-}
-.paper-burned::before,
-.paper-burned::after {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-  width: 100%;
-  height: 30px;
+  position: relative;
 }
 .paper-burned::before {
-  top: 0;
-  left: 0;
-  background: linear-gradient(180deg, oklch(0.20 0.05 40 / 0.4), transparent);
-  -webkit-mask: radial-gradient(8px 8px at 8px 100%, transparent 98%, #000) 0 0 / 16px 16px;
-  mask: radial-gradient(8px 8px at 8px 100%, transparent 98%, #000) 0 0 / 16px 16px;
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 100% 60px at 50% 0%, oklch(0.18 0.05 35 / 0.5), transparent 70%),
+    radial-gradient(ellipse 100% 60px at 50% 100%, oklch(0.18 0.05 35 / 0.5), transparent 70%),
+    radial-gradient(ellipse 40px 100% at 0% 50%, oklch(0.18 0.05 35 / 0.3), transparent 70%),
+    radial-gradient(ellipse 40px 100% at 100% 50%, oklch(0.18 0.05 35 / 0.3), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
 }
 .paper-burned::after {
-  bottom: 0;
-  left: 0;
-  background: linear-gradient(0deg, oklch(0.20 0.05 40 / 0.4), transparent);
-  -webkit-mask: radial-gradient(8px 8px at 8px 0, transparent 98%, #000) 0 0 / 16px 16px;
-  mask: radial-gradient(8px 8px at 8px 0, transparent 98%, #000) 0 0 / 16px 16px;
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 80px oklch(0.15 0.04 35 / 0.25);
+  pointer-events: none;
+  z-index: 0;
 }
+
+/* TEARS — blue water stains at corners and edges */
 .paper-tears {
-  /* tear stain drops at edges */
-  background-image:
-    radial-gradient(ellipse 12px 20px at 10% 5%, oklch(0.60 0.06 200 / 0.25), transparent 60%),
-    radial-gradient(ellipse 10px 18px at 90% 95%, oklch(0.60 0.06 200 / 0.20), transparent 60%),
-    radial-gradient(ellipse 8px 15px at 50% 98%, oklch(0.60 0.06 200 / 0.15), transparent 60%),
-    var(--parchment);
+  position: relative;
 }
+.paper-tears::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 30px 60px at 8% 3%, oklch(0.55 0.08 200 / 0.3), transparent 60%),
+    radial-gradient(ellipse 20px 45px at 92% 97%, oklch(0.55 0.08 200 / 0.25), transparent 60%),
+    radial-gradient(ellipse 15px 35px at 50% 100%, oklch(0.55 0.08 200 / 0.2), transparent 60%),
+    radial-gradient(ellipse 12px 30px at 95% 30%, oklch(0.55 0.08 200 / 0.15), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* INK — dark splatter marks */
 .paper-ink {
-  /* ink splatters */
-  background-image:
-    radial-gradient(circle 4px at 20% 15%, oklch(0.20 0.03 45 / 0.6), transparent 70%),
-    radial-gradient(circle 6px at 80% 85%, oklch(0.20 0.03 45 / 0.5), transparent 70%),
-    radial-gradient(circle 3px at 60% 30%, oklch(0.20 0.03 45 / 0.4), transparent 70%),
-    radial-gradient(circle 5px at 30% 70%, oklch(0.20 0.03 45 / 0.35), transparent 70%),
-    var(--parchment);
+  position: relative;
 }
+.paper-ink::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle 12px at 15% 12%, oklch(0.15 0.02 40 / 0.5), transparent 75%),
+    radial-gradient(circle 8px at 78% 82%, oklch(0.15 0.02 40 / 0.45), transparent 75%),
+    radial-gradient(circle 5px at 60% 25%, oklch(0.15 0.02 40 / 0.35), transparent 75%),
+    radial-gradient(circle 10px at 35% 70%, oklch(0.15 0.02 40 / 0.3), transparent 75%),
+    radial-gradient(circle 3px at 50% 50%, oklch(0.15 0.02 40 / 0.25), transparent 75%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* FROST — icy blue crystals at corners */
 .paper-frost {
-  background-image:
-    radial-gradient(ellipse 80px 40px at 10% 10%, oklch(0.80 0.05 230 / 0.25), transparent 60%),
-    radial-gradient(ellipse 60px 30px at 90% 90%, oklch(0.80 0.05 230 / 0.20), transparent 60%),
-    var(--parchment);
+  position: relative;
 }
+.paper-frost::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60px 80px at 5% 5%, oklch(0.75 0.08 230 / 0.3), transparent 55%),
+    radial-gradient(ellipse 50px 70px at 95% 95%, oklch(0.75 0.08 230 / 0.25), transparent 55%),
+    radial-gradient(ellipse 40px 50px at 95% 5%, oklch(0.75 0.08 230 / 0.2), transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* GOLD — shimmering gold particles */
 .paper-gold {
-  background-image:
-    radial-gradient(ellipse 100px 50px at 50% 0%, oklch(0.78 0.13 85 / 0.15), transparent 60%),
-    radial-gradient(ellipse 60px 30px at 20% 80%, oklch(0.78 0.13 85 / 0.10), transparent 60%),
-    var(--parchment);
-  box-shadow: inset 0 0 40px oklch(0.78 0.13 85 / 0.08);
+  position: relative;
+}
+.paper-gold::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80px 100px at 50% 0%, oklch(0.75 0.15 85 / 0.2), transparent 55%),
+    radial-gradient(circle 6px at 20% 30%, oklch(0.80 0.14 85 / 0.4), transparent 70%),
+    radial-gradient(circle 4px at 70% 60%, oklch(0.80 0.14 85 / 0.35), transparent 70%),
+    radial-gradient(circle 5px at 40% 80%, oklch(0.80 0.14 85 / 0.3), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+.paper-gold::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 50px oklch(0.75 0.15 85 / 0.1);
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* Grimoire book page — large readable area */
 .grimoire-page {
   position: relative;
   min-height: 400px;
-  padding: 3rem 3.5rem;
+  padding: 2.5rem 3rem;
   background-color: var(--parchment);
   background-image:
     repeating-linear-gradient(0deg, transparent 0, transparent 28px, oklch(0.70 0.05 70 / 0.06) 28px, oklch(0.70 0.05 70 / 0.06) 29px),
@@ -635,15 +687,22 @@
     0 8px 30px oklch(0.15 0.02 45 / 0.4);
   overflow: hidden;
 }
+/* Paper decorations sit behind text */
+.grimoire-page > * {
+  position: relative;
+  z-index: 1;
+}
 .grimoire-page::before {
   content: "";
   position: absolute;
-  left: 50px;
+  left: 40px;
   top: 0;
   bottom: 0;
   width: 1px;
   background: oklch(0.60 0.08 50 / 0.2);
+  z-index: 0;
 }
+
 .margin-note {
   font-family: var(--font-garamond);
   font-style: italic;
