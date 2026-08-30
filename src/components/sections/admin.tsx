@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { OrnamentTitle } from "@/components/fantasy/ornament-title";
 import { ParchmentCard, RuneSeal, RarityBadge, DifficultyBadge } from "@/components/fantasy/ui";
@@ -229,6 +229,8 @@ const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"|"che
   content: { type: "textarea", label: "Текст" },
   era: { type: "text", label: "Эра" },
   icon: { type: "text", label: "Иконка (эмодзи)" },
+  level: { type: "text", label: "Уровень (число)" },
+  minXp: { type: "text", label: "Минимальный опыт (XP)" },
 };
 
 function EntityEditor({ entityKey }: { entityKey: EntityKey }) {
@@ -304,7 +306,7 @@ function EntityEditor({ entityKey }: { entityKey: EntityKey }) {
               <Button size="icon" variant="ghost" onClick={() => { setEditing(it); setOpen(true); }} className="text-wine hover:bg-wine/10">
                 <Pencil className="w-4 h-4" />
               </Button>
-              <Button size="icon" variant="ghost" onClick={() => delMut.mutate(it.id)} className="text-destructive hover:bg-destructive/10">
+              <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Удалить «${it.name ?? it.title}»?`)) delMut.mutate(it.id); }} className="text-destructive hover:bg-destructive/10">
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -339,10 +341,14 @@ function EntityFormDialog({
   title: string;
 }) {
   const [form, setForm] = useState<any>(item ?? {});
-  // reset form when item changes
-  if (item && form && item.id !== form.id && Object.keys(form).length > 0 && item.id) {
-    // handle in effect-like way
-  }
+  // Reset form whenever the dialog opens or the item changes.
+  // The parent uses key={item?.id ?? "new"} for remount on item change, but clicking
+  // "Создать" twice in a row keeps key="new" → no remount → stale form persists.
+  // This useEffect ensures the form reflects the current item every time it opens.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm(item ?? {});
+  }, [item, open]);
   const current = item ?? {};
   const getVal = (f: string) => (form[f] !== undefined ? form[f] : current[f] ?? "");
   const setVal = (f: string, v: any) => setForm({ ...form, [f]: v });
@@ -502,7 +508,7 @@ function RanksEditor() {
             </div>
             <div className="flex gap-1">
               <Button size="icon" variant="ghost" onClick={()=>{setEditing(r);setOpen(true);}} className="text-wine"><Pencil className="w-4 h-4"/></Button>
-              <Button size="icon" variant="ghost" onClick={()=>del.mutate(r.id)} className="text-destructive"><Trash2 className="w-4 h-4"/></Button>
+              <Button size="icon" variant="ghost" onClick={()=>{ if (confirm(`Удалить ранг «${r.name}»?`)) del.mutate(r.id); }} className="text-destructive"><Trash2 className="w-4 h-4"/></Button>
             </div>
           </ParchmentCard>
         ))}
@@ -547,7 +553,7 @@ function QuestsEditor() {
               <span className="text-xs parchment-muted">{q.status}</span>
               <div className="flex gap-1">
                 <Button size="icon" variant="ghost" onClick={()=>{setEditing(q);setOpen(true);}} className="text-wine"><Pencil className="w-4 h-4"/></Button>
-                <Button size="icon" variant="ghost" onClick={()=>del.mutate(q.id)} className="text-destructive"><Trash2 className="w-4 h-4"/></Button>
+                <Button size="icon" variant="ghost" onClick={()=>{ if (confirm(`Удалить задание «${q.title}»?`)) del.mutate(q.id); }} className="text-destructive"><Trash2 className="w-4 h-4"/></Button>
               </div>
             </div>
           </ParchmentCard>
@@ -561,12 +567,20 @@ function QuestsEditor() {
 function QuestFormDialog({ open,onOpenChange,item,onSave,pending }:{open:boolean;onOpenChange:(v:boolean)=>void;item:any;onSave:(i:any)=>void;pending:boolean}) {
   const current = item ?? {};
   const [form, setForm] = useState<any>({});
+  // Reset form whenever the dialog opens or the item changes (prevents stale state on repeated "Создать")
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm({});
+  }, [item, open]);
   const getVal = (f:string) => (form[f] !== undefined ? form[f] : current[f] ?? "");
   const setVal = (f:string,v:any) => setForm({...form,[f]:v});
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="parchment gold-frame max-w-4xl max-h-[92vh] overflow-y-auto">
-        <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id?"Редактировать":"Создать"} задание</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id?"Редактировать":"Создать"} задание</DialogTitle>
+          <DialogDescription className="sr-only">Форма редактирования задания гильдии</DialogDescription>
+        </DialogHeader>
         <div className="space-y-3">
           <div><Label className="parchment-heading text-sm">Название</Label><Input value={getVal("title")} onChange={e=>setVal("title",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
           <div><Label className="parchment-heading text-sm">Описание</Label><Textarea value={getVal("description")} onChange={e=>setVal("description",e.target.value)} rows={3} className="bg-parchment/60 border-parchment-dark/40"/></div>
@@ -604,11 +618,14 @@ function GrimoireEditor() {
   const save = useMutation({
     mutationFn: async (item:any) => {
       const { id, ...rest } = item;
-      // Clean: remove undefined/null values and convert types
+      // Pass through all provided values (null, "", numbers). Skip only `undefined`
+      // so omitted fields preserve their existing DB value. Previously empty strings
+      // were dropped, which meant admin couldn't clear nullable text fields (unlockHint,
+      // marginTop, postscript, etc.) — old values silently persisted.
       const clean: any = {};
       for (const [k, v] of Object.entries(rest)) {
-        if (v !== undefined && v !== null && v !== "") clean[k] = v;
-        else if (v === null) clean[k] = null; // keep explicit nulls
+        if (v === undefined) continue;
+        clean[k] = v;
       }
       // Ensure numeric fields are numbers
       if (clean.order !== undefined) clean.order = Number(clean.order) || 0;
@@ -645,7 +662,7 @@ function GrimoireEditor() {
                 {g.unlocked?<Lock className="w-4 h-4"/>:<Unlock className="w-4 h-4"/>}
               </Button>
               <Button size="icon" variant="ghost" onClick={()=>{setEditing(g);setOpen(true);}} className="text-wine"><Pencil className="w-4 h-4"/></Button>
-              <Button size="icon" variant="ghost" onClick={()=>del.mutate(g.id)} className="text-destructive"><Trash2 className="w-4 h-4"/></Button>
+              <Button size="icon" variant="ghost" onClick={()=>{ if (confirm(`Стёреть главу «${g.unlocked ? g.title : 'запечатанная'}»?`)) del.mutate(g.id); }} className="text-destructive"><Trash2 className="w-4 h-4"/></Button>
             </div>
           </ParchmentCard>
         ))}
@@ -674,6 +691,11 @@ const ENTRY_TYPES = [
 function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:boolean;onOpenChange:(v:boolean)=>void;item:any;onSave:(i:any)=>void;pending:boolean}) {
   const current = item ?? {};
   const [form, setForm] = useState<any>({});
+  // Reset form when dialog opens or item changes (prevents stale state on repeated "Создать")
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm({});
+  }, [item, open]);
   const getVal = (f:string) => (form[f] !== undefined ? form[f] : current[f] ?? "");
   const setVal = (f:string,v:any) => setForm({...form,[f]:v});
   const entryType = getVal("entryType") || "NOTE";
@@ -683,7 +705,10 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="parchment gold-frame max-w-5xl max-h-[92vh] overflow-y-auto">
-        <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{item?.id?"Редактировать":"Создать"} главу</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{item?.id?"Редактировать":"Создать"} главу</DialogTitle>
+          <DialogDescription className="sr-only">Форма редактирования главы гримуара</DialogDescription>
+        </DialogHeader>
 
         <div className="space-y-5">
           {/* Секция 1: Основное */}
@@ -717,7 +742,7 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
                 <div className="flex items-center gap-2 h-10">
                   <button
                     type="button"
-                    onClick={() => setVal("unlocked", sealed)}
+                    onClick={() => setVal("unlocked", false)}
                     className={`px-4 py-2 rounded-lg border-2 text-sm font-[family-name:var(--font-cinzel)] transition-all ${sealed ? "border-amber-700/50 bg-amber-700/10 text-amber-700" : "border-parchment-dark/30 text-parchment-muted"}`}
                   >
                     🔒 Запечатана
@@ -938,7 +963,7 @@ function AchievementsEditor() {
               </div>
               <div className="flex gap-1">
                 <Button size="icon" variant="ghost" onClick={()=>{setEditing(a);setOpen(true);}} className="text-wine"><Pencil className="w-4 h-4"/></Button>
-                <Button size="icon" variant="ghost" onClick={()=>del.mutate(a.id)} className="text-destructive"><Trash2 className="w-4 h-4"/></Button>
+                <Button size="icon" variant="ghost" onClick={()=>{ if (confirm(`Удалить достижение «${a.name}»?`)) del.mutate(a.id); }} className="text-destructive"><Trash2 className="w-4 h-4"/></Button>
               </div>
             </div>
             <p className="parchment-muted text-sm">{a.description}</p>
@@ -954,7 +979,7 @@ function AchievementsEditor() {
       {/* Grant dialog */}
       <Dialog open={!!grant} onOpenChange={(v)=>!v && setGrant(null)}>
         <DialogContent className="parchment gold-frame max-w-lg">
-          <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] parchment-heading">Даровать достижение</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] parchment-heading">Даровать достижение</DialogTitle><DialogDescription className="sr-only">Выберите героя для дарования достижения</DialogDescription></DialogHeader>
           {grant && (
             <div className="space-y-3">
               <Select value={grant.charId} onValueChange={(v)=>setGrant({...grant,charId:v})}>
@@ -978,12 +1003,19 @@ function AchievementsEditor() {
 function AchFormDialog({ open,onOpenChange,item,onSave,pending }:{open:boolean;onOpenChange:(v:boolean)=>void;item:any;onSave:(i:any)=>void;pending:boolean}) {
   const current = item ?? {};
   const [form, setForm] = useState<any>({});
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm({});
+  }, [item, open]);
   const getVal = (f:string) => (form[f] !== undefined ? form[f] : current[f] ?? "");
   const setVal = (f:string,v:any) => setForm({...form,[f]:v});
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="parchment gold-frame max-w-4xl max-h-[92vh] overflow-y-auto">
-        <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id?"Редактировать":"Создать"} достижение</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id?"Редактировать":"Создать"} достижение</DialogTitle>
+          <DialogDescription className="sr-only">Форма редактирования достижения</DialogDescription>
+        </DialogHeader>
         <div className="space-y-3">
           <div><Label className="parchment-heading text-sm">Название</Label><Input value={getVal("name")} onChange={e=>setVal("name",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
           <div><Label className="parchment-heading text-sm">Описание</Label><Textarea value={getVal("description")} onChange={e=>setVal("description",e.target.value)} rows={2} className="bg-parchment/60 border-parchment-dark/40"/></div>
@@ -1149,7 +1181,7 @@ function LabEditor() {
             </div>
             <div className="flex gap-1 shrink-0">
               <Button size="icon" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }} className="text-wine"><Pencil className="w-4 h-4" /></Button>
-              <Button size="icon" variant="ghost" onClick={() => del.mutate(e.id)} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
+              <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Стёреть запись «${e.name}»?`)) del.mutate(e.id); }} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
             </div>
           </ParchmentCard>
         ))}
@@ -1163,12 +1195,19 @@ function LabEditor() {
 function LabFormDialog({ open, onOpenChange, item, onSave, pending }: { open: boolean; onOpenChange: (v: boolean) => void; item: any; onSave: (i: any) => void; pending: boolean }) {
   const current = item ?? {};
   const [form, setForm] = useState<any>({});
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm({});
+  }, [item, open]);
   const getVal = (f: string) => (form[f] !== undefined ? form[f] : current[f] ?? "");
   const setVal = (f: string, v: any) => setForm({ ...form, [f]: v });
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="parchment gold-frame max-w-4xl max-h-[92vh] overflow-y-auto">
-        <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id ? "Редактировать" : "Создать"} запись Лаборатории</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id ? "Редактировать" : "Создать"} запись Лаборатории</DialogTitle>
+          <DialogDescription className="sr-only">Форма редактирования записи Лаборатории Алого</DialogDescription>
+        </DialogHeader>
         <div className="space-y-3">
           <div>
             <Label className="parchment-heading text-sm">Тип</Label>

@@ -132,7 +132,26 @@ function MembersTab() {
     queryKey: ["personalities"],
     queryFn: () => fetch("/api/lore/personalities").then((r) => r.json()),
   });
+  const { data: ranksData } = useQuery<any[]>({
+    queryKey: ["ranks"],
+    queryFn: () => fetch("/api/guild/ranks").then((r) => r.json()).catch(() => []),
+  });
   if (isLoading) return <LoadingScroll />;
+
+  const ranks = (Array.isArray(ranksData) ? ranksData : []).slice().sort((a, b) => a.minXp - b.minXp);
+
+  // Compute rank progress: (xp - currentRank.minXp) / (nextRank.minXp - currentRank.minXp) * 100.
+  // Falls back to 100 if at max rank, or 0 if no rank assigned yet.
+  const progressFor = (xp: number, rankId: string | null): number => {
+    const idx = rankId ? ranks.findIndex((r) => r.id === rankId) : -1;
+    if (idx === -1) return 0;
+    const cur = ranks[idx];
+    const next = ranks[idx + 1];
+    if (!next) return 100; // max rank
+    const span = next.minXp - cur.minXp;
+    if (span <= 0) return 100;
+    return Math.min(100, Math.max(0, ((xp - cur.minXp) / span) * 100));
+  };
 
   // Player characters that are adventurers
   const chars = (Array.isArray(charsData) ? charsData : [])
@@ -174,7 +193,7 @@ function MembersTab() {
                   <span>{c.guildRank?.name ?? "Без ранга"}</span>
                   <span>{c.xp ?? 0} XP</span>
                 </div>
-                <Progress value={Math.min(100, ((c.xp ?? 0) % 100))} className="h-1.5 bg-parchment-dark/30" />
+                <Progress value={progressFor(c.xp ?? 0, c.guildRankId ?? null)} className="h-1.5 bg-parchment-dark/30" />
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-parchment-dark/20 text-xs">
                 <span className="flex items-center gap-1 parchment-muted">
@@ -266,16 +285,23 @@ function QuestsTab() {
   const { toast } = useToast();
 
   const acceptMut = useMutation({
-    mutationFn: async ({ questId, characterId }: { questId: string; characterId: string }) =>
-      fetch(`/api/guild/quests/${questId}/assign`, {
+    mutationFn: async ({ questId, characterId }: { questId: string; characterId: string }) => {
+      const res = await fetch(`/api/guild/quests/${questId}/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ characterId, status: "ASSIGNED" }),
-      }).then((r) => r.json()),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) throw new Error(json.error || "Не удалось принять задание");
+      return json;
+    },
     onSuccess: () => {
       toast({ title: "Задание принято", description: "Да хранят тебя боги." });
       qc.invalidateQueries({ queryKey: ["quests"] });
       qc.invalidateQueries({ queryKey: ["me"] });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Печать не сломлена", description: e.message, variant: "destructive" });
     },
   });
 
@@ -301,7 +327,7 @@ function QuestsTab() {
                 <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-wine" /> {q.location}</span>
               )}
               <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5 text-gold" /> {DIFF_REWARD[q.difficulty] ?? "?"} XP</span>
-              <QuestStatusBadge status={q.status} />
+              <QuestStatusBadge status={myProgress?.status ?? q.status} />
             </div>
             {q.reward && (
               <div className="pt-2 border-t border-parchment-dark/20">

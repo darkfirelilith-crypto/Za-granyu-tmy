@@ -32,8 +32,12 @@ export function GrimoireView() {
   const { toast } = useToast();
 
   const unlockMut = useMutation({
-    mutationFn: async (id: string) =>
-      fetch(`/api/grimoire/${id}/unlock`, { method: "POST" }).then((r) => r.json()),
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/grimoire/${id}/unlock`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok || json.error) throw new Error(json.error || "Не удалось изменить печать");
+      return json;
+    },
     onSuccess: (entry) => {
       toast({
         title: entry.unlocked ? "Печать снята!" : "Печать наложена",
@@ -42,6 +46,9 @@ export function GrimoireView() {
           : "Страница вновь сокрыта туманом.",
       });
       qc.invalidateQueries({ queryKey: ["grimoire"] });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
     },
   });
 
@@ -144,7 +151,7 @@ function GrimoirePage({
                   </h3>
                 ) : (
                   <h3 className="font-[family-name:var(--font-cinzel)] text-xl cipher-strong font-mono">
-                    ◈ {generateCipher(entry.id + "title", 8)} ◈
+                    ◈ {entry.encodedTitle || generateCipher(entry.id + "title", 8)} ◈
                   </h3>
                 )}
                 <div className="flex items-center gap-2 flex-wrap mt-1">
@@ -199,7 +206,7 @@ function GrimoirePage({
           {!entry.unlocked && (
             <div className="space-y-3 mt-4">
               <p className="cipher-strong text-base leading-relaxed font-mono">
-                {generateCipher(entry.id, 120)}
+                {entry.encodedContent || generateCipher(entry.id, 120)}
               </p>
               {entry.unlockHint && (
                 <div className="flex items-start gap-2 pt-3 border-t border-foreground/10">

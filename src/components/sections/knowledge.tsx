@@ -412,16 +412,19 @@ function getPersonIcon(p: Personality) {
 
 /* ===== IMPORTANT BEINGS (Важные Существа) ===== */
 function BeingsTab({ search }: { search: string }) {
-  // "Важные Существа" = Personalities where isKeyNpc=true (same model as Личности)
+  // "Важные Существа" = ImportantBeing entries (dedicated model with rich fields:
+  // loreDescription, characterDescription, whereToMeet, notes).
+  // Previously this tab fetched /api/lore/personalities and filtered by isKeyNpc,
+  // which disconnected it from the admin "Важные Существа" editor (ImportantBeing model).
+  // Now it fetches /api/lore/beings so admin-created beings actually appear to players.
   const { data, isLoading } = useQuery<any[]>({
-    queryKey: ["personalities"],
-    queryFn: () => fetch("/api/lore/personalities").then((r) => r.json()),
+    queryKey: ["beings"],
+    queryFn: () => fetch("/api/lore/beings").then((r) => r.json()).catch(() => []),
   });
   const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
-  const allItems = (Array.isArray(data) ? data : []);
-  // Filter: only key NPCs
-  const items = allItems.filter((b) => b.isKeyNpc).filter((b) =>
+  const allItems = Array.isArray(data) ? data : [];
+  const items = allItems.filter((b) =>
     b.name.toLowerCase().includes(search.toLowerCase()) ||
     (b.title ?? "").toLowerCase().includes(search.toLowerCase()) ||
     (b.race ?? "").toLowerCase().includes(search.toLowerCase())
@@ -452,10 +455,10 @@ function BeingsTab({ search }: { search: string }) {
             </span>
           </button>
         ))}
-        {items.length === 0 && <p className="parchment-muted text-center italic py-4 text-sm">Важных существ пока нет. Отметь личность как «Ключевой НПС» в админке.</p>}
+        {items.length === 0 && <p className="parchment-muted text-center italic py-4 text-sm">Важных существ пока нет. Создай их в админке → База Знаний → Важные Существа.</p>}
       </div>
 
-      {/* Detail — uses the same layout as Personalities */}
+      {/* Detail */}
       {sel ? (
         <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
           <div className="flex items-start justify-between gap-4 mb-4">
@@ -474,7 +477,6 @@ function BeingsTab({ search }: { search: string }) {
                 {sel.race && <span>🧬 {sel.race}</span>}
                 {sel.age && <span>📅 {sel.age}</span>}
                 {sel.gender && <span>⚧ {sel.gender}</span>}
-                {sel.affiliation && <span>🏛️ {sel.affiliation}</span>}
               </div>
             </div>
             {sel.portrait ? <ExpandablePortrait src={sel.portrait} alt={sel.name} size="lg" /> : (
@@ -489,19 +491,28 @@ function BeingsTab({ search }: { search: string }) {
               <p className="parchment-muted text-sm whitespace-pre-line">{sel.appearance}</p>
             </div>
           )}
-          {/* Description (lore) */}
-          <div className="lore-prose drop-cap text-base leading-relaxed mb-5">{sel.description}</div>
+          {/* Lore description */}
+          {sel.loreDescription && (
+            <div className="lore-prose drop-cap text-base leading-relaxed mb-5">{sel.loreDescription}</div>
+          )}
+          {/* Character description */}
+          {sel.characterDescription && (
+            <div className="mb-4 p-3 bg-parchment-dark/10 rounded-lg">
+              <p className="parchment-heading text-xs uppercase tracking-wider mb-1">Характер</p>
+              <p className="parchment-muted text-sm whitespace-pre-line">{sel.characterDescription}</p>
+            </div>
+          )}
           {/* Info grid */}
           <div className="flex flex-wrap gap-4 pt-4 border-t border-parchment-dark/30 text-sm">
-            {sel.affiliation && <Field label="Принадлежность" value={sel.affiliation} />}
-            {sel.role && <Field label="Должность" value={sel.role} />}
+            {sel.whereToMeet && <Field label="Где встретить" value={sel.whereToMeet} />}
+            {sel.notes && <Field label="Заметка" value={sel.notes} />}
           </div>
         </ParchmentCard>
       ) : (
         <ParchmentCard className="empty-portal">
           <SparkleIcon className="w-10 h-10 text-gold/40 mx-auto mb-2" />
           <p className="font-[family-name:var(--font-garamond)] italic text-lg">Важных существ пока нет.</p>
-          <p className="text-sm mt-1 opacity-70">Отметь личность как «Ключевой НПС» в админке.</p>
+          <p className="text-sm mt-1 opacity-70">Создай их в админке → База Знаний → Важные Существа.</p>
         </ParchmentCard>
       )}
     </div>

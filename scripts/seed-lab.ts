@@ -5,8 +5,9 @@ async function main() {
   const chapters = await db.grimoireEntry.findMany();
   for (const c of chapters) {
     if (!c.encodedTitle) {
-      // derive a cipher-y roman-numbered placeholder from the order
-      const roman = ["I", "II", "III", "IV", "V", "VI"][c.order] ?? String(c.order + 1);
+      // derive a cipher-y roman-numbered placeholder from the order (order is 1-indexed in seed.ts)
+      const romanIdx = c.order - 1;
+      const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"][romanIdx] ?? String(c.order);
       const enc = `◈ Гл. ${roman} — ◼◼◼◼ ◼◼◼ ◼◼◼◼ ◼◼ ◼◼◼◼◼ ◼◼ ◼◼◼ ◼ ◼◼◼ ◼`;
       await db.grimoireEntry.update({ where: { id: c.id }, data: { encodedTitle: enc } });
       console.log(`encodedTitle set for: ${c.title}`);

@@ -7,8 +7,18 @@ export function hashPassword(password: string): string {
 }
 
 export function verifyPassword(password: string, stored: string): boolean {
-  const [salt, hash] = stored.split(':')
-  const hashBuf = Buffer.from(hash, 'hex')
-  const testBuf = scryptSync(password, salt, 64)
-  return hashBuf.length === testBuf.length && timingSafeEqual(hashBuf, testBuf)
+  // Defensive: corrupted/legacy/malformed password rows must not crash login.
+  // Any parse/scrypt failure is treated as "wrong password" (return false).
+  try {
+    const parts = stored.split(':')
+    if (parts.length !== 2) return false
+    const [salt, hash] = parts
+    if (!salt || !hash) return false
+    const hashBuf = Buffer.from(hash, 'hex')
+    const testBuf = scryptSync(password, salt, 64)
+    // timingSafeEqual requires equal lengths; unequal length = not equal
+    return hashBuf.length === testBuf.length && timingSafeEqual(hashBuf, testBuf)
+  } catch {
+    return false
+  }
 }

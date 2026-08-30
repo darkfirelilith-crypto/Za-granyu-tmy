@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { ImagePlus, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,15 +28,25 @@ export function ImageUpload({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  // useId guarantees a unique, stable HTML id even when multiple ImageUpload instances
+  // have no label and the same maxDim (prevents duplicate-id collisions where clicking
+  // the second label opens the first input).
+  const fieldId = `img-${useId()}`;
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith("image/")) return;
+    // Reject very large files (>12MB) to avoid crashing the tab on mobile / OOM
+    if (file.size > 12 * 1024 * 1024) {
+      alert("Файл слишком большой (максимум 12 МБ).");
+      return;
+    }
     setBusy(true);
     try {
       const base64 = await resizeImage(file, maxDim);
       onChange(base64);
     } catch (e) {
       console.error("image resize failed", e);
+      alert("Не удалось обработать изображение. Попробуйте другой файл.");
     } finally {
       setBusy(false);
     }
@@ -89,10 +99,10 @@ export function ImageUpload({
               e.target.value = "";
             }}
             className="hidden"
-            id={`img-${label?.replace(/\s/g, "-") ?? "img"}-${maxDim}`}
+            id={fieldId}
           />
           <label
-            htmlFor={`img-${label?.replace(/\s/g, "-") ?? "img"}-${maxDim}`}
+            htmlFor={fieldId}
             className="btn-parchment inline-flex items-center gap-1.5 px-3 py-1.5 cursor-pointer text-xs"
           >
             <ImagePlus className="w-3.5 h-3.5" />

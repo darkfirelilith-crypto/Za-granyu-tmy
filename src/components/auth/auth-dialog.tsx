@@ -189,9 +189,11 @@ export function AuthDialog({
             : "Записать в Книгу"}
         </Button>
 
-        <p className="text-center text-xs parchment-muted italic">
-          Подсказка для испытателя: Божество — deity@eldrin.world / divine123
-        </p>
+        {process.env.NODE_ENV === "development" && (
+          <p className="text-center text-xs parchment-muted italic">
+            Подсказка для испытателя: Божество — deity@eldrin.world / divine123
+          </p>
+        )}
       </DialogContent>
     </Dialog>
   );

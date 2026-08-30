@@ -7,14 +7,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Доступ дарован лишь Божеству" }, { status: 403 });
   const { id } = await params;
-  const { characterId, role } = await req.json();
+  let body: { characterId?: string; role?: string | null };
+  try { body = await req.json(); } catch { return NextResponse.json({ error: "Неверное тело запроса" }, { status: 400 }); }
+  const { characterId, role } = body;
   if (!characterId) return NextResponse.json({ error: "Укажите characterId" }, { status: 400 });
-  const member = await db.groupMember.upsert({
-    where: { groupId_characterId: { groupId: id, characterId } },
-    update: { role: role ?? null },
-    create: { groupId: id, characterId, role: role ?? null },
-  });
-  return NextResponse.json(member, { status: 201 });
+  // Validate FK existence (group + character)
+  const [group, character] = await Promise.all([
+    db.group.findUnique({ where: { id }, select: { id: true } }),
+    db.character.findUnique({ where: { id: characterId }, select: { id: true } }),
+  ]);
+  if (!group) return NextResponse.json({ error: "Группа не найдена" }, { status: 404 });
+  if (!character) return NextResponse.json({ error: "Персонаж не найден" }, { status: 404 });
+  try {
+    const member = await db.groupMember.upsert({
+      where: { groupId_characterId: { groupId: id, characterId } },
+      update: { role: role ?? null },
+      create: { groupId: id, characterId, role: role ?? null },
+    });
+    return NextResponse.json(member, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "Не удалось добавить" }, { status: 500 });
+  }
 }
 
 // Remove a character from a group

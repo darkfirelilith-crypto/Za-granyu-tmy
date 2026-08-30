@@ -31,16 +31,38 @@ export function ProfileView() {
   const { toast } = useToast();
 
   const saveMut = useMutation({
-    mutationFn: async () =>
-      fetch("/api/characters", {
+    mutationFn: async () => {
+      // Send only the editable character fields — never nested relations, xp, level,
+      // userId, etc. (prevents accidental overwrite of admin-set values and Prisma errors).
+      const f = form ?? {};
+      const payload = {
+        id: data.character.id,
+        name: f.name,
+        race: f.race,
+        charClass: f.charClass,
+        alignment: f.alignment,
+        bio: f.bio,
+        traits: f.traits,
+        ideals: f.ideals,
+        motives: f.motives,
+        portrait: f.portrait,
+      };
+      const res = await fetch("/api/characters", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: data.character.id, ...form }),
-      }).then((r) => r.json()),
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) throw new Error(json.error || "Не удалось сохранить");
+      return json;
+    },
     onSuccess: () => {
       toast({ title: "Свиток обновлён", description: "Изменения вписаны в Книгу." });
       setEditing(false);
       qc.invalidateQueries({ queryKey: ["me"] });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Ошибка сохранения", description: e.message, variant: "destructive" });
     },
   });
 
@@ -51,7 +73,9 @@ export function ProfileView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ characterId: data.character.id, status }),
       });
-      return (await res.json()) as { xpAwarded?: number; autoUnlocked?: { id: string; title: string }[]; autoGranted?: { id: string; name: string; icon: string | null }[] };
+      const json = await res.json();
+      if (!res.ok || json.error) throw new Error(json.error || "Не удалось завершить задание");
+      return json as { xpAwarded?: number; autoUnlocked?: { id: string; title: string }[]; autoGranted?: { id: string; name: string; icon: string | null }[] };
     },
     onSuccess: (result, vars) => {
       if (vars.status === "COMPLETED") {
@@ -65,6 +89,9 @@ export function ProfileView() {
       qc.invalidateQueries({ queryKey: ["quests"] });
       qc.invalidateQueries({ queryKey: ["characters"] });
       if (result.autoUnlocked?.length) qc.invalidateQueries({ queryKey: ["grimoire"] });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
     },
   });
 
@@ -91,7 +118,11 @@ export function ProfileView() {
   const current = form ?? char;
   const rank = char.guildRank;
   const nextRank = (ranks ?? []).filter((r) => r.minXp > char.xp).sort((a, b) => a.minXp - b.minXp)[0];
-  const rankProgress = nextRank ? Math.min(100, ((char.xp - rank.minXp) / (nextRank.minXp - rank.minXp)) * 100) : 100;
+  // rank can be null (new character, deleted rank, invalid FK). Guard against null to
+  // avoid crashing the whole ProfileView with "Cannot read properties of null".
+  const rankProgress = nextRank && rank
+    ? Math.min(100, ((char.xp - rank.minXp) / (nextRank.minXp - rank.minXp)) * 100)
+    : 100;
   const achievements = char.achievements ?? [];
   const quests = char.questProgress ?? [];
   const notes = char.notes ?? [];

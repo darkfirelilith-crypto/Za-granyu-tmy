@@ -46,5 +46,14 @@ export const authOptions: NextAuthOptions = {
       return session
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || 'eldrin-chronicles-secret-dev-key',
+  // No hardcoded fallback: a missing secret in production is a fatal misconfiguration.
+  // In dev, NextAuth can still operate without a secret for credentials provider, but
+  // we throw in production to prevent JWT forgery via a publicly-known secret.
+  secret: (() => {
+    const s = process.env.NEXTAUTH_SECRET;
+    if (!s && process.env.NODE_ENV === "production") {
+      throw new Error("NEXTAUTH_SECRET must be set in production (use `openssl rand -base64 32`)");
+    }
+    return s;
+  })(),
 }

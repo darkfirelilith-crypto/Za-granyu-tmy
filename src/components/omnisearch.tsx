@@ -13,6 +13,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { MapPin, Crown, Sun, BookMarked, Scale, Sparkles, Link2, Sword, User } from "lucide-react";
 import type { View } from "@/lib/types";
+import { useAppStore } from "@/store/app-store";
 
 interface SearchHit {
   id: string;
@@ -85,7 +86,11 @@ export function Omnisearch({
     );
     data.grimoire?.forEach((g: any) =>
       hits.push({
-        id: g.id, label: g.title, sub: g.unlocked ? "Открыто" : "Запечатано",
+        id: g.id,
+        // Mask sealed chapter titles: never leak the real title of a sealed chapter
+        // (the whole point of the sealed mechanic is hiding it from players).
+        label: g.unlocked ? g.title : (g.encodedTitle || "◈ Запечатанная глава ◈"),
+        sub: g.unlocked ? "Открыто" : "Запечатано",
         icon: <Sparkles className="w-4 h-4 text-magic-glow" />, view: "grimoire",
       })
     );
@@ -115,7 +120,13 @@ export function Omnisearch({
     return () => window.removeEventListener("keydown", handler);
   }, [open, onOpenChange]);
 
+  const setKnowledgeTab = useAppStore((s) => s.setKnowledgeTab);
+  const setAdminTab = useAppStore((s) => s.setAdminTab);
+
   const handleSelect = (hit: SearchHit) => {
+    // Switch the relevant sub-tab before navigating so the user lands on the right section.
+    if (hit.view === "knowledge" && hit.tab) setKnowledgeTab(hit.tab as any);
+    if (hit.view === "admin" && hit.tab) setAdminTab(hit.tab);
     onNavigate(hit.view);
     onOpenChange(false);
   };

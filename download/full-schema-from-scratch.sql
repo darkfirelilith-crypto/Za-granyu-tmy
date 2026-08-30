@@ -29,6 +29,7 @@ CREATE TABLE "Character" (
     "ideals" TEXT,
     "motives" TEXT,
     "portrait" TEXT,
+    "isAdventurer" BOOLEAN NOT NULL DEFAULT true,
     "guildRankId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -99,13 +100,44 @@ CREATE TABLE "Personality" (
     "title" TEXT,
     "description" TEXT NOT NULL,
     "portrait" TEXT,
+    "race" TEXT,
+    "age" TEXT,
+    "gender" TEXT,
+    "appearance" TEXT,
     "affiliation" TEXT,
     "role" TEXT,
     "status" TEXT NOT NULL DEFAULT 'alive',
+    "isNpc" BOOLEAN NOT NULL DEFAULT false,
+    "isKeyNpc" BOOLEAN NOT NULL DEFAULT false,
+    "isAdventurer" BOOLEAN NOT NULL DEFAULT false,
+    "visibleGroupId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Personality_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ImportantBeing" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "title" TEXT,
+    "race" TEXT,
+    "age" TEXT,
+    "gender" TEXT,
+    "appearance" TEXT,
+    "loreDescription" TEXT,
+    "characterDescription" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'alive',
+    "whereToMeet" TEXT,
+    "notes" TEXT,
+    "portrait" TEXT,
+    "personalityId" TEXT,
+    "visibleGroupId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ImportantBeing_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -206,15 +238,25 @@ CREATE TABLE "GrimoireEntry" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "encodedTitle" TEXT,
-    "encodedContent" TEXT NOT NULL,
-    "realContent" TEXT NOT NULL,
+    "encodedContent" TEXT NOT NULL DEFAULT '',
+    "realContent" TEXT NOT NULL DEFAULT '',
     "unlocked" BOOLEAN NOT NULL DEFAULT false,
     "autoUnlocked" BOOLEAN NOT NULL DEFAULT false,
     "unlockHint" TEXT,
     "category" TEXT NOT NULL DEFAULT 'SECRETS',
     "order" INTEGER NOT NULL DEFAULT 0,
+    "loreDate" TEXT,
+    "entryType" TEXT NOT NULL DEFAULT 'NOTE',
+    "paperStyle" TEXT NOT NULL DEFAULT 'PLAIN',
+    "marginTop" TEXT,
+    "marginBottom" TEXT,
+    "postscript" TEXT,
+    "spellReflection" TEXT,
+    "spellFormula" TEXT,
+    "spellNotes" TEXT,
     "conditionType" TEXT,
     "conditionValue" TEXT,
+    "visibleGroupId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -239,6 +281,68 @@ CREATE TABLE "LabEntry" (
     CONSTRAINT "LabEntry_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "SiteContent" (
+    "id" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "title" TEXT,
+    "body" TEXT,
+    "image" TEXT,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "SiteContent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Group" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "image" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Group_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "GroupMember" (
+    "id" TEXT NOT NULL,
+    "groupId" TEXT NOT NULL,
+    "characterId" TEXT NOT NULL,
+    "role" TEXT,
+    "joinedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "GroupMember_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "GroupNpc" (
+    "id" TEXT NOT NULL,
+    "groupId" TEXT NOT NULL,
+    "personalityId" TEXT NOT NULL,
+    "role" TEXT,
+    "notes" TEXT,
+    "addedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "GroupNpc_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CharacterRelation" (
+    "id" TEXT NOT NULL,
+    "ownerId" TEXT NOT NULL,
+    "targetCharacterId" TEXT,
+    "targetPersonalityId" TEXT,
+    "relationLabel" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "CharacterRelation_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -253,6 +357,9 @@ CREATE UNIQUE INDEX "Country_name_key" ON "Country"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Personality_name_key" ON "Personality"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ImportantBeing_name_key" ON "ImportantBeing"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "WorldSystem_title_key" ON "WorldSystem"("title");
@@ -271,6 +378,15 @@ CREATE UNIQUE INDEX "GrimoireEntry_title_key" ON "GrimoireEntry"("title");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "LabEntry_name_key" ON "LabEntry"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SiteContent_key_key" ON "SiteContent"("key");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "GroupMember_groupId_characterId_key" ON "GroupMember"("groupId", "characterId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "GroupNpc_groupId_personalityId_key" ON "GroupNpc"("groupId", "personalityId");
 
 -- AddForeignKey
 ALTER TABLE "Character" ADD CONSTRAINT "Character_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -292,4 +408,25 @@ ALTER TABLE "QuestProgress" ADD CONSTRAINT "QuestProgress_questId_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "QuestProgress" ADD CONSTRAINT "QuestProgress_characterId_fkey" FOREIGN KEY ("characterId") REFERENCES "Character"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GroupMember" ADD CONSTRAINT "GroupMember_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GroupMember" ADD CONSTRAINT "GroupMember_characterId_fkey" FOREIGN KEY ("characterId") REFERENCES "Character"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GroupNpc" ADD CONSTRAINT "GroupNpc_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "Group"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GroupNpc" ADD CONSTRAINT "GroupNpc_personalityId_fkey" FOREIGN KEY ("personalityId") REFERENCES "Personality"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CharacterRelation" ADD CONSTRAINT "CharacterRelation_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "Character"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CharacterRelation" ADD CONSTRAINT "CharacterRelation_targetCharacterId_fkey" FOREIGN KEY ("targetCharacterId") REFERENCES "Character"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CharacterRelation" ADD CONSTRAINT "CharacterRelation_targetPersonalityId_fkey" FOREIGN KEY ("targetPersonalityId") REFERENCES "Personality"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

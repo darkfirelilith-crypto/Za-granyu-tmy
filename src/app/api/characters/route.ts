@@ -23,8 +23,14 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   const session = await requireUser();
   if (!session) return NextResponse.json({ error: "Войдите" }, { status: 401 });
-  const body = await req.json();
-  const { id, ...data } = body;
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Неверное тело запроса" }, { status: 400 });
+  }
+  const id = body.id as string | undefined;
+  if (!id) return NextResponse.json({ error: "Укажите id" }, { status: 400 });
 
   const target = await db.character.findUnique({ where: { id } });
   if (!target) return NextResponse.json({ error: "Персонаж не найден" }, { status: 404 });
@@ -34,21 +40,35 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Чужой свиток не переписать" }, { status: 403 });
   }
 
-  // Players cannot change xp / level / rank directly
-  const safeData = admin
-    ? data
-    : {
-        name: data.name,
-        race: data.race,
-        charClass: data.charClass,
-        alignment: data.alignment,
-        bio: data.bio,
-        traits: data.traits,
-        ideals: data.ideals,
-        motives: data.motives,
-        portrait: data.portrait,
-      };
+  // Players can only edit a strict allow-list of fields (no xp/level/rank/ownership).
+  const playerSafe: Record<string, unknown> = {};
+  const playerFields = ["name", "race", "charClass", "alignment", "bio", "traits", "ideals", "motives", "portrait"] as const;
+  for (const f of playerFields) {
+    if (f in body) playerSafe[f] = body[f];
+  }
 
-  const updated = await db.character.update({ where: { id }, data: safeData });
-  return NextResponse.json(updated);
+  // Admin can additionally edit xp/level/guildRankId/isAdventurer — also a strict allow-list.
+  const adminSafe: Record<string, unknown> = { ...playerSafe };
+  if (admin) {
+    const adminFields = ["xp", "level", "guildRankId", "isAdventurer"] as const;
+    for (const f of adminFields) {
+      if (f in body) {
+        const v = body[f];
+        if (f === "xp" || f === "level") adminSafe[f] = v === undefined ? undefined : Number(v);
+        else if (f === "isAdventurer") adminSafe[f] = v === undefined ? undefined : Boolean(v);
+        else adminSafe[f] = v;
+      }
+    }
+  }
+
+  try {
+    const updated = await db.character.update({
+      where: { id },
+      data: admin ? adminSafe : playerSafe,
+    });
+    return NextResponse.json(updated);
+  } catch (e) {
+    console.error("character update failed:", e);
+    return NextResponse.json({ error: "Не удалось сохранить" }, { status: 500 });
+  }
 }

@@ -49,6 +49,8 @@ export interface Achievement {
   rarity: string;
   category: string | null;
   autoGrant: boolean;
+  conditionType?: string | null;
+  conditionValue?: string | null;
   createdAt: string;
 }
 
@@ -148,6 +150,7 @@ export interface Character {
   achievements?: { achievement: Achievement; grantedAt: string; grantedBy: string | null }[];
   questProgress?: { quest: Quest; status: string; acceptedAt: string; completedAt: string | null }[];
   notes?: Note[];
+  groupMemberships?: { id: string; groupId: string; role: string | null; joinedAt: string }[];
 }
 
 export interface Note {
