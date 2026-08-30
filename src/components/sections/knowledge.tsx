@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import type { Country, Personality, CountryRelation, WorldSystem, God, Legend } from "@/lib/types";
 import { ExpandablePortrait } from "@/components/fantasy/expandable-portrait";
+import { MiniWorldMap } from "@/components/fantasy/mini-world-map";
 import { Search, MapPin, Crown, Link2, Scale, Sun, BookMarked, Globe2, Sparkle as SparkleIcon } from "lucide-react";
 
 export function KnowledgeView() {
@@ -115,7 +116,12 @@ function CountriesTab({ search }: { search: string }) {
         ))}
       </div>
       {sel && (
-        <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
+        <div className="space-y-4">
+          {/* Mini world map — highlights selected country, click to switch */}
+          <ParchmentCard className="p-3 overflow-hidden">
+            <MiniWorldMap selected={sel.name} onSelect={(n) => { const c = items.find((x) => x.name === n); if (c) setSelected(c.id); }} />
+          </ParchmentCard>
+          <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
           {/* Banner image — full width, proper aspect ratio, no cropping */}
           {sel.banner && (
             <div className="w-full h-48 md:h-64 overflow-hidden mb-4 rounded-lg gold-frame">
@@ -145,7 +151,8 @@ function CountriesTab({ search }: { search: string }) {
               <p className="parchment-muted text-sm whitespace-pre-line">{sel.culture}</p>
             </div>
           )}
-        </ParchmentCard>
+          </ParchmentCard>
+        </div>
       )}
     </div>
   );

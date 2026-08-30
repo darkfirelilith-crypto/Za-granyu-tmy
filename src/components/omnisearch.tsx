@@ -11,7 +11,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { MapPin, Crown, Sun, BookMarked, Scale, Sparkles, Link2, Sword, User } from "lucide-react";
+import { MapPin, Crown, Sun, BookMarked, Scale, Sparkles, Link2, Sword, User, FlaskConical } from "lucide-react";
 import type { View } from "@/lib/types";
 import { useAppStore } from "@/store/app-store";
 
@@ -36,7 +36,7 @@ export function Omnisearch({
   const { data } = useQuery({
     queryKey: ["omnisearch-all"],
     queryFn: async () => {
-      const [countries, personalities, gods, legends, systems, grimoire, quests, characters] = await Promise.all([
+      const [countries, personalities, gods, legends, systems, grimoire, quests, characters, lab] = await Promise.all([
         fetch("/api/lore/countries").then((r) => r.json()).catch(() => []),
         fetch("/api/lore/personalities").then((r) => r.json()).catch(() => []),
         fetch("/api/lore/gods").then((r) => r.json()).catch(() => []),
@@ -45,8 +45,9 @@ export function Omnisearch({
         fetch("/api/grimoire").then((r) => r.json()).catch(() => []),
         fetch("/api/guild/quests").then((r) => r.json()).catch(() => []),
         fetch("/api/characters").then((r) => (r.ok ? r.json() : [])).catch(() => []),
+        fetch("/api/lab").then((r) => r.json()).catch(() => []),
       ]);
-      return { countries, personalities, gods, legends, systems, grimoire, quests, characters };
+      return { countries, personalities, gods, legends, systems, grimoire, quests, characters, lab };
     },
     enabled: open,
   });
@@ -104,6 +105,16 @@ export function Omnisearch({
       hits.push({
         id: c.id, label: c.name, sub: `${c.race ?? "—"} · ${c.charClass ?? "—"} · Ур.${c.level}`,
         icon: <User className="w-4 h-4 text-gold" />, view: "guild",
+      })
+    );
+    // Lab entries (Лаборатория Алого): races, classes, subclasses, spells, items.
+    const labKindLabel: Record<string, string> = {
+      RACE: "Раса", CLASS: "Класс", SUBCLASS: "Подкласс", SPELL: "Заклинание", ITEM: "Предмет",
+    };
+    data.lab?.forEach((l: any) =>
+      hits.push({
+        id: l.id, label: l.name, sub: `${labKindLabel[l.kind] ?? l.kind} · ${l.subtitle ?? l.rarity ?? ""}`.trim(),
+        icon: <FlaskConical className="w-4 h-4 text-wine" />, view: "lab",
       })
     );
   }
