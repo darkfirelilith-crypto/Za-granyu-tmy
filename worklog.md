@@ -183,3 +183,24 @@ Action needed from user:
 1. Either: Go to Vercel → Deployments → last deploy → ... → Redeploy → UNCHECK "Use existing build cache" → Redeploy. This forces a fresh `prisma generate`.
 2. Or: Provide a fresh Vercel token (previous one revoked) so I can trigger via API.
 3. After redeploy: login as admin, test creating a personality with race/age — should work and return new fields.
+
+---
+Task ID: user-request-6 (grimoire 3 types + paper styles + important beings)
+Agent: main
+Task: Grimoire 3 entry types with paper decorations, Important Beings section
+
+Work Log:
+- Schema (additive, no data loss): GrimoireEntry +entryType/paperStyle/marginTop/marginBottom/postscript/spellReflection/spellFormula/spellNotes. New ImportantBeing model.
+- Grimoire form: 7 sections — Основное, Тип записи (3 cards: Дневник/Магическая Формула/Заметка), Оформление страницы (7 styles: Plain/Blood/Burned/Tears/Ink/Frost/Gold), Пометки на полях (top+bottom), Содержание (conditional fields per type), Видимость, Условие.
+- Grimoire view: chapters collapse/expand on click. Expanded shows book-page (.grimoire-page) with paper decoration. DIARY shows body + postscript. SPELL_FORMULA shows reflection + formula box + notes. NOTE shows text. Margin notes top/bottom.
+- CSS: 7 paper-* classes (blood stains, burned edges, tear drops, ink splatters, frost, gold glow), .grimoire-page (lined paper, left margin line), .margin-note.
+- ImportantBeing model + API /api/lore/beings (CRUD + group visibility filter).
+- Knowledge: new "Важные Существа" tab with master-detail (portrait, all fields: name/title/race/age/gender/appearance/lore/character/status/whereToMeet/notes).
+- Admin: beings in SECTIONS, FIELD_META for all new fields.
+
+Verification (production):
+- Deploy: HTTP 200.
+- POST /api/lore/beings with all new fields → 201, response includes race/age/gender/appearance/loreDescription/characterDescription/whereToMeet/notes.
+- POST /api/grimoire with entryType=DIARY, paperStyle=BLOOD, marginTop/marginBottom, postscript → 201, all fields returned.
+- Prisma client on Vercel now generates fresh (previous stale cache issue resolved).
+- Existing user data intact (additive only).
