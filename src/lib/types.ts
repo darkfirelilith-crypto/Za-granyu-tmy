@@ -15,10 +15,29 @@ export type LabKind = "RACE" | "CLASS" | "SUBCLASS" | "SPELL" | "ITEM";
 export type KnowledgeTab =
   | "countries"
   | "personalities"
+  | "beings"
   | "relations"
   | "systems"
   | "pantheon"
   | "legends";
+
+export interface ImportantBeing {
+  id: string;
+  name: string;
+  title: string | null;
+  race: string | null;
+  age: string | null;
+  gender: string | null;
+  appearance: string | null;
+  loreDescription: string | null;
+  characterDescription: string | null;
+  status: string;
+  whereToMeet: string | null;
+  notes: string | null;
+  portrait: string | null;
+  personalityId: string | null;
+  visibleGroupId: string | null;
+}
 
 export type Role = "ADMIN" | "PLAYER";
 

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import type { Country, Personality, CountryRelation, WorldSystem, God, Legend } from "@/lib/types";
-import { Search, MapPin, Crown, Link2, Scale, Sun, BookMarked, Globe2 } from "lucide-react";
+import { Search, MapPin, Crown, Link2, Scale, Sun, BookMarked, Globe2, Sparkle as SparkleIcon } from "lucide-react";
 
 export function KnowledgeView() {
   const { knowledgeTab, setKnowledgeTab } = useAppStore();
@@ -35,6 +35,9 @@ export function KnowledgeView() {
             </TabsTrigger>
             <TabsTrigger value="personalities" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold">
               <Crown className="w-4 h-4 mr-1" /> Личности
+            </TabsTrigger>
+            <TabsTrigger value="beings" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold">
+              <SparkleIcon className="w-4 h-4 mr-1" /> Важные Существа
             </TabsTrigger>
             <TabsTrigger value="relations" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold">
               <Link2 className="w-4 h-4 mr-1" /> Отношения
@@ -65,6 +68,7 @@ export function KnowledgeView() {
 
         <TabsContent value="countries" className="mt-6"><CountriesTab search={search} /></TabsContent>
         <TabsContent value="personalities" className="mt-6"><PersonalitiesTab search={search} /></TabsContent>
+        <TabsContent value="beings" className="mt-6"><BeingsTab search={search} /></TabsContent>
         <TabsContent value="relations" className="mt-6"><RelationsTab search={search} /></TabsContent>
         <TabsContent value="systems" className="mt-6"><SystemsTab search={search} /></TabsContent>
         <TabsContent value="pantheon" className="mt-6"><PantheonTab search={search} /></TabsContent>
@@ -380,4 +384,116 @@ function getPersonIcon(p: Personality) {
   if (r.includes("убийц") || r.includes("гильд")) return "🗡️";
   if (r.includes("лич")) return "💀";
   return "🧙";
+}
+
+/* ===== IMPORTANT BEINGS (Важные Существа) ===== */
+function BeingsTab({ search }: { search: string }) {
+  const { data, isLoading } = useQuery<any[]>({
+    queryKey: ["beings"],
+    queryFn: () => fetch("/api/lore/beings").then((r) => r.json()),
+  });
+  const [selected, setSelected] = useState<string | null>(null);
+  if (isLoading) return <LoadingScroll />;
+  const items = (Array.isArray(data) ? data : []).filter((b) =>
+    b.name.toLowerCase().includes(search.toLowerCase()) ||
+    (b.title ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    (b.race ?? "").toLowerCase().includes(search.toLowerCase())
+  );
+  const sel = items.find((b) => b.id === selected) ?? items[0];
+
+  return (
+    <div className="grid lg:grid-cols-[280px_1fr] gap-5">
+      {/* List */}
+      <div className="space-y-2 max-h-[70vh] overflow-y-auto fantasy-scroll pr-2">
+        {items.map((b) => (
+          <button
+            key={b.id}
+            onClick={() => setSelected(b.id)}
+            className={`w-full text-left px-3 py-2 rounded border transition-all flex items-center gap-3 ${
+              sel?.id === b.id ? "bg-gold/10 border-gold/40 text-gold" : "bg-background/30 border-gold/10 text-foreground/70 hover:border-gold/30 hover:text-gold"
+            }`}
+          >
+            <div className="w-10 h-10 rounded overflow-hidden bg-parchment-dark/20 shrink-0 flex items-center justify-center">
+              {b.portrait ? <img src={b.portrait} alt={b.name} className="w-full h-full object-cover" /> : <span className="text-lg">🌟</span>}
+            </div>
+            <div className="min-w-0">
+              <p className="font-[family-name:var(--font-cinzel)] text-sm truncate">{b.name}</p>
+              {b.title && <p className="text-xs parchment-muted/80 truncate">{b.title}</p>}
+            </div>
+            <span className={`ml-auto text-xs shrink-0 ${b.status === "alive" ? "text-green-600" : b.status === "deceased" ? "text-red-600" : "text-amber-600"}`}>
+              {b.status === "alive" ? "✓" : b.status === "deceased" ? "✗" : "?"}
+            </span>
+          </button>
+        ))}
+        {items.length === 0 && <p className="parchment-muted text-center italic py-4 text-sm">Важных существ пока нет.</p>}
+      </div>
+
+      {/* Detail */}
+      {sel ? (
+        <ParchmentCard key={sel.id} className="animate-reveal space-y-4 overflow-hidden">
+          {sel.portrait && (
+            <div className="h-48 md:h-56 -mx-5 -mt-5 md:-mx-6 md:-mt-6 overflow-hidden gold-frame">
+              <img src={sel.portrait} alt={sel.name} className="w-full h-full object-cover" />
+            </div>
+          )}
+          <div className="flex items-start gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.name}</h3>
+                {sel.title && <Badge variant="outline" className="border-gold/30 text-gold/70">{sel.title}</Badge>}
+                <span className={`text-xs px-2 py-0.5 rounded border font-[family-name:var(--font-cinzel)] uppercase ${
+                  sel.status === "alive" ? "border-green-600/30 text-green-700" :
+                  sel.status === "deceased" ? "border-red-700/30 text-red-700" : "border-amber-700/30 text-amber-700"
+                }`}>
+                  {sel.status === "alive" ? "Жив" : sel.status === "deceased" ? "Погиб" : "Пропал"}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-3 mt-2 text-sm parchment-muted">
+                {sel.race && <span>🧬 {sel.race}</span>}
+                {sel.age && <span>📅 {sel.age}</span>}
+                {sel.gender && <span>⚧ {sel.gender}</span>}
+              </div>
+            </div>
+          </div>
+
+          {sel.appearance && (
+            <div>
+              <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Внешность</p>
+              <p className="parchment-muted text-sm whitespace-pre-line">{sel.appearance}</p>
+            </div>
+          )}
+          {sel.loreDescription && (
+            <div>
+              <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Лор</p>
+              <p className="lore-prose drop-cap whitespace-pre-line">{sel.loreDescription}</p>
+            </div>
+          )}
+          {sel.characterDescription && (
+            <div>
+              <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Характер</p>
+              <p className="parchment-muted text-sm whitespace-pre-line">{sel.characterDescription}</p>
+            </div>
+          )}
+          {sel.whereToMeet && (
+            <div>
+              <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Где встретить</p>
+              <p className="parchment-muted text-sm">{sel.whereToMeet}</p>
+            </div>
+          )}
+          {sel.notes && (
+            <div className="pt-3 border-t border-parchment-dark/20">
+              <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Заметки</p>
+              <p className="parchment-muted text-sm italic whitespace-pre-line">{sel.notes}</p>
+            </div>
+          )}
+        </ParchmentCard>
+      ) : (
+        <ParchmentCard className="empty-portal">
+          <SparkleIcon className="w-10 h-10 text-gold/40 mx-auto mb-2" />
+          <p className="font-[family-name:var(--font-garamond)] italic text-lg">Важных существ пока нет.</p>
+          <p className="text-sm mt-1 opacity-70">Добавь их через Чертог Божества → База Знаний → Важные Существа.</p>
+        </ParchmentCard>
+      )}
+    </div>
+  );
 }

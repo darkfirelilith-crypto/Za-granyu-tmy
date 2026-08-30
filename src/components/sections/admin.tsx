@@ -20,6 +20,7 @@ import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Use
 const ENTITIES = {
   countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries", fields: ["name","description","emblem","banner","capital","government","population","culture","climate"] },
   personalities: { label: "Личности", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","race","age","gender","appearance","description","portrait","affiliation","role","status"] },
+  beings: { label: "Важные Существа", icon: Sparkles, api: "/api/lore/beings", fields: ["name","title","race","age","gender","appearance","loreDescription","characterDescription","status","whereToMeet","notes","portrait"] },
   relations: { label: "Отношения", icon: Link2, api: "/api/lore/relations", fields: ["countryAName","countryBName","relationType","description"] },
   systems: { label: "Мир. Система", icon: Scale, api: "/api/lore/systems", fields: ["title","category","description","icon"] },
   gods: { label: "Пантеон", icon: Sun, api: "/api/lore/gods", fields: ["name","title","domain","description","symbol","alignment","pantheon"] },
@@ -34,6 +35,7 @@ const SECTIONS = [
   { key: "knowledge", label: "База Знаний", icon: BookOpen, sub: [
     { key: "countries", label: "Страны" },
     { key: "personalities", label: "Личности" },
+    { key: "beings", label: "Важные Существа" },
     { key: "relations", label: "Отношения" },
     { key: "systems", label: "Мир. Система" },
     { key: "gods", label: "Пантеон" },
@@ -208,6 +210,10 @@ const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"; opt
   age: { type: "text", label: "Возраст" },
   gender: { type: "text", label: "Пол" },
   appearance: { type: "textarea", label: "Описание внешности" },
+  loreDescription: { type: "textarea", label: "Описание лора" },
+  characterDescription: { type: "textarea", label: "Описание характера" },
+  whereToMeet: { type: "text", label: "Где можно встретить" },
+  notes: { type: "textarea", label: "Заметка о персонаже" },
   portrait: { type: "image", label: "Портрет (изображение)" },
   status: { type: "select", label: "Статус", options: ["alive","deceased","missing"] },
   countryAName: { type: "text", label: "Страна A" },
@@ -602,11 +608,29 @@ function GrimoireEditor() {
   );
 }
 
+const PAPER_STYLES = [
+  { value: "PLAIN", label: "Чистый пергамент", emoji: "📜" },
+  { value: "BLOOD", label: "Кровавые пятна", emoji: "🩸" },
+  { value: "BURNED", label: "Обгорелые углы", emoji: "🔥" },
+  { value: "TEARS", label: "Капли слёз", emoji: "💧" },
+  { value: "INK", label: "Чернильные брызги", emoji: "🖋️" },
+  { value: "FROST", label: "Морозный иней", emoji: "❄️" },
+  { value: "GOLD", label: "Золотое сияние", emoji: "✨" },
+];
+
+const ENTRY_TYPES = [
+  { value: "NOTE", label: "Заметка", emoji: "📝", desc: "Простой текстовый блок" },
+  { value: "DIARY", label: "Дневник", emoji: "📔", desc: "Полотно текста + постскриптум" },
+  { value: "SPELL_FORMULA", label: "Магическая Формула", emoji: "🔮", desc: "Размышление + формула заклинания" },
+];
+
 function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:boolean;onOpenChange:(v:boolean)=>void;item:any;onSave:(i:any)=>void;pending:boolean}) {
   const current = item ?? {};
   const [form, setForm] = useState<any>({});
   const getVal = (f:string) => (form[f] !== undefined ? form[f] : current[f] ?? "");
   const setVal = (f:string,v:any) => setForm({...form,[f]:v});
+  const entryType = getVal("entryType") || "NOTE";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="parchment gold-frame max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -614,7 +638,7 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
 
         <div className="space-y-5">
           {/* Секция 1: Основное */}
-          <div className="space-y-3 pb-3 border-b border-parchment-dark/30">
+          <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
             <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Основное</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -647,30 +671,121 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
             )}
           </div>
 
-          {/* Секция 2: Содержание */}
-          <div className="space-y-3 pb-3 border-b border-parchment-dark/30">
-            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Содержание</p>
+          {/* Секция 2: Тип записи */}
+          <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
+            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Тип записи</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {ENTRY_TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setVal("entryType", t.value)}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${entryType === t.value ? "border-wine bg-wine/10" : "border-parchment-dark/30 hover:border-wine/40"}`}
+                >
+                  <div className="text-2xl mb-1">{t.emoji}</div>
+                  <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading">{t.label}</p>
+                  <p className="parchment-muted text-xs italic">{t.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Секция 3: Оформление страницы */}
+          <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
+            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Оформление страницы</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {PAPER_STYLES.map((ps) => (
+                <button
+                  key={ps.value}
+                  type="button"
+                  onClick={() => setVal("paperStyle", ps.value)}
+                  className={`p-2 rounded-lg border-2 text-center transition-all ${(getVal("paperStyle") || "PLAIN") === ps.value ? "border-wine bg-wine/10" : "border-parchment-dark/30 hover:border-wine/40"}`}
+                >
+                  <div className="text-xl mb-0.5">{ps.emoji}</div>
+                  <p className="text-xs font-[family-name:var(--font-cinzel)] parchment-heading">{ps.label}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Секция 4: Пометки на полях (общее для всех типов) */}
+          <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
+            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Пометки на полях</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className="parchment-heading text-sm">Пометка сверху</Label>
+                <Textarea value={getVal("marginTop") ?? ""} onChange={e=>setVal("marginTop",e.target.value)} rows={2} placeholder="Заметка на верхнем поле страницы" className="bg-parchment/60 border-parchment-dark/40" />
+              </div>
+              <div>
+                <Label className="parchment-heading text-sm">Пометка снизу</Label>
+                <Textarea value={getVal("marginBottom") ?? ""} onChange={e=>setVal("marginBottom",e.target.value)} rows={2} placeholder="Заметка на нижнем поле страницы" className="bg-parchment/60 border-parchment-dark/40" />
+              </div>
+            </div>
+          </div>
+
+          {/* Секция 5: Содержание (зависит от типа) */}
+          <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
+            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Содержание — {ENTRY_TYPES.find(t=>t.value===entryType)?.label || "Заметка"}</p>
+
+            {/* Зашифрованный текст (виден когда запечатано) — общее */}
             <div>
               <Label className="parchment-heading text-sm">Зашифрованный текст</Label>
-              <Textarea value={getVal("encodedContent")} onChange={e=>setVal("encodedContent",e.target.value)} rows={4} placeholder="Cipher-текст, виден когда запечатано" className="bg-parchment/60 border-parchment-dark/40" />
+              <Textarea value={getVal("encodedContent")} onChange={e=>setVal("encodedContent",e.target.value)} rows={3} placeholder="Cipher-текст, виден когда запечатано" className="bg-parchment/60 border-parchment-dark/40" />
             </div>
-            <div>
-              <Label className="parchment-heading text-sm">Истинный текст главы</Label>
-              <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={6} placeholder="Настоящее содержание, виден когда глава открыта" className="bg-parchment/60 border-parchment-dark/40" />
-            </div>
+
+            {/* ДНЕВНИК: большое полотно текста + постскриптум */}
+            {entryType === "DIARY" && (
+              <>
+                <div>
+                  <Label className="parchment-heading text-sm">Полотно текста (тело дневника)</Label>
+                  <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={10} placeholder="Огромное полотно текста — запись из дневника автора" className="bg-parchment/60 border-parchment-dark/40" />
+                </div>
+                <div>
+                  <Label className="parchment-heading text-sm">Постскриптум (P.S.)</Label>
+                  <Textarea value={getVal("postscript") ?? ""} onChange={e=>setVal("postscript",e.target.value)} rows={3} placeholder="Постскриптум — дополнение после основной записи" className="bg-parchment/60 border-parchment-dark/40" />
+                </div>
+              </>
+            )}
+
+            {/* МАГИЧЕСКАЯ ФОРМУЛА: размышление + формула + заметки */}
+            {entryType === "SPELL_FORMULA" && (
+              <>
+                <div>
+                  <Label className="parchment-heading text-sm">Описание и размышления автора о заклинании</Label>
+                  <Textarea value={getVal("spellReflection") ?? ""} onChange={e=>setVal("spellReflection",e.target.value)} rows={5} placeholder="Описание заклинания и размышления автора о нём" className="bg-parchment/60 border-parchment-dark/40" />
+                </div>
+                <div>
+                  <Label className="parchment-heading text-sm">Формула заклинания (характеристики)</Label>
+                  <Textarea value={getVal("spellFormula") ?? ""} onChange={e=>setVal("spellFormula",e.target.value)} rows={6} placeholder="Круг, компоненты, время накладывания, дистанция, длительность, урон/эффект..." className="bg-parchment/60 border-parchment-dark/40 font-mono text-sm" />
+                </div>
+                <div>
+                  <Label className="parchment-heading text-sm">Дополнительные заметки о заклинании</Label>
+                  <Textarea value={getVal("spellNotes") ?? ""} onChange={e=>setVal("spellNotes",e.target.value)} rows={3} placeholder="Побочные эффекты, ограничения, история создания..." className="bg-parchment/60 border-parchment-dark/40" />
+                </div>
+              </>
+            )}
+
+            {/* ЗАМЕТКА: просто текст */}
+            {entryType === "NOTE" && (
+              <div>
+                <Label className="parchment-heading text-sm">Текст заметки</Label>
+                <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={6} placeholder="Текст заметки" className="bg-parchment/60 border-parchment-dark/40" />
+              </div>
+            )}
+
             <div>
               <Label className="parchment-heading text-sm">Подсказка для разблокировки</Label>
               <Input value={getVal("unlockHint")??""} onChange={e=>setVal("unlockHint",e.target.value)} placeholder="напр. Заверши три задания гильдии" className="bg-parchment/60 border-parchment-dark/40 h-10" />
             </div>
           </div>
 
-          {/* Секция 3: Видимость */}
-          <div className="space-y-2 pb-3 border-b border-parchment-dark/30">
+          {/* Секция 6: Видимость */}
+          <div className="space-y-2 pb-4 border-b border-parchment-dark/30">
             <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Видимость для групп</p>
             <VisibilitySelector label="Какая группа видит главу" value={getVal("visibleGroupId") || ""} onChange={(v) => setVal("visibleGroupId", v || null)} />
           </div>
 
-          {/* Секция 4: Условие авто-снятия */}
+          {/* Секция 7: Условие авто-снятия */}
           <div className="space-y-2">
             <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Условие авто-снятия печати</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

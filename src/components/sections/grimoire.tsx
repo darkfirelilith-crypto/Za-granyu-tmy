@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { OrnamentTitle } from "@/components/fantasy/ornament-title";
@@ -97,6 +98,12 @@ export function GrimoireView() {
   );
 }
 
+const ENTRY_TYPE_LABEL: Record<string, string> = {
+  DIARY: "📔 Дневник",
+  SPELL_FORMULA: "🔮 Магическая Формула",
+  NOTE: "📝 Заметка",
+};
+
 function GrimoirePage({
   entry,
   isAdmin,
@@ -108,93 +115,201 @@ function GrimoirePage({
   onUnlock: () => void;
   pending: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const paperClass = `paper-${(entry.paperStyle || "PLAIN").toLowerCase()}`;
+
   return (
-    <ParchmentCard
-      className={`relative overflow-hidden ${entry.unlocked ? "animate-reveal" : ""}`}
-      frame={entry.unlocked}
-    >
-      {/* Locked veil overlay */}
-      {!entry.unlocked && (
-        <div className="absolute inset-0 locked-veil z-0 rounded-lg" />
-      )}
-      <div className="relative z-10 space-y-4">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            {entry.unlocked ? (
-              <RuneSeal icon={<Unlock className="w-6 h-6 text-gold" />} size="sm" glow />
-            ) : (
-              <RuneSeal icon={<Lock className="w-6 h-6 text-foreground/50" />} size="sm" className="opacity-70" />
-            )}
-            <div>
+    <div className="space-y-2">
+      {/* Chapter header (always visible) — click to expand */}
+      <ParchmentCard
+        className={`relative overflow-hidden cursor-pointer transition-all ${entry.unlocked ? "gold-frame-hover" : ""}`}
+        frame={entry.unlocked}
+      >
+        {!entry.unlocked && <div className="absolute inset-0 locked-veil z-0 rounded-lg" />}
+        <div
+          className="relative z-10"
+          onClick={() => entry.unlocked && setExpanded(!expanded)}
+        >
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
               {entry.unlocked ? (
-                <h3 className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">
-                  {entry.title}
-                </h3>
+                <RuneSeal icon={<Unlock className="w-6 h-6 text-gold" />} size="sm" glow />
               ) : (
-                <h3 className="font-[family-name:var(--font-cinzel)] text-xl cipher-strong">
-                  {entry.encodedTitle || "◈ Запечатанная глава ◈"}
-                </h3>
+                <RuneSeal icon={<Lock className="w-6 h-6 text-foreground/50" />} size="sm" className="opacity-70" />
               )}
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline" className={`text-xs ${entry.unlocked ? "border-gold/30 text-gold/70" : "border-foreground/20 text-foreground/40"}`}>
-                  {entry.unlocked ? (CAT_LABEL[entry.category] ?? entry.category) : "Запечатано"}
-                </Badge>
-                {entry.unlocked && entry.autoUnlocked && (
-                  <Badge variant="outline" className="text-xs border-magic-glow/40 text-magic-glow/80">
-                    ✦ Снято судьбой
-                  </Badge>
+              <div>
+                {entry.unlocked ? (
+                  <h3 className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">
+                    {entry.title}
+                  </h3>
+                ) : (
+                  <h3 className="font-[family-name:var(--font-cinzel)] text-xl cipher-strong">
+                    {entry.encodedTitle || "◈ Запечатанная глава ◈"}
+                  </h3>
                 )}
-                {!entry.unlocked && entry.conditionType && (
-                  <Badge variant="outline" className="text-xs border-amber-600/40 text-amber-600/80">
-                    ⚗ Условие есть
+                <div className="flex items-center gap-2 flex-wrap mt-1">
+                  <Badge variant="outline" className={`text-xs ${entry.unlocked ? "border-gold/30 text-gold/70" : "border-foreground/20 text-foreground/40"}`}>
+                    {entry.unlocked ? (CAT_LABEL[entry.category] ?? entry.category) : "Запечатано"}
                   </Badge>
-                )}
-                {isAdmin && entry.visibleGroupId && (
-                  <Badge variant="outline" className="text-xs border-purple-600/40 text-purple-600/80">
-                    👥 Только группа
-                  </Badge>
-                )}
+                  {entry.unlocked && (
+                    <Badge variant="outline" className="text-xs border-wine/30 text-wine/70">
+                      {ENTRY_TYPE_LABEL[entry.entryType || "NOTE"] ?? "📝 Заметка"}
+                    </Badge>
+                  )}
+                  {entry.unlocked && entry.autoUnlocked && (
+                    <Badge variant="outline" className="text-xs border-magic-glow/40 text-magic-glow/80">
+                      ✦ Снято судьбой
+                    </Badge>
+                  )}
+                  {!entry.unlocked && entry.conditionType && (
+                    <Badge variant="outline" className="text-xs border-amber-600/40 text-amber-600/80">
+                      ⚗ Условие есть
+                    </Badge>
+                  )}
+                  {isAdmin && entry.visibleGroupId && (
+                    <Badge variant="outline" className="text-xs border-purple-600/40 text-purple-600/80">
+                      👥 Только группа
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {isAdmin && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => { e.stopPropagation(); onUnlock(); }}
+                  disabled={pending}
+                  className={`btn-rune ${entry.unlocked ? "border-wine/40 text-wine hover:bg-wine/10" : "border-gold/40 text-gold hover:bg-gold/10"}`}
+                >
+                  <Crown className="w-3.5 h-3.5 mr-1" />
+                  {entry.unlocked ? "Наложить печать" : "Снять печать"}
+                </Button>
+              )}
+              {entry.unlocked && (
+                <span className="text-gold/60 text-sm animate-flicker">
+                  {expanded ? "▲" : "▼"}
+                </span>
+              )}
+            </div>
           </div>
-          {isAdmin && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onUnlock}
-              disabled={pending}
-              className={`btn-rune ${entry.unlocked ? "border-wine/40 text-wine hover:bg-wine/10" : "border-gold/40 text-gold hover:bg-gold/10"}`}
-            >
-              <Crown className="w-3.5 h-3.5 mr-1" />
-              {entry.unlocked ? "Наложить печать" : "Снять печать"}
-            </Button>
+
+          {/* When sealed — show cipher + hint */}
+          {!entry.unlocked && (
+            <div className="space-y-3 mt-4">
+              <p className="cipher-strong text-base leading-relaxed">
+                {entry.encodedContent}
+              </p>
+              {entry.unlockHint && (
+                <div className="flex items-start gap-2 pt-3 border-t border-foreground/10">
+                  <KeyRound className="w-4 h-4 text-gold/60 mt-0.5 shrink-0 animate-flicker" />
+                  <p className="text-sm text-gold/60 italic font-[family-name:var(--font-garamond)]">
+                    Указание для снятия печати: {entry.unlockHint}
+                  </p>
+                </div>
+              )}
+              <p className="text-center text-foreground/40 text-xs italic pt-2">
+                ✦ Глава запечатана. Исполни условия, чтобы снять печать. ✦
+              </p>
+            </div>
+          )}
+
+          {/* When unlocked and collapsed — show preview */}
+          {entry.unlocked && !expanded && (
+            <div className="mt-3 pt-3 border-t border-parchment-dark/20">
+              <p className="parchment-muted text-sm italic line-clamp-2">
+                {entry.realContent || entry.spellReflection || "Нажми, чтобы раскрыть главу..."}
+              </p>
+              <p className="text-xs text-gold/60 mt-1">▼ Кликни, чтобы раскрыть</p>
+            </div>
           )}
         </div>
+      </ParchmentCard>
 
-        {entry.unlocked ? (
-          <div className="lore-prose drop-cap border-l-2 border-gold/40 pl-4">
-            <p className="animate-reveal">{entry.realContent}</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="cipher-strong text-base leading-relaxed">
-              {entry.encodedContent}
-            </p>
-            {entry.unlockHint && (
-              <div className="flex items-start gap-2 pt-3 border-t border-foreground/10">
-                <KeyRound className="w-4 h-4 text-gold/60 mt-0.5 shrink-0 animate-flicker" />
-                <p className="text-sm text-gold/60 italic font-[family-name:var(--font-garamond)]">
-                  Указание для снятия печати: {entry.unlockHint}
-                </p>
+      {/* When unlocked and expanded — show full book page */}
+      {entry.unlocked && expanded && (
+        <div className={`grimoire-page ${paperClass} animate-reveal`}>
+          {/* Margin note top */}
+          {entry.marginTop && (
+            <div className="margin-note mb-4 ml-12">{entry.marginTop}</div>
+          )}
+
+          {/* Title */}
+          <h2 className="font-[family-name:var(--font-cinzel-decorative)] text-3xl text-wine text-center mb-6">
+            {entry.title}
+          </h2>
+
+          {/* DIARY type: large body + postscript */}
+          {entry.entryType === "DIARY" && (
+            <div className="space-y-4">
+              <div className="lore-prose drop-cap whitespace-pre-line text-base leading-relaxed">
+                {entry.realContent}
               </div>
-            )}
-            <p className="text-center text-foreground/40 text-xs italic pt-2">
-              ✦ Глава запечатана. Исполни условия, чтобы снять печать. ✦
-            </p>
+              {entry.postscript && (
+                <div className="mt-6 pt-4 border-t border-parchment-dark/20">
+                  <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading mb-1">P.S.</p>
+                  <p className="parchment-muted italic whitespace-pre-line">{entry.postscript}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SPELL_FORMULA type: reflection + formula + notes */}
+          {entry.entryType === "SPELL_FORMULA" && (
+            <div className="space-y-4">
+              {entry.spellReflection && (
+                <div>
+                  <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading mb-1">Размышления автора</p>
+                  <p className="lore-prose whitespace-pre-line">{entry.spellReflection}</p>
+                </div>
+              )}
+              {entry.spellFormula && (
+                <div className="my-4 p-4 bg-parchment-dark/20 rounded-lg border border-wine/20">
+                  <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading mb-2">✦ Формула заклинания ✦</p>
+                  <pre className="whitespace-pre-wrap font-mono text-sm parchment-text">{entry.spellFormula}</pre>
+                </div>
+              )}
+              {entry.spellNotes && (
+                <div>
+                  <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading mb-1">Заметки</p>
+                  <p className="parchment-muted text-sm whitespace-pre-line">{entry.spellNotes}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* NOTE type: simple text */}
+          {entry.entryType === "NOTE" && (
+            <div className="lore-prose whitespace-pre-line text-base leading-relaxed">
+              {entry.realContent}
+            </div>
+          )}
+
+          {/* Fallback for entries with no entryType set (old entries) */}
+          {!entry.entryType && entry.realContent && (
+            <div className="lore-prose drop-cap whitespace-pre-line text-base leading-relaxed">
+              {entry.realContent}
+            </div>
+          )}
+
+          {/* Margin note bottom */}
+          {entry.marginBottom && (
+            <div className="margin-note mt-4 ml-12">{entry.marginBottom}</div>
+          )}
+
+          {/* Collapse button */}
+          <div className="text-center mt-6">
+            <button
+              onClick={() => setExpanded(false)}
+              className="btn-parchment text-xs px-3 py-1.5"
+            >
+              ▲ Свернуть главу
+            </button>
           </div>
-        )}
-      </div>
-    </ParchmentCard>
+        </div>
+      )}
+    </div>
   );
 }
 
