@@ -158,6 +158,17 @@
   }
 }
 
+/* ===== Override Tailwind's sm:max-w-lg on dialog content ===== */
+/* Tailwind 4 generates .sm\:max-w-lg { max-width: var(--container-lg) } which
+   forces ALL dialog windows to ~32rem. We neutralize it so our per-dialog
+   max-w-* classes actually take effect. */
+@media (min-width: 40rem) {
+  [data-slot="dialog-content"].sm\:max-w-lg,
+  [data-slot="alert-dialog-content"].sm\:max-w-lg {
+    max-width: unset !important;
+  }
+}
+
 /* ===== FANTASY UTILITY CLASSES ===== */
 
 /* Parchment background with subtle fiber texture */
