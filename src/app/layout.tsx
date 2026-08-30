@@ -6,7 +6,7 @@ import { Providers } from "@/components/providers";
 
 const cinzel = Cinzel({
   variable: "--font-cinzel",
-  subsets: ["latin", "cyrillic"],
+  subsets: ["latin", "latin-ext"],
   weight: ["400", "500", "600", "700", "800", "900"],
 });
 

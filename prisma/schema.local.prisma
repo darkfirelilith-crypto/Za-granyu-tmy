@@ -40,11 +40,15 @@ model Character {
   ideals      String?  // идеалы
   motives     String?  // мотивы
   portrait    String?  // base64 image
+  isAdventurer Boolean @default(true) // true = shows in Guild members list
   guildRankId String?
   guildRank   GuildRank? @relation(fields: [guildRankId], references: [id])
   achievements CharacterAchievement[]
   questProgress QuestProgress[]
   notes       Note[]
+  groupMemberships GroupMember[]
+  relationsOwned   CharacterRelation[] @relation("RelationOwner")
+  relationsAsTarget CharacterRelation[] @relation("RelationTarget")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -109,11 +113,45 @@ model Personality {
   title       String?
   description String
   portrait    String?
-  affiliation String?  // country name / faction
-  role        String?  // king, archmage, etc.
-  status      String   @default("alive") // alive | deceased | missing
+  race        String?
+  age         String?
+  gender      String?
+  appearance  String?
+  affiliation String?
+  role        String?
+  status      String   @default("alive")
+  isNpc       Boolean  @default(false)
+  isKeyNpc    Boolean  @default(false)
+  isAdventurer Boolean @default(false) // true = shows in Guild members list
+  visibleGroupId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  groupNpcs       GroupNpc[]
+  characterRelations CharacterRelation[]
+}
+
+// ===== Important Beings (Важные Существа) — key NPCs of the campaign =====
+
+model ImportantBeing {
+  id                  String   @id @default(cuid())
+  name                String   @unique
+  title               String?
+  race                String?
+  age                 String?
+  gender              String?
+  appearance          String?  // описание внешности
+  loreDescription     String?  // лор персонажа
+  characterDescription String? // описание характера
+  status              String   @default("alive") // alive | deceased | missing
+  whereToMeet         String?  // где можно встретить
+  notes               String?  // заметка о персонаже
+  portrait            String?  // base64 image
+  // Optional link to Personality (если это та же личность)
+  personalityId       String?
+  // Visibility: null = visible to everyone; otherwise only members of this group
+  visibleGroupId      String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model CountryRelation {
@@ -202,16 +240,32 @@ model GrimoireEntry {
   id             String   @id @default(cuid())
   title          String   @unique          // real chapter title (hidden when sealed)
   encodedTitle   String?                   // cipher-like title shown when sealed
-  encodedContent String                     // cipher-like text shown when sealed
-  realContent    String                     // actual lore shown when unsealed
+  encodedContent String   @default("")     // cipher-like text shown when sealed
+  realContent    String   @default("")     // actual lore shown when unsealed (main body)
   unlocked       Boolean  @default(false)
-  autoUnlocked   Boolean  @default(false)   // true if unsealed by condition (vs manual)
-  unlockHint     String?                    // hint shown when sealed
+  autoUnlocked   Boolean  @default(false)  // true if unsealed by condition (vs manual)
+  unlockHint     String?
   category       String   @default("SECRETS") // SECRETS | RITUALS | PROPHECY | HISTORY | BEASTIARY
   order          Int      @default(0)
-  // Auto-unlock condition: conditionType in {QUEST_COMPLETED, XP_THRESHOLD, RANK_REACHED, ACHIEVEMENT_EARNED, MANUAL}
+  loreDate       String?  // дата написания главы (по лору)
+  // Entry type: DIARY (дневник) | SPELL_FORMULA (магическая формула) | NOTE (заметка)
+  entryType      String   @default("NOTE")
+  // Paper decoration style: PLAIN | BLOOD | BURNED | TEARS | INK | FROST | GOLD
+  paperStyle     String   @default("PLAIN")
+  // Common: margin notes (top + bottom)
+  marginTop      String?
+  marginBottom   String?
+  // DIARY: large body (realContent) + postscript
+  postscript     String?
+  // SPELL_FORMULA: author reflection + formula + spell notes
+  spellReflection String?
+  spellFormula    String?
+  spellNotes      String?
+  // Auto-unlock condition
   conditionType  String?
   conditionValue String?
+  // Visibility: null = visible to everyone; otherwise only visible to members of this group
+  visibleGroupId String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -231,5 +285,73 @@ model LabEntry {
   order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// ===== Editable Site Content (история гильдии, девиз, залы, описание зала) =====
+
+model SiteContent {
+  id        String   @id @default(cuid())
+  key       String   @unique // guild_history | guild_motto | guild_halls | hall_intro | hall_world | hall_features
+  title     String?
+  body      String?
+  image     String?  // base64 image (optional)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+// ===== Groups (кампания — объединение игроков + встреченные НПС) =====
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  image       String?  // base64 (герб / эмблема группы)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  members     GroupMember[]
+  npcs        GroupNpc[]
+}
+
+model GroupMember {
+  id          String   @id @default(cuid())
+  groupId     String
+  characterId String
+  role        String?  // напр. "Лидер", "Член", "Гость"
+  joinedAt    DateTime @default(now())
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, characterId])
+}
+
+model GroupNpc {
+  id             String   @id @default(cuid())
+  groupId        String
+  personalityId String
+  role           String?  // напр. "Союзник", "Контакт", "Враг", "Наставник"
+  notes          String?
+  addedAt        DateTime @default(now())
+  group          Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  personality    Personality @relation(fields: [personalityId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, personalityId])
+}
+
+// ===== Character relations (отношения персонажа с НПС и другими персонажами) =====
+
+model CharacterRelation {
+  id                  String   @id @default(cuid())
+  ownerId             String   // character who has the feeling
+  targetCharacterId   String?  // another player's character (nullable)
+  targetPersonalityId String?  // an NPC (nullable)
+  relationLabel       String   // напр. "Друг", "Враг", "Союзник", "Родственник", "Любим", "Ненависть", "Знакомый"
+  description         String?  // свободное описание отношения
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  owner               Character   @relation("RelationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  targetCharacter     Character?  @relation("RelationTarget", fields: [targetCharacterId], references: [id], onDelete: Cascade)
+  targetPersonality   Personality? @relation(fields: [targetPersonalityId], references: [id], onDelete: Cascade)
+
+  // exactly one of targetCharacterId/targetPersonalityId should be set (enforced in app)
 }
 

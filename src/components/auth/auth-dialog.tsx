@@ -87,8 +87,11 @@ export function AuthDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="parchment gold-frame max-w-lg">
         <DialogHeader>
+          <DialogTitle className="sr-only">
+            {mode === "login" ? "Вход в сагу" : "Рождение героя"}
+          </DialogTitle>
           <OrnamentTitle size="md" className="mb-2">
-            {mode === "login" ? "Вход в Хроникаль" : "Рождение Героя"}
+            {mode === "login" ? "Вход в сагу" : "Рождение героя"}
           </OrnamentTitle>
           <DialogDescription className="parchment-muted text-center font-[family-name:var(--font-garamond)]">
             {mode === "login"
@@ -182,7 +185,7 @@ export function AuthDialog({
           {(loginMut.isPending || registerMut.isPending)
             ? "Сверяются свитки..."
             : mode === "login"
-            ? "Войти в Хроники"
+            ? "Войти в сагу"
             : "Записать в Книгу"}
         </Button>
 

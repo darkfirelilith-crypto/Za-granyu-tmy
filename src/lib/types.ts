@@ -79,6 +79,8 @@ export interface Personality {
   role: string | null;
   status: string;
   isNpc?: boolean;
+  isKeyNpc?: boolean;
+  isAdventurer?: boolean;
   visibleGroupId?: string | null;
 }
 
@@ -140,6 +142,7 @@ export interface Character {
   ideals?: string | null;
   motives?: string | null;
   portrait: string | null;
+  isAdventurer?: boolean;
   guildRankId: string | null;
   guildRank?: GuildRank | null;
   achievements?: { achievement: Achievement; grantedAt: string; grantedBy: string | null }[];
@@ -177,6 +180,15 @@ export interface GrimoireEntry {
   unlockHint: string | null;
   category: string;
   order: number;
+  loreDate?: string | null;
+  entryType?: string;
+  paperStyle?: string;
+  marginTop?: string | null;
+  marginBottom?: string | null;
+  postscript?: string | null;
+  spellReflection?: string | null;
+  spellFormula?: string | null;
+  spellNotes?: string | null;
   conditionType?: string | null;
   conditionValue?: string | null;
   visibleGroupId?: string | null;
