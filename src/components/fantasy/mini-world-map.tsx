@@ -9,13 +9,13 @@ import { cn } from "@/lib/utils";
  * but smaller and without city markers / hover tooltips.
  */
 
-const REGIONS: { name: string; d: string }[] = [
-  { name: "Эльдрион", d: "M 380 240 L 470 220 L 520 250 L 540 310 L 510 360 L 440 380 L 380 350 L 360 290 Z" },
-  { name: "Крагмарск", d: "M 250 80 L 420 60 L 560 90 L 540 180 L 470 220 L 380 240 L 300 200 L 240 140 Z" },
-  { name: "Сильмариэль", d: "M 120 200 L 250 80 L 300 200 L 360 290 L 300 360 L 180 380 L 100 320 L 80 250 Z" },
-  { name: "Удунголь", d: "M 560 90 L 760 110 L 880 180 L 920 300 L 860 400 L 720 420 L 620 380 L 540 310 L 520 250 L 540 180 Z" },
-  { name: "Вес'Харан", d: "M 300 360 L 440 380 L 510 360 L 560 420 L 540 500 L 460 540 L 360 530 L 300 480 L 280 420 Z" },
-  { name: "Мёртвые Земли", d: "M 540 310 L 620 380 L 720 420 L 700 500 L 620 560 L 540 540 L 460 540 L 540 500 L 560 420 L 510 360 Z" },
+const REGIONS: { name: string; d: string; labelX: number; labelY: number }[] = [
+  { name: "Эльдрион", d: "M 380 240 L 470 220 L 520 250 L 540 310 L 510 360 L 440 380 L 380 350 L 360 290 Z", labelX: 450, labelY: 300 },
+  { name: "Крагмарск", d: "M 250 80 L 420 60 L 560 90 L 540 180 L 470 220 L 380 240 L 300 200 L 240 140 Z", labelX: 400, labelY: 150 },
+  { name: "Сильмариэль", d: "M 120 200 L 250 80 L 300 200 L 360 290 L 300 360 L 180 380 L 100 320 L 80 250 Z", labelX: 200, labelY: 270 },
+  { name: "Удунголь", d: "M 560 90 L 760 110 L 880 180 L 920 300 L 860 400 L 720 420 L 620 380 L 540 310 L 520 250 L 540 180 Z", labelX: 720, labelY: 260 },
+  { name: "Вес'Харан", d: "M 300 360 L 440 380 L 510 360 L 560 420 L 540 500 L 460 540 L 360 530 L 300 480 L 280 420 Z", labelX: 420, labelY: 460 },
+  { name: "Мёртвые Земли", d: "M 540 310 L 620 380 L 720 420 L 700 500 L 620 560 L 540 540 L 460 540 L 540 500 L 560 420 L 510 360 Z", labelX: 620, labelY: 470 },
 ];
 
 const REGION_FILL: Record<string, string> = {
@@ -59,6 +59,19 @@ export function MiniWorldMap({
               className="transition-all duration-200 hover:opacity-90"
               style={isSel ? { filter: "drop-shadow(0 0 6px oklch(0.78 0.13 85 / 0.5))" } : undefined}
             />
+            {/* Country name label */}
+            <text
+              x={r.labelX}
+              y={r.labelY}
+              textAnchor="middle"
+              className="font-[family-name:var(--font-cinzel)] pointer-events-none select-none"
+              fill={isDead ? "oklch(0.70 0.02 270)" : "oklch(0.25 0.03 50)"}
+              fontSize={isSel ? "18" : "13"}
+              fontWeight={isSel ? "700" : "500"}
+              style={{ textShadow: "0 1px 2px oklch(0.95 0.04 75 / 0.7)" }}
+            >
+              {r.name}
+            </text>
           </g>
         );
       })}

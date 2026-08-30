@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { OrnamentTitle } from "@/components/fantasy/ornament-title";
 import { ParchmentCard, RuneSeal, RarityBadge } from "@/components/fantasy/ui";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Award, Sword, BookOpen, Edit3, Save, X, Trophy, Flag, Ban, Plus, Trash2, Pencil, Users, Link2, Heart } from "lucide-react";
+import { Award, Sword, BookOpen, Edit3, Save, X, Trophy, Flag, Ban, Plus, Trash2, Pencil, Users, Link2, Heart, Download, Upload } from "lucide-react";
 
 export function ProfileView() {
   const { data, isLoading } = useQuery<any>({
@@ -94,6 +94,89 @@ export function ProfileView() {
       toast({ title: "Ошибка", description: e.message, variant: "destructive" });
     },
   });
+
+  // ===== Export / Import character as JSON =====
+  // Export: download a JSON file with all editable character fields + achievements/quests snapshot.
+  // Import: read a JSON file and PUT the editable fields (name/race/class/alignment/bio/traits/ideals/motives).
+  // XP/level/rank are admin-controlled, so import deliberately does NOT overwrite them.
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const exportCharacter = () => {
+    const c = data?.character;
+    if (!c) return;
+    const snapshot = {
+      _type: "za-granyu-tmy-character",
+      _version: 1,
+      exportedAt: new Date().toISOString(),
+      character: {
+        name: c.name,
+        race: c.race,
+        charClass: c.charClass,
+        alignment: c.alignment,
+        level: c.level,
+        xp: c.xp,
+        bio: c.bio,
+        traits: c.traits,
+        ideals: c.ideals,
+        motives: c.motives,
+      },
+      guildRank: c.guildRank?.name ?? null,
+      achievements: (c.achievements ?? []).map((a: any) => ({
+        name: a.achievement?.name,
+        icon: a.achievement?.icon,
+        rarity: a.achievement?.rarity,
+        grantedAt: a.grantedAt,
+      })),
+      completedQuests: (c.questProgress ?? []).filter((q: any) => q.status === "COMPLETED").map((q: any) => ({
+        title: q.quest?.title,
+        completedAt: q.completedAt,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${c.name.replace(/\s+/g, "-").toLowerCase()}-character.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Свиток экспортирован", description: "Файл JSON скачан." });
+  };
+
+  const importCharacter = async (file: File) => {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const imp = parsed.character ?? parsed;
+      if (!imp.name || typeof imp.name !== "string") {
+        throw new Error("Неверный формат: нет поля name");
+      }
+      const c = data?.character;
+      if (!c) throw new Error("Персонаж не найден");
+      const payload = {
+        id: c.id,
+        name: imp.name ?? c.name,
+        race: imp.race ?? c.race,
+        charClass: imp.charClass ?? c.charClass,
+        alignment: imp.alignment ?? c.alignment,
+        bio: imp.bio ?? c.bio,
+        traits: imp.traits ?? c.traits,
+        ideals: imp.ideals ?? c.ideals,
+        motives: imp.motives ?? c.motives,
+        // XP/level/rank are admin-controlled — NOT imported.
+      };
+      const res = await fetch("/api/characters", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) throw new Error(json.error || "Не удалось импортировать");
+      toast({ title: "Свиток импортирован", description: "Данные персонажа восстановлены из файла." });
+      qc.invalidateQueries({ queryKey: ["me"] });
+    } catch (e: any) {
+      toast({ title: "Ошибка импорта", description: e.message, variant: "destructive" });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -226,20 +309,39 @@ export function ProfileView() {
                       <h2 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading break-words">{char.name}</h2>
                     )}
                   </div>
-                  <div className="shrink-0">
+                  <div className="shrink-0 flex flex-wrap gap-2 items-center">
                     {editing ? (
-                      <div className="flex gap-2">
+                      <>
                         <Button size="sm" onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="btn-wine-solid h-9 px-3">
                           <Save className="w-3.5 h-3.5 mr-1" /> Сохранить
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setForm(null); }} className="btn-parchment h-9 px-3">
                           <X className="w-3.5 h-3.5 mr-1" /> Отмена
                         </Button>
-                      </div>
+                      </>
                     ) : (
-                      <Button size="sm" onClick={() => { setForm(char); setEditing(true); }} className="btn-parchment h-9 px-3">
-                        <Edit3 className="w-3.5 h-3.5 mr-1" /> Редактировать
-                      </Button>
+                      <>
+                        <Button size="sm" onClick={() => { setForm(char); setEditing(true); }} className="btn-parchment h-9 px-3">
+                          <Edit3 className="w-3.5 h-3.5 mr-1" /> Редактировать
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={exportCharacter} className="btn-parchment h-9 px-3" title="Скачать свиток героя как JSON" aria-label="Экспортировать персонажа">
+                          <Download className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => fileInputRef.current?.click()} className="btn-parchment h-9 px-3" title="Загрузить свиток героя из JSON" aria-label="Импортировать персонажа">
+                          <Upload className="w-3.5 h-3.5" />
+                        </Button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="application/json,.json"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) importCharacter(f);
+                            e.target.value = "";
+                          }}
+                        />
+                      </>
                     )}
                   </div>
                 </div>
