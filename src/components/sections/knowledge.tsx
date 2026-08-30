@@ -88,6 +88,9 @@ function CountriesTab({ search }: { search: string }) {
   const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
   const items = (data ?? []).filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
+  if (items.length === 0) {
+    return <EmptyState text={search ? "Стран не найдено" : "Свиток стран пока пуст"} sub={search ? "Попробуй иной поиск" : "Божество наполнит его землями мира"} />;
+  }
   const sel = items.find((c) => c.id === selected) ?? items[0];
   return (
     <div className="grid lg:grid-cols-[260px_1fr] gap-5">
@@ -153,6 +156,9 @@ function PersonalitiesTab({ search }: { search: string }) {
   const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
   const items = (data ?? []).filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  if (items.length === 0) {
+    return <EmptyState text={search ? "Личностей не найдено" : "Летопись личностей пуста"} sub={search ? "Попробуй иной поиск" : "Божество впишет имена героев и злодеев"} />;
+  }
   const sel = items.find((p) => p.id === selected) ?? items[0];
   return (
     <div className="grid lg:grid-cols-[260px_1fr] gap-5">
@@ -243,7 +249,7 @@ function RelationsTab({ search }: { search: string }) {
           {r.description && <p className="parchment-muted text-sm">{r.description}</p>}
         </ParchmentCard>
       ))}
-      {items.length === 0 && <EmptyState text="Не найдено связей" />}
+      {items.length === 0 && <EmptyState text={search ? "Связей не найдено" : "Межгосударственные связи ещё не записаны"} sub={search ? "Попробуй иной поиск" : undefined} />}
     </div>
   );
 }
@@ -278,7 +284,7 @@ function SystemsTab({ search }: { search: string }) {
           </div>
         </ParchmentCard>
       ))}
-      {items.length === 0 && <EmptyState text="Не найдено систем" />}
+      {items.length === 0 && <EmptyState text={search ? "Систем не найдено" : "Мировые системы ещё не описаны"} sub={search ? "Попробуй иной поиск" : undefined} />}
     </div>
   );
 }
@@ -291,6 +297,9 @@ function PantheonTab({ search }: { search: string }) {
   });
   if (isLoading) return <LoadingScroll />;
   const items = (data ?? []).filter((g) => g.name.toLowerCase().includes(search.toLowerCase()) || g.domain.toLowerCase().includes(search.toLowerCase()));
+  if (items.length === 0) {
+    return <EmptyState text={search ? "Богов не найдено" : "Пантеон ещё не сформирован"} sub={search ? "Попробуй иной поиск" : "Здесь появятся боги и божества вашего мира"} />;
+  }
   return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
       {items.map((g) => (
@@ -357,7 +366,7 @@ function LegendsTab({ search }: { search: string }) {
           </ParchmentCard>
         );
       })}
-      {items.length === 0 && <EmptyState text="Не найдено легенд" />}
+      {items.length === 0 && <EmptyState text={search ? "Легенд не найдено" : "Легенды этого мира ещё не поведаны"} sub={search ? "Попробуй иной поиск" : undefined} />}
     </div>
   );
 }
@@ -393,10 +402,12 @@ function LoadingScroll() {
     </div>
   );
 }
-function EmptyState({ text }: { text: string }) {
+function EmptyState({ text, sub }: { text: string; sub?: string }) {
   return (
-    <div className="col-span-full text-center py-12 text-foreground/40 font-[family-name:var(--font-garamond)] italic">
-      {text}
+    <div className="col-span-full text-center py-16 flex flex-col items-center gap-3">
+      <span className="text-5xl opacity-40 animate-flicker">❦</span>
+      <p className="font-[family-name:var(--font-garamond)] italic text-lg text-foreground/60">{text}</p>
+      {sub && <p className="text-sm text-foreground/40 font-[family-name:var(--font-cinzel)] tracking-wide">{sub}</p>}
     </div>
   );
 }

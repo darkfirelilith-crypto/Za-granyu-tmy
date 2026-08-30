@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { PageTransition } from "@/components/fantasy/page-transition";
 import { Omnisearch } from "@/components/omnisearch";
+import { DiceRoller } from "@/components/fantasy/dice-roller";
 
 interface MeResponse {
   user: { id: string; name: string; email: string; role: string } | null;
@@ -58,11 +59,14 @@ export function AppShell() {
     () => false
   );
 
-  // Guard: redirect unauthorized users away from protected views (no side-effect in render)
+  // Guard: redirect unauthorized users away from protected views (no side-effect in render).
+  // Use sessionStatus explicitly — `session` is undefined while loading, null when unauthenticated,
+  // and an object when authenticated; relying on `session !== undefined` is fragile/confusing.
   useEffect(() => {
-    if (view === "profile" && !isPlayer && session !== undefined) setView("hall");
-    if (view === "admin" && !isAdmin && session !== undefined) setView("hall");
-  }, [view, isPlayer, isAdmin, session, setView]);
+    if (sessionStatus === "loading") return;
+    if (view === "profile" && !isPlayer) setView("hall");
+    if (view === "admin" && !isAdmin) setView("hall");
+  }, [view, isPlayer, isAdmin, sessionStatus, setView]);
 
   const handleSignOut = () => {
     signOut({ redirect: false });
@@ -85,10 +89,10 @@ export function AppShell() {
             </h1>
             <span className="text-gold text-3xl animate-flicker">❦</span>
           </div>
-          <p className="text-gold/60 text-sm md:text-base font-[family-name:var(--font-cinzel)] tracking-[0.3em] uppercase text-center">
+          <p className="text-gold/80 text-sm md:text-base font-[family-name:var(--font-cinzel)] tracking-[0.3em] uppercase text-center">
             Сага о героях и тайнах мира
           </p>
-          <p className="text-foreground/70 font-[family-name:var(--font-garamond)] italic text-center max-w-md text-lg">
+          <p className="text-foreground font-[family-name:var(--font-garamond)] italic text-center max-w-md text-lg drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
             Войди в сагу, странник. Лишь избранные могут читать свитки этого мира.
           </p>
           <Button
@@ -287,6 +291,7 @@ export function AppShell() {
 
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
       <Omnisearch open={searchOpen} onOpenChange={setSearchOpen} onNavigate={setView} />
+      <DiceRoller />
     </div>
   );
 }

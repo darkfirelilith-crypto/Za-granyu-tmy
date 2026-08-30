@@ -90,7 +90,7 @@ export function AuthDialog({
           <DialogTitle className="sr-only">
             {mode === "login" ? "Вход в сагу" : "Рождение героя"}
           </DialogTitle>
-          <OrnamentTitle size="md" className="mb-2">
+          <OrnamentTitle size="md" className="mb-2" decorative>
             {mode === "login" ? "Вход в сагу" : "Рождение героя"}
           </OrnamentTitle>
           <DialogDescription className="parchment-muted text-center font-[family-name:var(--font-garamond)]">

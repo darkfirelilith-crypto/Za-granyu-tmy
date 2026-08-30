@@ -40,7 +40,7 @@ export function HallView({ onNavigate }: { onNavigate: (v: View) => void }) {
       {/* Hero — minimal intro */}
       <section className="text-center space-y-4 animate-reveal">
         <OrnamentTitle size="xl" flourish="✦">За гранью тьмы</OrnamentTitle>
-        <p className="max-w-2xl mx-auto text-foreground/80 font-[family-name:var(--font-garamond)] text-lg md:text-xl leading-relaxed italic">
+        <p className="max-w-2xl mx-auto text-foreground font-[family-name:var(--font-garamond)] text-lg md:text-xl leading-relaxed italic drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
           {content?.hall_intro || "Перед тобой — врата в мир, что за гранью тьмы. Листай свитки и найди свой путь."}
         </p>
         <div className="flex flex-wrap justify-center gap-3 pt-2">
@@ -78,7 +78,7 @@ function NavBtn({ icon: Icon, label, onClick }: { icon: any; label: string; onCl
   return (
     <button
       onClick={onClick}
-      className="btn-rune bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md flex items-center gap-2"
+      className="btn-gold px-5 py-2.5 rounded-md flex items-center gap-2 text-sm"
     >
       <Icon className="w-4 h-4" />
       {label}
@@ -143,7 +143,7 @@ function Carousel({ cards, onNavigate }: { cards: HallCard[]; onNavigate: (v: Vi
 
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scroll-smooth pb-2 fantasy-scroll"
+        className={`flex gap-4 overflow-x-auto scroll-smooth pb-2 fantasy-scroll ${cards.length <= 3 ? "justify-center" : ""}`}
         style={{ scrollbarWidth: "thin" }}
       >
         {cards.map((c) => (
@@ -154,7 +154,7 @@ function Carousel({ cards, onNavigate }: { cards: HallCard[]; onNavigate: (v: Vi
           >
             <div className="h-44 w-64 rounded-lg overflow-hidden gold-frame bg-parchment-dark/20 flex items-center justify-center transition-all group-hover:gold-frame-hover">
               {c.image ? (
-                <img src={c.image} alt={c.name} className="w-full h-full object-cover" />
+                <img src={c.image} alt={c.name} className="w-full h-full object-cover object-top" />
               ) : (
                 <span className="text-6xl">{c.emoji}</span>
               )}

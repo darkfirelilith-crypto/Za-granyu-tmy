@@ -60,6 +60,6 @@ server.log
 /skills/
 
 # QA screenshots
-qa-*.png
+qa*.png
 login-screen.png
 *-qa.png
