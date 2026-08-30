@@ -567,10 +567,20 @@ function GrimoireEditor() {
   const save = useMutation({
     mutationFn: async (item:any) => {
       const { id, ...rest } = item;
-      if (id) return fetch(`/api/grimoire/${id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(rest)}).then(r=>r.json());
-      return fetch("/api/grimoire",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({order:0,...rest})}).then(r=>r.json());
+      // Clean: remove undefined/null values and convert types
+      const clean: any = {};
+      for (const [k, v] of Object.entries(rest)) {
+        if (v !== undefined && v !== null && v !== "") clean[k] = v;
+        else if (v === null) clean[k] = null; // keep explicit nulls
+      }
+      // Ensure numeric fields are numbers
+      if (clean.order !== undefined) clean.order = Number(clean.order) || 0;
+      if (id) return fetch(`/api/grimoire/${id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(clean)}).then(async r => { const j = await r.json(); if (j.error) throw new Error(j.error); return j; });
+      if (!clean.title) throw new Error("Укажите название главы");
+      return fetch("/api/grimoire",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({order:0,...clean})}).then(async r => { const j = await r.json(); if (j.error) throw new Error(j.error); return j; });
     },
     onSuccess:()=>{setOpen(false);qc.invalidateQueries({queryKey:["grimoire"]});toast({title:"Глава переписана"});},
+    onError:(e:Error)=>{toast({title:"Ошибка сохранения",description:e.message,variant:"destructive"});},
   });
   const del = useMutation({ mutationFn:(id:string)=>fetch(`/api/grimoire/${id}`,{method:"DELETE"}).then(r=>r.json()), onSuccess:()=>{qc.invalidateQueries({queryKey:["grimoire"]});toast({title:"Глава стёрта"});} });
   const unlock = useMutation({ mutationFn:(id:string)=>fetch(`/api/grimoire/${id}/unlock`,{method:"POST"}).then(r=>r.json()), onSuccess:()=>{qc.invalidateQueries({queryKey:["grimoire"]});} });
@@ -630,27 +640,29 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
   const getVal = (f:string) => (form[f] !== undefined ? form[f] : current[f] ?? "");
   const setVal = (f:string,v:any) => setForm({...form,[f]:v});
   const entryType = getVal("entryType") || "NOTE";
+  // sealed = !unlocked. New chapters are sealed by default.
+  const sealed = item?.id ? !getVal("unlocked") : (getVal("unlocked") === undefined ? true : !getVal("unlocked"));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="parchment gold-frame max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="parchment gold-frame max-w-5xl max-h-[92vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{item?.id?"Редактировать":"Создать"} главу</DialogTitle></DialogHeader>
 
         <div className="space-y-5">
           {/* Секция 1: Основное */}
           <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
             <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Основное</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label className="parchment-heading text-sm">Истинное название главы</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-2">
+                <Label className="parchment-heading text-sm">Название главы</Label>
                 <Input value={getVal("title")} onChange={e=>setVal("title",e.target.value)} placeholder="напр. Глава 1: Падение с Неба" className="bg-parchment/60 border-parchment-dark/40 h-10" />
-                <p className="parchment-muted text-xs italic mt-0.5">Видно, когда глава открыта</p>
               </div>
               <div>
-                <Label className="parchment-heading text-sm">Зашифрованное название</Label>
-                <Input value={getVal("encodedTitle") ?? ""} onChange={e=>setVal("encodedTitle",e.target.value)} placeholder="напр. ◈ Гл. I — ◼◼◼◼ ◼◼◼ ◼◼◼◼ ◼◼ ◼◼◼ ◼" className="bg-parchment/60 border-parchment-dark/40 h-10" />
-                <p className="parchment-muted text-xs italic mt-0.5">Видно, когда запечатана</p>
+                <Label className="parchment-heading text-sm">Дата (по лору)</Label>
+                <Input value={getVal("loreDate") ?? ""} onChange={e=>setVal("loreDate",e.target.value)} placeholder="напр. 3 Эра, 15 день" className="bg-parchment/60 border-parchment-dark/40 h-10" />
               </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label className="parchment-heading text-sm">Категория</Label>
                 <Select value={getVal("category")} onValueChange={v=>setVal("category",v)}>
@@ -662,12 +674,31 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
                 <Label className="parchment-heading text-sm">Порядок</Label>
                 <Input type="number" value={getVal("order")??0} onChange={e=>setVal("order",Number(e.target.value))} className="bg-parchment/60 border-parchment-dark/40 h-10" />
               </div>
+              {/* Toggle: Запечатана / Открыта */}
+              <div>
+                <Label className="parchment-heading text-sm">Состояние главы</Label>
+                <div className="flex items-center gap-2 h-10">
+                  <button
+                    type="button"
+                    onClick={() => setVal("unlocked", sealed)}
+                    className={`px-4 py-2 rounded-lg border-2 text-sm font-[family-name:var(--font-cinzel)] transition-all ${sealed ? "border-amber-700/50 bg-amber-700/10 text-amber-700" : "border-parchment-dark/30 text-parchment-muted"}`}
+                  >
+                    🔒 Запечатана
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVal("unlocked", true)}
+                    className={`px-4 py-2 rounded-lg border-2 text-sm font-[family-name:var(--font-cinzel)] transition-all ${!sealed ? "border-green-600/50 bg-green-600/10 text-green-700" : "border-parchment-dark/30 text-parchment-muted"}`}
+                  >
+                    🔓 Открыта
+                  </button>
+                </div>
+              </div>
             </div>
-            {item?.id && (
-              <label className="flex items-center gap-2 cursor-pointer pt-1">
-                <input type="checkbox" id="unl" checked={!!getVal("unlocked")} onChange={e=>setVal("unlocked",e.target.checked)} className="w-4 h-4" />
-                <Label htmlFor="unl" className="parchment-heading text-sm">Глава открыта (печать снята)</Label>
-              </label>
+            {sealed && (
+              <p className="parchment-muted text-xs italic bg-amber-700/5 px-3 py-2 rounded">
+                🔒 Когда глава запечатана, игроки видят только рандомные иероглифы вместо текста. Название тоже скрыто. Шифр генерируется автоматически — ничего вводить не нужно.
+              </p>
             )}
           </div>
 
@@ -680,9 +711,9 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
                   key={t.value}
                   type="button"
                   onClick={() => setVal("entryType", t.value)}
-                  className={`p-3 rounded-lg border-2 text-left transition-all ${entryType === t.value ? "border-wine bg-wine/10" : "border-parchment-dark/30 hover:border-wine/40"}`}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${entryType === t.value ? "border-wine bg-wine/10" : "border-parchment-dark/30 hover:border-wine/40"}`}
                 >
-                  <div className="text-2xl mb-1">{t.emoji}</div>
+                  <div className="text-3xl mb-1">{t.emoji}</div>
                   <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading">{t.label}</p>
                   <p className="parchment-muted text-xs italic">{t.desc}</p>
                 </button>
@@ -693,7 +724,7 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
           {/* Секция 3: Оформление страницы */}
           <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
             <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Оформление страницы</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
               {PAPER_STYLES.map((ps) => (
                 <button
                   key={ps.value}
@@ -701,24 +732,24 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
                   onClick={() => setVal("paperStyle", ps.value)}
                   className={`p-2 rounded-lg border-2 text-center transition-all ${(getVal("paperStyle") || "PLAIN") === ps.value ? "border-wine bg-wine/10" : "border-parchment-dark/30 hover:border-wine/40"}`}
                 >
-                  <div className="text-xl mb-0.5">{ps.emoji}</div>
-                  <p className="text-xs font-[family-name:var(--font-cinzel)] parchment-heading">{ps.label}</p>
+                  <div className="text-2xl mb-0.5">{ps.emoji}</div>
+                  <p className="text-[10px] font-[family-name:var(--font-cinzel)] parchment-heading leading-tight">{ps.label}</p>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Секция 4: Пометки на полях (общее для всех типов) */}
+          {/* Секция 4: Пометки на полях */}
           <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
             <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Пометки на полях</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="parchment-heading text-sm">Пометка сверху</Label>
-                <Textarea value={getVal("marginTop") ?? ""} onChange={e=>setVal("marginTop",e.target.value)} rows={2} placeholder="Заметка на верхнем поле страницы" className="bg-parchment/60 border-parchment-dark/40" />
+                <Textarea value={getVal("marginTop") ?? ""} onChange={e=>setVal("marginTop",e.target.value)} rows={2} placeholder="Заметка на верхнем поле" className="bg-parchment/60 border-parchment-dark/40" />
               </div>
               <div>
                 <Label className="parchment-heading text-sm">Пометка снизу</Label>
-                <Textarea value={getVal("marginBottom") ?? ""} onChange={e=>setVal("marginBottom",e.target.value)} rows={2} placeholder="Заметка на нижнем поле страницы" className="bg-parchment/60 border-parchment-dark/40" />
+                <Textarea value={getVal("marginBottom") ?? ""} onChange={e=>setVal("marginBottom",e.target.value)} rows={2} placeholder="Заметка на нижнем поле" className="bg-parchment/60 border-parchment-dark/40" />
               </div>
             </div>
           </div>
@@ -727,49 +758,51 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
           <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
             <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Содержание — {ENTRY_TYPES.find(t=>t.value===entryType)?.label || "Заметка"}</p>
 
-            {/* Зашифрованный текст (виден когда запечатано) — общее */}
-            <div>
-              <Label className="parchment-heading text-sm">Зашифрованный текст</Label>
-              <Textarea value={getVal("encodedContent")} onChange={e=>setVal("encodedContent",e.target.value)} rows={3} placeholder="Cipher-текст, виден когда запечатано" className="bg-parchment/60 border-parchment-dark/40" />
-            </div>
-
             {/* ДНЕВНИК: большое полотно текста + постскриптум */}
             {entryType === "DIARY" && (
-              <>
+              <div className="space-y-3">
                 <div>
                   <Label className="parchment-heading text-sm">Полотно текста (тело дневника)</Label>
-                  <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={10} placeholder="Огромное полотно текста — запись из дневника автора" className="bg-parchment/60 border-parchment-dark/40" />
+                  <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={12} placeholder="Огромное полотно текста — запись из дневника автора" className="bg-parchment/60 border-parchment-dark/40" />
                 </div>
                 <div>
                   <Label className="parchment-heading text-sm">Постскриптум (P.S.)</Label>
                   <Textarea value={getVal("postscript") ?? ""} onChange={e=>setVal("postscript",e.target.value)} rows={3} placeholder="Постскриптум — дополнение после основной записи" className="bg-parchment/60 border-parchment-dark/40" />
                 </div>
-              </>
+              </div>
             )}
 
             {/* МАГИЧЕСКАЯ ФОРМУЛА: размышление + формула + заметки */}
             {entryType === "SPELL_FORMULA" && (
-              <>
+              <div className="space-y-3">
                 <div>
                   <Label className="parchment-heading text-sm">Описание и размышления автора о заклинании</Label>
-                  <Textarea value={getVal("spellReflection") ?? ""} onChange={e=>setVal("spellReflection",e.target.value)} rows={5} placeholder="Описание заклинания и размышления автора о нём" className="bg-parchment/60 border-parchment-dark/40" />
+                  <Textarea value={getVal("spellReflection") ?? ""} onChange={e=>setVal("spellReflection",e.target.value)} rows={6} placeholder="Описание заклинания и размышления автора о нём" className="bg-parchment/60 border-parchment-dark/40" />
                 </div>
                 <div>
                   <Label className="parchment-heading text-sm">Формула заклинания (характеристики)</Label>
-                  <Textarea value={getVal("spellFormula") ?? ""} onChange={e=>setVal("spellFormula",e.target.value)} rows={6} placeholder="Круг, компоненты, время накладывания, дистанция, длительность, урон/эффект..." className="bg-parchment/60 border-parchment-dark/40 font-mono text-sm" />
+                  <Textarea value={getVal("spellFormula") ?? ""} onChange={e=>setVal("spellFormula",e.target.value)} rows={8} placeholder="Круг, компоненты, время накладывания, дистанция, длительность, урон/эффект..." className="bg-parchment/60 border-parchment-dark/40 font-mono text-sm" />
                 </div>
                 <div>
                   <Label className="parchment-heading text-sm">Дополнительные заметки о заклинании</Label>
                   <Textarea value={getVal("spellNotes") ?? ""} onChange={e=>setVal("spellNotes",e.target.value)} rows={3} placeholder="Побочные эффекты, ограничения, история создания..." className="bg-parchment/60 border-parchment-dark/40" />
                 </div>
-              </>
+              </div>
             )}
 
             {/* ЗАМЕТКА: просто текст */}
             {entryType === "NOTE" && (
               <div>
                 <Label className="parchment-heading text-sm">Текст заметки</Label>
-                <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={6} placeholder="Текст заметки" className="bg-parchment/60 border-parchment-dark/40" />
+                <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={8} placeholder="Текст заметки" className="bg-parchment/60 border-parchment-dark/40" />
+              </div>
+            )}
+
+            {/* Fallback for old entries with no entryType */}
+            {!entryType && (
+              <div>
+                <Label className="parchment-heading text-sm">Текст главы</Label>
+                <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={8} className="bg-parchment/60 border-parchment-dark/40" />
               </div>
             )}
 
@@ -788,7 +821,7 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
           {/* Секция 7: Условие авто-снятия */}
           <div className="space-y-2">
             <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Условие авто-снятия печати</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select value={getVal("conditionType") || "MANUAL"} onValueChange={(v) => setVal("conditionType", v === "MANUAL" ? null : v)}>
                 <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 h-10"><SelectValue/></SelectTrigger>
                 <SelectContent className="parchment">

@@ -244,6 +244,7 @@ model GrimoireEntry {
   unlockHint     String?
   category       String   @default("SECRETS") // SECRETS | RITUALS | PROPHECY | HISTORY | BEASTIARY
   order          Int      @default(0)
+  loreDate       String?  // дата написания главы (по лору)
   // Entry type: DIARY (дневник) | SPELL_FORMULA (магическая формула) | NOTE (заметка)
   entryType      String   @default("NOTE")
   // Paper decoration style: PLAIN | BLOOD | BURNED | TEARS | INK | FROST | GOLD

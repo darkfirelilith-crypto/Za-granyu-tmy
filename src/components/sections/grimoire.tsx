@@ -143,8 +143,8 @@ function GrimoirePage({
                     {entry.title}
                   </h3>
                 ) : (
-                  <h3 className="font-[family-name:var(--font-cinzel)] text-xl cipher-strong">
-                    {entry.encodedTitle || "◈ Запечатанная глава ◈"}
+                  <h3 className="font-[family-name:var(--font-cinzel)] text-xl cipher-strong font-mono">
+                    ◈ {generateCipher(entry.id + "title", 8)} ◈
                   </h3>
                 )}
                 <div className="flex items-center gap-2 flex-wrap mt-1">
@@ -195,11 +195,11 @@ function GrimoirePage({
             </div>
           </div>
 
-          {/* When sealed — show cipher + hint */}
+          {/* When sealed — show auto-generated hieroglyphs + hint */}
           {!entry.unlocked && (
             <div className="space-y-3 mt-4">
-              <p className="cipher-strong text-base leading-relaxed">
-                {entry.encodedContent}
+              <p className="cipher-strong text-base leading-relaxed font-mono">
+                {generateCipher(entry.id, 120)}
               </p>
               {entry.unlockHint && (
                 <div className="flex items-start gap-2 pt-3 border-t border-foreground/10">
@@ -235,10 +235,14 @@ function GrimoirePage({
             <div className="margin-note mb-4 ml-12">{entry.marginTop}</div>
           )}
 
-          {/* Title */}
-          <h2 className="font-[family-name:var(--font-cinzel-decorative)] text-3xl text-wine text-center mb-6">
+          {/* Title + date */}
+          <h2 className="font-[family-name:var(--font-cinzel-decorative)] text-3xl text-wine text-center mb-2">
             {entry.title}
           </h2>
+          {entry.loreDate && (
+            <p className="text-center parchment-muted text-sm italic mb-6">📅 {entry.loreDate}</p>
+          )}
+          {!entry.loreDate && <div className="mb-4" />}
 
           {/* DIARY type: large body + postscript */}
           {entry.entryType === "DIARY" && (
@@ -319,4 +323,20 @@ function pluralChapter(n: number): string {
   if (mod10 === 1 && mod100 !== 11) return "глава";
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return "главы";
   return "глав";
+}
+
+// Deterministic pseudo-random cipher generator — produces hieroglyph-like symbols
+// based on the entry ID (so the same chapter always shows the same cipher).
+const HIEROGLYPHS = "◈◇◆◼◻▼▲▽△⬡⬢✦✧❖☠♾⟁⟆⟐⟡⫷⫸⫹⫺⟢⟣⟤⟥⟨⟩⟪⟫⟰⟱⟲⟳⟴⟵⟶⟷⟸⟹⟺⟻⟼⟽⟾⟿⤀⤁⤂⤃⤄⤅⤆⤇⤈⤉⤊⤋⤌⤍⤎⤏⤐⤑⤒⤓⤔⤕⤖⤗⤘⤙⤚⤛⤜⤝⤞⤟⤠⤡⤢⤣⤤⤥⤦⤧⤨⤩⤪⤫⤬⤭⤮⤯⤰⤱⤲⤳⤴⤵⤶⤷⤸⤹⤺⤻⤼⤽⤾⤿";
+function generateCipher(seed: string, length: number): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+  const chars = HIEROGLYPHS.split("");
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    hash = ((hash << 5) - hash + i * 37) | 0;
+    result += chars[Math.abs(hash) % chars.length];
+    if ((i + 1) % 8 === 0) result += " ";
+  }
+  return result.trim();
 }
