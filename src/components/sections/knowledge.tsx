@@ -85,20 +85,24 @@ function CountriesTab({ search }: { search: string }) {
     queryKey: ["countries"],
     queryFn: () => fetch("/api/lore/countries").then((r) => r.json()),
   });
+  const { selectedCountryName, setSelectedCountryName } = useAppStore();
   const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
   const items = (data ?? []).filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
   if (items.length === 0) {
     return <EmptyState text={search ? "Стран не найдено" : "Свиток стран пока пуст"} sub={search ? "Попробуй иной поиск" : "Божество наполнит его землями мира"} />;
   }
-  const sel = items.find((c) => c.id === selected) ?? items[0];
+  // If a country was selected from the world map (selectedCountryName), pre-select it
+  // and clear the cross-view signal so it doesn't override future manual selections.
+  const preSelected = selectedCountryName ? items.find((c) => c.name === selectedCountryName) : undefined;
+  const sel = items.find((c) => c.id === selected) ?? preSelected ?? items[0];
   return (
     <div className="grid lg:grid-cols-[260px_1fr] gap-5">
       <div className="space-y-2 max-h-[70vh] overflow-y-auto fantasy-scroll pr-2">
         {items.map((c) => (
           <button
             key={c.id}
-            onClick={() => setSelected(c.id)}
+            onClick={() => { setSelected(c.id); setSelectedCountryName(null); }}
             className={`w-full text-left px-3 py-2 rounded border transition-all ${
               sel?.id === c.id
                 ? "bg-gold/10 border-gold/40 text-gold"

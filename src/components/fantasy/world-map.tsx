@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import type { Country } from "@/lib/types";
 import { MapPin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/store/app-store";
 
 /**
  * Stylized interactive world map of «За гранью тьмы».
@@ -110,6 +111,7 @@ const REGION_COLORS: Record<string, { fill: string; stroke: string }> = {
 export function WorldMap({ onNavigateToCountry }: { onNavigateToCountry?: () => void } = {}) {
   const [selected, setSelected] = useState<string | null>(null);
   const [hoveredCity, setHoveredCity] = useState<{ name: string; x: number; y: number } | null>(null);
+  const setSelectedCountryName = useAppStore((s) => s.setSelectedCountryName);
   const { data: countries, isLoading } = useQuery<Country[]>({
     queryKey: ["countries"],
     queryFn: () => fetch("/api/lore/countries").then((r) => r.json()),
@@ -223,7 +225,7 @@ export function WorldMap({ onNavigateToCountry }: { onNavigateToCountry?: () => 
                   aria-label={`Город: ${city.name}`}
                   onMouseEnter={() => setHoveredCity({ name: city.name, x: city.x, y: city.y })}
                   onMouseLeave={() => setHoveredCity(null)}
-                  onClick={() => { setSelected(r.name); onNavigateToCountry?.(); }}
+                  onClick={() => { setSelected(r.name); setSelectedCountryName(r.name); onNavigateToCountry?.(); }}
                 >
                   {/* Invisible larger hit area for easier hover */}
                   <circle cx={city.x} cy={city.y - 2} r="12" fill="transparent" />
