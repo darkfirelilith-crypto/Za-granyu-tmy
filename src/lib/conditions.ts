@@ -18,10 +18,13 @@ export interface ConditionContext {
   xp: number;
   rankLevel: number;
   completedQuestIds: string[];
+  completedQuestTitles: string[];
   assignedQuestIds: string[];
+  assignedQuestTitles: string[];
   earnedAchievementIds: string[];
   /** Optional trigger: the quest that was just assigned or completed (if any) */
   triggerQuestId?: string;
+  triggerQuestTitle?: string;
 }
 
 export function checkCondition(
@@ -32,9 +35,18 @@ export function checkCondition(
   if (!type || !value) return false;
   switch (type) {
     case "QUEST_COMPLETED":
-      return ctx.triggerQuestId === value || ctx.completedQuestIds.includes(value);
+      // Match by quest id OR quest title (admins may set conditionValue to either).
+      // NOTE: do NOT use triggerQuestId/triggerQuestTitle here — that would fire on
+      // assign too. Only the completed-quest lists reflect actual completion.
+      return (
+        ctx.completedQuestIds.includes(value) ||
+        ctx.completedQuestTitles.includes(value)
+      );
     case "QUEST_ASSIGNED":
-      return ctx.triggerQuestId === value || ctx.assignedQuestIds.includes(value);
+      return (
+        ctx.assignedQuestIds.includes(value) ||
+        ctx.assignedQuestTitles.includes(value)
+      );
     case "XP_THRESHOLD":
       return ctx.xp >= Number(value);
     case "RANK_REACHED":
@@ -60,7 +72,7 @@ export async function buildContext(characterId: string, triggerQuestId?: string)
     include: {
       guildRank: true,
       achievements: { select: { achievementId: true } },
-      questProgress: { select: { questId: true, status: true } },
+      questProgress: { include: { quest: { select: { id: true, title: true } } } },
     },
   });
   if (!char) throw new Error("Character not found");
@@ -68,19 +80,41 @@ export async function buildContext(characterId: string, triggerQuestId?: string)
   const completedQuestIds = char.questProgress
     .filter((q) => q.status === "COMPLETED")
     .map((q) => q.questId);
+  const completedQuestTitles = char.questProgress
+    .filter((q) => q.status === "COMPLETED")
+    .map((q) => q.quest.title);
   const assignedQuestIds = char.questProgress
     .filter((q) => q.status === "ASSIGNED")
     .map((q) => q.questId);
+  const assignedQuestTitles = char.questProgress
+    .filter((q) => q.status === "ASSIGNED")
+    .map((q) => q.quest.title);
   const earnedAchievementIds = char.achievements.map((a) => a.achievementId);
+
+  // Resolve trigger quest title (if triggerQuestId is set) so conditionValue
+  // can match by title too.
+  let triggerQuestTitle: string | undefined;
+  if (triggerQuestId) {
+    const triggerProgress = char.questProgress.find((q) => q.questId === triggerQuestId);
+    triggerQuestTitle = triggerProgress?.quest.title;
+    // If not in progress (shouldn't happen), fetch directly
+    if (!triggerQuestTitle) {
+      const q = await db.quest.findUnique({ where: { id: triggerQuestId }, select: { title: true } });
+      triggerQuestTitle = q?.title;
+    }
+  }
 
   return {
     characterId,
     xp: char.xp,
     rankLevel: char.guildRank?.level ?? 1,
     completedQuestIds,
+    completedQuestTitles,
     assignedQuestIds,
+    assignedQuestTitles,
     earnedAchievementIds,
     triggerQuestId,
+    triggerQuestTitle,
   };
 }
 

@@ -55,7 +55,7 @@ export function HallView({ onNavigate }: { onNavigate: (v: View) => void }) {
       {/* Interactive world map */}
       <section className="space-y-4">
         <OrnamentTitle size="md" flourish="🗺️" className="mb-2">Карта мира</OrnamentTitle>
-        <WorldMap />
+        <WorldMap onNavigateToCountry={() => onNavigate("knowledge")} />
       </section>
 
       {/* Auto-scrolling carousel of DB element cards */}

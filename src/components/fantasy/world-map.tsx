@@ -107,7 +107,7 @@ const REGION_COLORS: Record<string, { fill: string; stroke: string }> = {
   "Мёртвые Земли": { fill: "oklch(0.20 0.02 270 / 0.6)", stroke: "oklch(0.35 0.05 270)" },
 };
 
-export function WorldMap() {
+export function WorldMap({ onNavigateToCountry }: { onNavigateToCountry?: () => void } = {}) {
   const [selected, setSelected] = useState<string | null>(null);
   const [hoveredCity, setHoveredCity] = useState<{ name: string; x: number; y: number } | null>(null);
   const { data: countries, isLoading } = useQuery<Country[]>({
@@ -223,6 +223,7 @@ export function WorldMap() {
                   aria-label={`Город: ${city.name}`}
                   onMouseEnter={() => setHoveredCity({ name: city.name, x: city.x, y: city.y })}
                   onMouseLeave={() => setHoveredCity(null)}
+                  onClick={() => { setSelected(r.name); onNavigateToCountry?.(); }}
                 >
                   {/* Invisible larger hit area for easier hover */}
                   <circle cx={city.x} cy={city.y - 2} r="12" fill="transparent" />
