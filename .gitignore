@@ -63,3 +63,6 @@ server.log
 qa*.png
 login-screen.png
 *-qa.png
+
+# Generated banner images (base64 stored in DB, not needed in repo)
+download/banners/

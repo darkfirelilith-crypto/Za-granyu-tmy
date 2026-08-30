@@ -300,10 +300,21 @@ function PantheonTab({ search }: { search: string }) {
   if (items.length === 0) {
     return <EmptyState text={search ? "Богов не найдено" : "Пантеон ещё не сформирован"} sub={search ? "Попробуй иной поиск" : "Здесь появятся боги и божества вашего мира"} />;
   }
+  // Pantheon tier styling: Старшие (gold), Младшие (silver), Алый (wine)
+  const pantheonStyle: Record<string, string> = {
+    Старшие: "border-gold/50 text-gold/90 bg-gold/10",
+    Младшие: "border-zinc-400/50 text-zinc-600 bg-zinc-300/10",
+    Алый: "border-wine/50 text-wine/90 bg-wine/10",
+  };
   return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
       {items.map((g) => (
-        <ParchmentCard key={g.id} hover className="text-center space-y-3">
+        <ParchmentCard key={g.id} hover className="text-center space-y-3 relative">
+          {g.pantheon && (
+            <span className={`absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full border font-[family-name:var(--font-cinzel)] uppercase tracking-wider ${pantheonStyle[g.pantheon] ?? "border-gold/30 text-gold/70"}`}>
+              {g.pantheon}
+            </span>
+          )}
           <RuneSeal
             icon={<span className="text-3xl">{g.symbol ?? "✨"}</span>}
             size="lg"
@@ -320,10 +331,13 @@ function PantheonTab({ search }: { search: string }) {
           <p className="parchment-muted text-sm text-left">{g.description}</p>
           {g.alignment && (
             <div className="pt-2 border-t border-parchment-dark/20">
-              <span className={`text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider ${
-                g.alignment === "good" ? "text-green-600" : g.alignment === "evil" ? "text-red-700" : "text-zinc-500"
+              <span className={`inline-flex items-center gap-1 text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider px-2 py-1 rounded ${
+                g.alignment === "good" ? "text-green-700 bg-green-100/40 border border-green-600/30" :
+                g.alignment === "evil" ? "text-red-800 bg-red-100/40 border border-red-700/30" :
+                "text-zinc-600 bg-zinc-200/40 border border-zinc-500/30"
               }`}>
-                {g.alignment === "good" ? "✦ Добро" : g.alignment === "evil" ? "✦ Зло" : "✦ Нейтралитет"}
+                <span className="text-base leading-none">{g.alignment === "good" ? "☀" : g.alignment === "evil" ? "🌑" : "⚖"}</span>
+                {g.alignment === "good" ? "Добро" : g.alignment === "evil" ? "Зло" : "Нейтралитет"}
               </span>
             </div>
           )}
