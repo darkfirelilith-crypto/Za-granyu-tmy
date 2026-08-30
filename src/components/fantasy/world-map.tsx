@@ -23,6 +23,7 @@ const REGIONS: {
   d: string; // SVG path
   labelX: number;
   labelY: number;
+  cities: { name: string; x: number; y: number; icon: string }[];
 }[] = [
   {
     name: "Эльдрион",
@@ -31,6 +32,10 @@ const REGIONS: {
     d: "M 380 240 L 470 220 L 520 250 L 540 310 L 510 360 L 440 380 L 380 350 L 360 290 Z",
     labelX: 450,
     labelY: 300,
+    cities: [
+      { name: "Эльдрион-Ситэ", x: 450, y: 320, icon: "🏛️" },
+      { name: "Храм Аэтериуса", x: 420, y: 260, icon: "✨" },
+    ],
   },
   {
     name: "Крагмарск",
@@ -39,6 +44,10 @@ const REGIONS: {
     d: "M 250 80 L 420 60 L 560 90 L 540 180 L 470 220 L 380 240 L 300 200 L 240 140 Z",
     labelX: 400,
     labelY: 150,
+    cities: [
+      { name: "Крагмар", x: 400, y: 160, icon: "🏰" },
+      { name: "Фьорд Сигурда", x: 300, y: 130, icon: "⚓" },
+    ],
   },
   {
     name: "Сильмариэль",
@@ -47,6 +56,9 @@ const REGIONS: {
     d: "M 120 200 L 250 80 L 300 200 L 360 290 L 300 360 L 180 380 L 100 320 L 80 250 Z",
     labelX: 200,
     labelY: 270,
+    cities: [
+      { name: "Сильмар", x: 200, y: 290, icon: "🌳" },
+    ],
   },
   {
     name: "Удунголь",
@@ -55,6 +67,10 @@ const REGIONS: {
     d: "M 560 90 L 760 110 L 880 180 L 920 300 L 860 400 L 720 420 L 620 380 L 540 310 L 520 250 L 540 180 Z",
     labelX: 720,
     labelY: 260,
+    cities: [
+      { name: "Удун (кочует)", x: 740, y: 280, icon: "⛺" },
+      { name: "Ставка хана Батыра", x: 700, y: 230, icon: "🏹" },
+    ],
   },
   {
     name: "Вес'Харан",
@@ -63,6 +79,10 @@ const REGIONS: {
     d: "M 300 360 L 440 380 L 510 360 L 560 420 L 540 500 L 460 540 L 360 530 L 300 480 L 280 420 Z",
     labelX: 420,
     labelY: 460,
+    cities: [
+      { name: "Харан", x: 440, y: 470, icon: "🕌" },
+      { name: "Гавань Вес'Харан", x: 480, y: 520, icon: "⛵" },
+    ],
   },
   {
     name: "Мёртвые Земли",
@@ -71,6 +91,10 @@ const REGIONS: {
     d: "M 540 310 L 620 380 L 720 420 L 700 500 L 620 560 L 540 540 L 460 540 L 540 500 L 560 420 L 510 360 Z",
     labelX: 620,
     labelY: 470,
+    cities: [
+      { name: "Разлом Падения", x: 620, y: 480, icon: "💀" },
+      { name: "Чертог Слёз Алого", x: 580, y: 420, icon: "🔥" },
+    ],
   },
 ];
 
@@ -184,6 +208,72 @@ export function WorldMap() {
             );
           })}
 
+          {/* City markers — SVG pins on top of regions, with hover tooltip */}
+          {REGIONS.flatMap((r) =>
+            r.cities.map((city) => {
+              const isDead = r.name === "Мёртвые Земли";
+              const pin = isDead ? "oklch(0.80 0.10 15)" : "oklch(0.55 0.17 30)";
+              const pinStroke = isDead ? "oklch(0.30 0 0)" : "oklch(0.30 0.10 25)";
+              return (
+                <g
+                  key={`${r.name}-${city.name}`}
+                  className="cursor-pointer"
+                  role="button"
+                  aria-label={`Город: ${city.name}`}
+                >
+                  {/* Pin: a drop shape */}
+                  <circle
+                    cx={city.x}
+                    cy={city.y - 2}
+                    r="6"
+                    fill={pin}
+                    stroke={pinStroke}
+                    strokeWidth="1.5"
+                    className="transition-all duration-200 hover:r-8"
+                    style={{ filter: "drop-shadow(0 1px 2px oklch(0 0 0 / 0.4))" }}
+                  />
+                  {/* Pin stem */}
+                  <line
+                    x1={city.x}
+                    y1={city.y + 2}
+                    x2={city.x}
+                    y2={city.y + 10}
+                    stroke={pinStroke}
+                    strokeWidth="1.5"
+                  />
+                  {/* City icon (small, above pin) */}
+                  <text
+                    x={city.x}
+                    y={city.y - 10}
+                    textAnchor="middle"
+                    fontSize="12"
+                    className="pointer-events-none select-none"
+                  >
+                    {city.icon}
+                  </text>
+                  {/* Hover tooltip — visible on hover via CSS group-hover */}
+                  <g className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" style={{ pointerEvents: "none" }}>
+                    <title>{city.name}</title>
+                  </g>
+                  {/* Always-visible small label for capital cities (first city in list) */}
+                  {city === r.cities[0] && (
+                    <text
+                      x={city.x}
+                      y={city.y + 22}
+                      textAnchor="middle"
+                      fontSize="9"
+                      fill="oklch(0.25 0.05 50)"
+                      className="font-[family-name:var(--font-cinzel)] pointer-events-none select-none font-semibold"
+                      style={{ textShadow: "0 1px 2px oklch(0.95 0.04 75 / 0.8)" }}
+                    >
+                      {city.name}
+                    </text>
+                  )}
+                </g>
+              );
+            })
+          )}
+
           {/* Compass rose — decorative, bottom right */}
           <g transform="translate(900 600)" opacity="0.5">
             <circle cx="0" cy="0" r="28" fill="none" stroke="oklch(0.40 0.05 60 / 0.4)" strokeWidth="1" />
@@ -260,6 +350,25 @@ export function WorldMap() {
               {selCountry.population && <div className="flex gap-2"><span className="parchment-heading shrink-0">Народ:</span><span className="parchment-muted">{selCountry.population}</span></div>}
               {selCountry.climate && <div className="flex gap-2"><span className="parchment-heading shrink-0">Климат:</span><span className="parchment-muted">{selCountry.climate}</span></div>}
             </div>
+            {/* Cities & locations */}
+            {(() => {
+              const region = REGIONS.find((r) => r.name === selCountry.name);
+              if (!region || region.cities.length === 0) return null;
+              return (
+                <div className="mt-3 pt-3 border-t border-parchment-dark/20">
+                  <p className="parchment-heading text-xs uppercase tracking-wider mb-2">📍 Города и локации</p>
+                  <div className="space-y-1">
+                    {region.cities.map((c, i) => (
+                      <div key={c.name} className="flex items-center gap-2 text-xs">
+                        <span className="text-base">{c.icon}</span>
+                        <span className="parchment-text flex-1">{c.name}</span>
+                        {i === 0 && <Badge variant="outline" className="border-gold/30 text-gold/70 text-[9px] px-1 py-0">столица</Badge>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </ParchmentCard>
         ) : (
           <ParchmentCard className="empty-portal text-center">

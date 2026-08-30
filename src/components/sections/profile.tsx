@@ -127,6 +127,46 @@ export function ProfileView() {
   const quests = char.questProgress ?? [];
   const notes = char.notes ?? [];
 
+  // Build a unified timeline of recent deeds (achievements granted + quest status
+  // changes + notes created), sorted by date desc. Shows the last 8 events.
+  type TimelineEvent = {
+    id: string;
+    kind: "achievement" | "quest" | "note";
+    icon: string;
+    title: string;
+    detail: string;
+    at: number; // timestamp ms
+  };
+  const timeline: TimelineEvent[] = [
+    ...achievements.map((a: any) => ({
+      id: `ach-${a.achievementId}`,
+      kind: "achievement" as const,
+      icon: a.achievement?.icon ?? "🏅",
+      title: `Дар «${a.achievement?.name ?? "достижение"}»`,
+      detail: a.achievement?.description ?? "",
+      at: new Date(a.grantedAt).getTime(),
+    })),
+    ...quests.map((q: any) => ({
+      id: `qst-${q.questId}`,
+      kind: "quest" as const,
+      icon: q.status === "COMPLETED" ? "✓" : q.status === "FAILED" ? "✗" : "⚔",
+      title: `${q.status === "COMPLETED" ? "Завершён" : q.status === "FAILED" ? "Оставлен" : "Принят"} квест «${q.quest?.title ?? ""}»`,
+      detail: q.quest?.description ?? "",
+      at: new Date(q.status === "COMPLETED" ? q.completedAt : q.acceptedAt).getTime(),
+    })),
+    ...notes.map((n: any) => ({
+      id: `note-${n.id}`,
+      kind: "note" as const,
+      icon: "✒",
+      title: `Заметка: ${n.title || "без названия"}`,
+      detail: n.content,
+      at: new Date(n.updatedAt ?? n.createdAt).getTime(),
+    })),
+  ].sort((a, b) => b.at - a.at);
+  const recentTimeline = timeline.slice(0, 8);
+  const fmtDate = (ts: number) =>
+    new Date(ts).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-10 space-y-8">
       <OrnamentTitle size="lg" flourish="⚔️">Свиток Героя</OrnamentTitle>
@@ -268,6 +308,44 @@ export function ProfileView() {
               <p className="parchment-muted text-xs sm:text-sm">Заметок</p>
             </ParchmentCard>
           </div>
+
+          {/* Recent deeds timeline */}
+          {recentTimeline.length > 0 && (
+            <div className="space-y-4">
+              <OrnamentTitle size="md" flourish="✒">Последние деяния</OrnamentTitle>
+              <ParchmentCard className="overflow-hidden p-0">
+                <div className="divide-y divide-parchment-dark/15">
+                  {recentTimeline.map((ev) => (
+                    <div key={ev.id} className="flex items-start gap-3 px-4 py-3 hover:bg-parchment-dark/5 transition-colors">
+                      {/* Icon medallion */}
+                      <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg ${
+                        ev.kind === "achievement" ? "bg-gold/15 border border-gold/40" :
+                        ev.kind === "quest" ? "bg-wine/10 border border-wine/30" :
+                        "bg-parchment-dark/20 border border-parchment-dark/40"
+                      }`}>
+                        {ev.icon}
+                      </div>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                          <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading">{ev.title}</p>
+                          <span className="text-xs parchment-muted/70 shrink-0">{fmtDate(ev.at)}</span>
+                        </div>
+                        {ev.detail && (
+                          <p className="text-xs parchment-muted mt-0.5 line-clamp-2">{ev.detail}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {timeline.length > 8 && (
+                  <p className="text-center text-xs parchment-muted italic py-2 border-t border-parchment-dark/15">
+                    … и ещё {timeline.length - 8} деяний в свитке героя
+                  </p>
+                )}
+              </ParchmentCard>
+            </div>
+          )}
 
           {/* Achievements */}
           <div className="space-y-4">
