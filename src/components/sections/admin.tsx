@@ -19,7 +19,7 @@ import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Use
 
 const ENTITIES = {
   countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries", fields: ["name","description","emblem","banner","capital","government","population","culture","climate"] },
-  personalities: { label: "Личности", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","race","age","gender","appearance","description","portrait","affiliation","role","status","isNpc"] },
+  personalities: { label: "Личности", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","race","age","gender","appearance","description","portrait","affiliation","role","status","isNpc","isKeyNpc"] },
   beings: { label: "Важные Существа", icon: Sparkles, api: "/api/lore/beings", fields: ["name","title","race","age","gender","appearance","loreDescription","characterDescription","status","whereToMeet","notes","portrait"] },
   relations: { label: "Отношения", icon: Link2, api: "/api/lore/relations", fields: ["countryAName","countryBName","relationType","description"] },
   systems: { label: "Мир. Система", icon: Scale, api: "/api/lore/systems", fields: ["title","category","description","icon"] },
@@ -35,7 +35,6 @@ const SECTIONS = [
   { key: "knowledge", label: "База Знаний", icon: BookOpen, sub: [
     { key: "countries", label: "Страны" },
     { key: "personalities", label: "Личности" },
-    { key: "beings", label: "Важные Существа" },
     { key: "relations", label: "Отношения" },
     { key: "systems", label: "Мир. Система" },
     { key: "gods", label: "Пантеон" },
@@ -217,6 +216,7 @@ const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"|"che
   portrait: { type: "image", label: "Портрет (изображение)" },
   status: { type: "select", label: "Статус", options: ["alive","deceased","missing"] },
   isNpc: { type: "checkbox", label: "Это НПС (встречается в группе)" },
+  isKeyNpc: { type: "checkbox", label: "Ключевой НПС (показывается в «Важные Существа»)" },
   countryAName: { type: "text", label: "Страна A" },
   countryBName: { type: "text", label: "Страна B" },
   relationType: { type: "select", label: "Тип связи", options: ["ally","enemy","neutral","trade","vassal"] },
@@ -244,15 +244,32 @@ function EntityEditor({ entityKey }: { entityKey: EntityKey }) {
   const saveMut = useMutation({
     mutationFn: async (item: any) => {
       const { id, ...rest } = item;
-      if (id) {
-        return fetch(`${meta.api}/${id}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify(rest) }).then(r=>r.json());
+      // Clean undefined/empty-string values — Prisma chokes on undefined
+      const clean: any = {};
+      for (const [k, v] of Object.entries(rest)) {
+        if (v === undefined) continue;
+        if (v === "" && k !== "description" && k !== "name" && k !== "title" && k !== "encodedContent" && k !== "realContent") continue;
+        clean[k] = v;
       }
-      return fetch(meta.api, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(rest) }).then(r=>r.json());
+      // Convert isNpc/isAdventurer to boolean if present
+      if (clean.isNpc !== undefined) clean.isNpc = Boolean(clean.isNpc);
+      if (clean.visibleGroupId === "") clean.visibleGroupId = null;
+      if (clean.order !== undefined) clean.order = Number(clean.order) || 0;
+
+      const res = id
+        ? await fetch(`${meta.api}/${id}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify(clean) })
+        : await fetch(meta.api, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(clean) });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      return json;
     },
     onSuccess: () => {
       toast({ title: "Свиток переписан", description: "Изменения внесены в летопись." });
       setOpen(false);
       qc.invalidateQueries({ queryKey: [entityKey] });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Ошибка сохранения", description: e.message, variant: "destructive" });
     },
   });
 
@@ -1012,8 +1029,9 @@ function CharactersEditor() {
   const [editing, setEditing] = useState<any>(null);
 
   const update = useMutation({
-    mutationFn: async (item:any) => fetch("/api/characters",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:item.id,xp:Number(item.xp),level:Number(item.level),guildRankId:item.guildRankId})}).then(r=>r.json()),
+    mutationFn: async (item:any) => fetch("/api/characters",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:item.id,xp:Number(item.xp),level:Number(item.level),guildRankId:item.guildRankId,isAdventurer:item.isAdventurer !== undefined ? Boolean(item.isAdventurer) : undefined})}).then(r=>r.json()),
     onSuccess:()=>{setEditing(null);qc.invalidateQueries({queryKey:["characters"]});qc.invalidateQueries({queryKey:["me"]});toast({title:"Герой обновлён"});},
+    onError:(e:Error)=>{toast({title:"Ошибка",description:e.message,variant:"destructive"});},
   });
   const grant = useMutation({
     mutationFn: async ({achId,charId,action}:{achId:string;charId:string;action:"grant"|"revoke"})=>
@@ -1046,6 +1064,11 @@ function CharactersEditor() {
                     <SelectContent className="parchment">{(ranks ?? []).map(r=><SelectItem key={r.id} value={r.id}>{r.icon} {r.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+                {/* Is Adventurer toggle */}
+                <label className="flex items-center gap-2 cursor-pointer pt-1">
+                  <input type="checkbox" checked={editing.isAdventurer !== false} onChange={e=>setEditing({...editing,isAdventurer:e.target.checked})} className="w-5 h-5 rounded accent-wine" />
+                  <Label className="parchment-heading text-xs">Авантюрист (показывается в «Братья по оружию»)</Label>
+                </label>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={()=>update.mutate(editing)} disabled={update.isPending} className="bg-primary text-primary-foreground btn-rune">Сохранить</Button>
                   <Button size="sm" variant="ghost" onClick={()=>setEditing(null)} className="parchment-muted">Отмена</Button>

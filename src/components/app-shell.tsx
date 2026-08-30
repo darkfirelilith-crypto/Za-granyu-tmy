@@ -36,13 +36,14 @@ const NAV_ITEMS = [
 
 export function AppShell() {
   const { view, setView } = useAppStore();
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const [authOpen, setAuthOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: me } = useQuery<MeResponse>({
     queryKey: ["me"],
     queryFn: () => fetch("/api/auth/me").then((r) => r.json()),
+    enabled: sessionStatus === "authenticated",
   });
 
   const isAdmin = session?.user?.role === "ADMIN";
@@ -68,6 +69,51 @@ export function AppShell() {
     toast({ title: "Свиток закрыт", description: "Странник покинул чертог." });
     setView("hall");
   };
+
+  // === AUTH GATE: if not logged in, show only the login screen ===
+  const isAuthed = sessionStatus === "authenticated" && !!session?.user;
+
+  if (sessionStatus !== "loading" && !isAuthed) {
+    return (
+      <div className="relative min-h-screen flex flex-col bg-grimoire items-center justify-center">
+        <EmberField />
+        <div className="vignette relative z-10 flex flex-col items-center gap-6 px-4">
+          <div className="flex items-center gap-3">
+            <span className="text-gold text-3xl animate-flicker">❦</span>
+            <h1 className="font-[family-name:var(--font-cinzel-decorative)] text-3xl md:text-5xl shimmer-gold tracking-wide">
+              За гранью тьмы
+            </h1>
+            <span className="text-gold text-3xl animate-flicker">❦</span>
+          </div>
+          <p className="text-gold/60 text-sm md:text-base font-[family-name:var(--font-cinzel)] tracking-[0.3em] uppercase text-center">
+            Сага о героях и тайнах мира
+          </p>
+          <p className="text-foreground/70 font-[family-name:var(--font-garamond)] italic text-center max-w-md text-lg">
+            Войди в сагу, странник. Лишь избранные могут читать свитки этого мира.
+          </p>
+          <Button
+            onClick={() => setAuthOpen(true)}
+            className="btn-rune bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 py-3 h-auto mt-4"
+          >
+            <ScrollText className="w-5 h-5 mr-2" />
+            Войти в сагу
+          </Button>
+        </div>
+        <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+      </div>
+    );
+  }
+
+  if (sessionStatus === "loading") {
+    return (
+      <div className="relative min-h-screen flex flex-col bg-grimoire items-center justify-center">
+        <EmberField />
+        <p className="text-gold/60 font-[family-name:var(--font-cinzel)] animate-flicker text-xl">
+          ✦ Открываем врата... ✦
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen flex flex-col bg-grimoire">

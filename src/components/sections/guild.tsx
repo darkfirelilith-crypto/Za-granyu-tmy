@@ -127,7 +127,8 @@ function MembersTab() {
     queryFn: () => fetch("/api/characters").then((r) => r.json()),
   });
   if (isLoading) return <LoadingScroll />;
-  const chars = (data ?? []).sort((a, b) => (b.xp ?? 0) - (a.xp ?? 0));
+  // Only show characters that are adventurers (isAdventurer !== false)
+  const chars = (data ?? []).filter((c) => c.isAdventurer !== false).sort((a, b) => (b.xp ?? 0) - (a.xp ?? 0));
   return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {chars.map((c, idx) => (

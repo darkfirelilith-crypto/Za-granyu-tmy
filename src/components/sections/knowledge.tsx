@@ -412,13 +412,16 @@ function getPersonIcon(p: Personality) {
 
 /* ===== IMPORTANT BEINGS (Важные Существа) ===== */
 function BeingsTab({ search }: { search: string }) {
+  // "Важные Существа" = Personalities where isKeyNpc=true (same model as Личности)
   const { data, isLoading } = useQuery<any[]>({
-    queryKey: ["beings"],
-    queryFn: () => fetch("/api/lore/beings").then((r) => r.json()),
+    queryKey: ["personalities"],
+    queryFn: () => fetch("/api/lore/personalities").then((r) => r.json()),
   });
   const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
-  const items = (Array.isArray(data) ? data : []).filter((b) =>
+  const allItems = (Array.isArray(data) ? data : []);
+  // Filter: only key NPCs
+  const items = allItems.filter((b) => b.isKeyNpc).filter((b) =>
     b.name.toLowerCase().includes(search.toLowerCase()) ||
     (b.title ?? "").toLowerCase().includes(search.toLowerCase()) ||
     (b.race ?? "").toLowerCase().includes(search.toLowerCase())
@@ -449,20 +452,17 @@ function BeingsTab({ search }: { search: string }) {
             </span>
           </button>
         ))}
-        {items.length === 0 && <p className="parchment-muted text-center italic py-4 text-sm">Важных существ пока нет.</p>}
+        {items.length === 0 && <p className="parchment-muted text-center italic py-4 text-sm">Важных существ пока нет. Отметь личность как «Ключевой НПС» в админке.</p>}
       </div>
 
-      {/* Detail */}
+      {/* Detail — uses the same layout as Personalities */}
       {sel ? (
         <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
-          {/* Header — name + status + portrait thumbnail in corner */}
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.name}</h3>
                 {sel.title && <Badge variant="outline" className="border-gold/30 text-gold/70">{sel.title}</Badge>}
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-xs px-2 py-0.5 rounded border font-[family-name:var(--font-cinzel)] uppercase ${
                   sel.status === "alive" ? "border-green-600/30 text-green-700" :
                   sel.status === "deceased" ? "border-red-700/30 text-red-700" : "border-amber-700/30 text-amber-700"
@@ -474,57 +474,34 @@ function BeingsTab({ search }: { search: string }) {
                 {sel.race && <span>🧬 {sel.race}</span>}
                 {sel.age && <span>📅 {sel.age}</span>}
                 {sel.gender && <span>⚧ {sel.gender}</span>}
+                {sel.affiliation && <span>🏛️ {sel.affiliation}</span>}
               </div>
             </div>
-            {/* Expandable portrait in the corner */}
-            {sel.portrait && <ExpandablePortrait src={sel.portrait} alt={sel.name} size="lg" />}
+            {sel.portrait ? <ExpandablePortrait src={sel.portrait} alt={sel.name} size="lg" /> : (
+              <div className="shrink-0"><RuneSeal icon={<span className="text-3xl">🌟</span>} size="lg" /></div>
+            )}
           </div>
 
-          {/* Appearance — in a styled block */}
+          {/* Appearance */}
           {sel.appearance && (
             <div className="mb-4 p-3 bg-parchment-dark/10 rounded-lg">
               <p className="parchment-heading text-xs uppercase tracking-wider mb-1">Внешность</p>
               <p className="parchment-muted text-sm whitespace-pre-line">{sel.appearance}</p>
             </div>
           )}
-
-          {/* Lore — main text with drop-cap */}
-          {sel.loreDescription && (
-            <div className="mb-4">
-              <p className="parchment-heading text-xs uppercase tracking-wider mb-1">Лор</p>
-              <div className="lore-prose drop-cap text-base leading-relaxed whitespace-pre-line">{sel.loreDescription}</div>
-            </div>
-          )}
-
-          {/* Character description */}
-          {sel.characterDescription && (
-            <div className="mb-4">
-              <p className="parchment-heading text-xs uppercase tracking-wider mb-1">Характер</p>
-              <p className="parchment-muted text-sm whitespace-pre-line">{sel.characterDescription}</p>
-            </div>
-          )}
-
-          {/* Info grid — where to meet + notes */}
-          <div className="grid sm:grid-cols-2 gap-4 pt-4 border-t border-parchment-dark/30">
-            {sel.whereToMeet && (
-              <div>
-                <p className="parchment-heading text-xs uppercase tracking-wider mb-1">📍 Где встретить</p>
-                <p className="parchment-muted text-sm">{sel.whereToMeet}</p>
-              </div>
-            )}
-            {sel.notes && (
-              <div>
-                <p className="parchment-heading text-xs uppercase tracking-wider mb-1">📝 Заметки</p>
-                <p className="parchment-muted text-sm italic whitespace-pre-line">{sel.notes}</p>
-              </div>
-            )}
+          {/* Description (lore) */}
+          <div className="lore-prose drop-cap text-base leading-relaxed mb-5">{sel.description}</div>
+          {/* Info grid */}
+          <div className="flex flex-wrap gap-4 pt-4 border-t border-parchment-dark/30 text-sm">
+            {sel.affiliation && <Field label="Принадлежность" value={sel.affiliation} />}
+            {sel.role && <Field label="Должность" value={sel.role} />}
           </div>
         </ParchmentCard>
       ) : (
         <ParchmentCard className="empty-portal">
           <SparkleIcon className="w-10 h-10 text-gold/40 mx-auto mb-2" />
           <p className="font-[family-name:var(--font-garamond)] italic text-lg">Важных существ пока нет.</p>
-          <p className="text-sm mt-1 opacity-70">Добавь их через Чертог Божества → База Знаний → Важные Существа.</p>
+          <p className="text-sm mt-1 opacity-70">Отметь личность как «Ключевой НПС» в админке.</p>
         </ParchmentCard>
       )}
     </div>

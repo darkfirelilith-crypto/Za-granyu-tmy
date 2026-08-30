@@ -40,6 +40,7 @@ model Character {
   ideals      String?  // идеалы
   motives     String?  // мотивы
   portrait    String?  // base64 image
+  isAdventurer Boolean @default(true) // true = shows in Guild members list
   guildRankId String?
   guildRank   GuildRank? @relation(fields: [guildRankId], references: [id])
   achievements CharacterAchievement[]
@@ -119,7 +120,8 @@ model Personality {
   affiliation String?
   role        String?
   status      String   @default("alive")
-  isNpc       Boolean  @default(false) // true = this is an NPC, can be assigned to groups
+  isNpc       Boolean  @default(false)
+  isKeyNpc    Boolean  @default(false) // true = key NPC (shows in "Важные Существа" tab too)
   visibleGroupId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
