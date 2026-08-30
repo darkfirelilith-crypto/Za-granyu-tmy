@@ -1009,3 +1009,50 @@ Stage Summary:
 - Full transaction wrapping assign/register/admin-users-create (риск регрессии > польза).
 - Удаление /api/route.ts hello-world stub (косметика).
 - .env.example commit pending (нужно закоммитить).
+
+---
+Task ID: session-setup-1
+Agent: Z.ai Code (main)
+Task: Подключение доступов (GitHub + Neon), анализ сайта «За гранью тьмы», проверка работоспособности, багов и неточностей в коде и стилях.
+
+Work Log:
+- Получены доступы: GitHub PAT (репо darkfirelilith-crypto/Za-granyu-tmy), Neon PostgreSQL (pooled + direct), NEXTAUTH_SECRET. Vercel-токен уже отозван.
+- Локальная директория была свежей scaffold-заготовкой Z.ai, не связанной с реальным проектом. Реальный D&D-сайт лежит в ветке main GitHub-репозитория.
+- Настроил git remote (x-access-token), сделал `git reset --hard origin/main` — локалка синхронизирована с реальным проектом (HEAD e7aac76 «Полная QA: 40 багов»).
+- `bun install` + `prisma generate` — зависимости установлены.
+- Создан .env с подключением к Neon: DATABASE_URL (pooled, pgbouncer=true) + DIRECT_URL (direct) + NEXTAUTH_SECRET/URL + ADMIN_*.
+- schema.prisma: добавлен `directUrl = env("DIRECT_URL")` — обязательно для `prisma db push` на Neon (pooled-коннектор не поддерживает DDL).
+- `prisma db push`: БД уже синхронизирована со схемой, данных не потеряно.
+- Найден и устранён КРИТИЧЕСКИЙ инфра-баг: в persistent-шелле была выставлена `DATABASE_URL=file:/home/z/my-project/db/custom.db` (от исходного scaffold), которая перебивала .env (process-env > .env). Из-за этого dev-скрипт через автоопределение генерировал SQLite-клиент → все DB-endpoints падали с HTTP 500 (Prisma: "URL must start with file:"). Исправлено: `unset` stale-переменных, `source .env`, принудительная регенерация postgres-клиента.
+- Найден и устранён баг выживаемости dev-сервера: background-процессы убиваются Bash-tool между командами. Решение: запуск через `setsid --fork` (double-fork, reparent к init PID 1) — сервер стабильно выживает.
+- Agent Browser: login-экран рендерится, регистрация тестового игрока (qa-test@eldrin.world) через /api/auth/register → 200 (PLAYER + персонаж созданы в Neon), вход успешен, навигация по 7 секциям (Зал, База Знаний, Гильдия, Гримуар, Лаборатория, Профиль) без runtime-ошибок.
+- VLM-ревью скриншотов (login, Зал): атмосфера фэнтези выдержана, найдены стилевые неточности (см. ниже).
+- Зафиксирован инфра-фикс: commit d6c101f запушен в GitHub (schema.prisma directUrl + .env.example DIRECT_URL + .gitignore QA-скриншоты).
+
+Stage Summary:
+- Инфраструктура работает: GitHub remote настроен, Neon подключён, dev-сервер стабилен (setsid --fork), DB-запросы через API возвращают 200 с реальными данными.
+- Сайт функционален: вход, регистрация, навигация, DB-reads — всё работает.
+- Коммит d6c101f в GitHub main.
+
+Найденные баги и неточности (НЕ исправлены — ожидают решения пользователя):
+1. [CRITICAL/исправлен локально] Stale shell DATABASE_URL=file: перебивает .env → SQLite-клиент → 500. Корневая причина: dev-скрипт автоопределяет схему по DATABASE_URL, а шелл-окружение загрязнено. Рекомендация: упростить dev-скрипт до postgres-only ИЛИ гарантировать чистоту окружения.
+2. [STYLE] Login-экран: низкий контраст описательного курсивного текста («Войди в сагу, странник...») на тёмном фоне — ухудшает читаемость.
+3. [STYLE/BUG] Зал, карусель «Свитки мира»: `object-cover` без `object-top` → портреты обрезаются (верх головы срезан). Фикс: `object-cover object-top` (или object-contain для портретов).
+4. [STYLE] Зал, карусель: при малом числе карточек (1–2) контент прижат влево, справа пусто, стрелки «висят». Нет центрирования/фоллбэка для малого кол-ва.
+5. [STYLE] Зал: CTA-кнопки (База Знаний/Гильдия/...) в плоском современном стиле выбиваются из пергаментной фэнтези-темы.
+6. [A11Y] Auth-диалог: дублированный заголовок «Вход в сагу» (два <h2>) — нарушение семантики.
+7. [CODE SMELL] app-shell.tsx useEffect-guard: проверка `session !== undefined` семантически некорректна (session из useSession = null при отсутствии, не undefined). Работает по счастливому совпадению. Следует `sessionStatus === "authenticated"`.
+8. [DATA] Neon prod-БД почти пуста по lore-контенту: 0 стран, богов, легенд, квестов, достижений, систем мира. Сид-скрипты (prisma/seed*.ts, scripts/seed-*.ts) не выполнялись на Neon. Есть только: admin (darkfire.lilith@gmail.com / Данталион), 1 персонаж, 5 рангов, 1 личность, 1 гримуар, 1 группа, + тестовый игрок qa-test@eldrin.world.
+9. [OPS] Vercel API-токен отозван — авто-деплой через API недоступен. Деплой идёт через GitHub-интеграцию Vercel (push → auto-deploy).
+
+Не исправлено (риски/косметика из предыдущей QA — оставлено как есть):
+- Системные 404 на ~10 lore [id] routes (P2025 как 500).
+- User-enumeration timing attack в authorize.
+- Транзакции в assign/register/admin-users-create.
+
+Приоритеты следующего этапа (по решению пользователя):
+- A. Залить сид-контент в Neon (страны, боги, легенды, квесты, достижения) — иначе разделы пусты.
+- B. Исправить стилевые баги Зала (карусель object-top, центрирование, стиль CTA-кнопок).
+- C. Исправить a11y (дублированный заголовок диалога) и code smell (useEffect guard).
+- D. Упростить dev-скрипт (убрать хрупкое автоопределение sqlite/postgres).
+- E. Удалить тестового игрока qa-test@eldrin.world после завершения QA.
