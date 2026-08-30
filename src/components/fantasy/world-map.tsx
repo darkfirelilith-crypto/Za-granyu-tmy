@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ParchmentCard, RuneSeal } from "@/components/fantasy/ui";
 import { Badge } from "@/components/ui/badge";
 import type { Country } from "@/lib/types";
-import { MapPin, X } from "lucide-react";
+import { MapPin, X, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 
@@ -111,6 +111,20 @@ const REGION_COLORS: Record<string, { fill: string; stroke: string }> = {
 export function WorldMap({ onNavigateToCountry }: { onNavigateToCountry?: () => void } = {}) {
   const [selected, setSelected] = useState<string | null>(null);
   const [hoveredCity, setHoveredCity] = useState<{ name: string; x: number; y: number } | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  // Display settings — persisted in localStorage (client-only lazy init to avoid hydration mismatch).
+  const [settings, setSettings] = useState<{ cities: boolean; labels: boolean; compass: boolean; legend: boolean; waves: boolean }>(() => {
+    if (typeof window === "undefined") return { cities: true, labels: true, compass: true, legend: true, waves: true };
+    try {
+      const raw = localStorage.getItem("worldmap-settings");
+      return raw ? JSON.parse(raw) : { cities: true, labels: true, compass: true, legend: true, waves: true };
+    } catch { return { cities: true, labels: true, compass: true, legend: true, waves: true }; }
+  });
+  const updateSetting = (key: keyof typeof settings, val: boolean) => {
+    const next = { ...settings, [key]: val };
+    setSettings(next);
+    try { localStorage.setItem("worldmap-settings", JSON.stringify(next)); } catch { /* ignore */ }
+  };
   const setSelectedCountryName = useAppStore((s) => s.setSelectedCountryName);
   const { data: countries, isLoading } = useQuery<Country[]>({
     queryKey: ["countries"],
@@ -125,6 +139,38 @@ export function WorldMap({ onNavigateToCountry }: { onNavigateToCountry?: () => 
     <div className="grid lg:grid-cols-[1fr_320px] gap-6">
       {/* ===== MAP ===== */}
       <ParchmentCard className="parchment-map p-2 md:p-4 relative">
+        {/* Settings gear button */}
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-parchment-dark/30 border border-gold/30 text-gold/70 hover:text-gold hover:border-gold/60 transition-all flex items-center justify-center"
+          aria-label="Настройки карты"
+          title="Настройки карты"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
+        {/* Settings panel */}
+        {showSettings && (
+          <div className="absolute top-12 right-3 z-20 w-56 p-3 rounded-lg bg-parchment border border-gold/30 shadow-xl space-y-2">
+            <p className="font-[family-name:var(--font-cinzel)] text-xs parchment-heading uppercase tracking-wider border-b border-parchment-dark/20 pb-1 mb-1">Настройки карты</p>
+            {([
+              { key: "cities" as const, label: "🏙️ Города и локации" },
+              { key: "labels" as const, label: "🏷️ Названия стран" },
+              { key: "compass" as const, label: "🧭 Компас" },
+              { key: "legend" as const, label: "📜 Легенда снизу" },
+              { key: "waves" as const, label: "🌊 Волны моря" },
+            ]).map((opt) => (
+              <label key={opt.key} className="flex items-center gap-2 cursor-pointer text-sm parchment-text hover:text-wine transition-colors">
+                <input
+                  type="checkbox"
+                  checked={settings[opt.key]}
+                  onChange={(e) => updateSetting(opt.key, e.target.checked)}
+                  className="accent-wine"
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+        )}
         <svg
           viewBox="0 0 1000 680"
           className="w-full h-auto"
@@ -154,8 +200,8 @@ export function WorldMap({ onNavigateToCountry }: { onNavigateToCountry?: () => 
           <rect x="0" y="0" width="1000" height="680" fill="url(#sea-grad)" />
           <rect x="0" y="0" width="1000" height="680" fill="url(#parchment-tex)" />
 
-          {/* Decorative wave lines (sea) */}
-          {[60, 620, 640, 660].map((y) => (
+          {/* Decorative wave lines (sea) — toggleable */}
+          {settings.waves && [60, 620, 640, 660].map((y) => (
             <path
               key={y}
               d={`M 20 ${y} Q 60 ${y - 4} 100 ${y} T 200 ${y} T 300 ${y} T 400 ${y} T 500 ${y} T 600 ${y} T 700 ${y} T 800 ${y} T 900 ${y}`}
@@ -194,25 +240,27 @@ export function WorldMap({ onNavigateToCountry }: { onNavigateToCountry?: () => 
                     <path d="M 600 380 L 650 440 L 700 500" stroke="oklch(0.15 0 0 / 0.4)" strokeWidth="1" fill="none" />
                   </>
                 )}
-                {/* Label */}
-                <text
-                  x={r.labelX}
-                  y={r.labelY}
-                  textAnchor="middle"
-                  className="font-[family-name:var(--font-cinzel)] pointer-events-none select-none"
-                  fill={isDead ? "oklch(0.70 0.02 270)" : "oklch(0.25 0.03 50)"}
-                  fontSize={isSel ? "20" : "16"}
-                  fontWeight="600"
-                  style={{ textShadow: "0 1px 2px oklch(0.95 0.04 75 / 0.6)" }}
-                >
-                  {r.emoji} {r.name}
-                </text>
+                {/* Label — toggleable */}
+                {settings.labels && (
+                  <text
+                    x={r.labelX}
+                    y={r.labelY}
+                    textAnchor="middle"
+                    className="font-[family-name:var(--font-cinzel)] pointer-events-none select-none"
+                    fill={isDead ? "oklch(0.70 0.02 270)" : "oklch(0.25 0.03 50)"}
+                    fontSize={isSel ? "20" : "16"}
+                    fontWeight="600"
+                    style={{ textShadow: "0 1px 2px oklch(0.95 0.04 75 / 0.6)" }}
+                  >
+                    {r.emoji} {r.name}
+                  </text>
+                )}
               </g>
             );
           })}
 
-          {/* City markers — SVG pins on top of regions, with hover tooltip */}
-          {REGIONS.flatMap((r) =>
+          {/* City markers — SVG pins on top of regions, with hover tooltip (toggleable) */}
+          {settings.cities && REGIONS.flatMap((r) =>
             r.cities.map((city) => {
               const isDead = r.name === "Мёртвые Земли";
               const pin = isDead ? "oklch(0.80 0.10 15)" : "oklch(0.55 0.17 30)";
@@ -323,13 +371,15 @@ export function WorldMap({ onNavigateToCountry }: { onNavigateToCountry?: () => 
             </g>
           )}
 
-          {/* Compass rose — decorative, bottom right */}
-          <g transform="translate(900 600)" opacity="0.5">
-            <circle cx="0" cy="0" r="28" fill="none" stroke="oklch(0.40 0.05 60 / 0.4)" strokeWidth="1" />
-            <path d="M 0 -28 L 4 0 L 0 28 L -4 0 Z" fill="oklch(0.40 0.05 60 / 0.5)" />
-            <path d="M -28 0 L 0 4 L 28 0 L 0 -4 Z" fill="oklch(0.40 0.05 60 / 0.3)" />
-            <text x="0" y="-32" textAnchor="middle" fontSize="9" fill="oklch(0.40 0.05 60)" className="font-[family-name:var(--font-cinzel)]">N</text>
-          </g>
+          {/* Compass rose — decorative, bottom right (toggleable) */}
+          {settings.compass && (
+            <g transform="translate(900 600)" opacity="0.5">
+              <circle cx="0" cy="0" r="28" fill="none" stroke="oklch(0.40 0.05 60 / 0.4)" strokeWidth="1" />
+              <path d="M 0 -28 L 4 0 L 0 28 L -4 0 Z" fill="oklch(0.40 0.05 60 / 0.5)" />
+              <path d="M -28 0 L 0 4 L 28 0 L 0 -4 Z" fill="oklch(0.40 0.05 60 / 0.3)" />
+              <text x="0" y="-32" textAnchor="middle" fontSize="9" fill="oklch(0.40 0.05 60)" className="font-[family-name:var(--font-cinzel)]">N</text>
+            </g>
+          )}
 
           {/* Title cartouche */}
           <g transform="translate(40 40)" opacity="0.8">
@@ -340,7 +390,8 @@ export function WorldMap({ onNavigateToCountry }: { onNavigateToCountry?: () => 
           </g>
         </svg>
 
-        {/* Legend */}
+        {/* Legend — toggleable */}
+        {settings.legend && (
         <div className="mt-3 flex flex-wrap gap-2 justify-center text-xs">
           {REGIONS.map((r) => (
             <button
@@ -358,6 +409,7 @@ export function WorldMap({ onNavigateToCountry }: { onNavigateToCountry?: () => 
             </button>
           ))}
         </div>
+        )}
       </ParchmentCard>
 
       {/* ===== DETAIL PANEL ===== */}

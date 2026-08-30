@@ -61,8 +61,12 @@ server.log
 
 # QA screenshots
 qa*.png
+p[0-9]*.png
 login-screen.png
 *-qa.png
+
+# Tool results / agent artifacts
+tool-results/
 
 # Generated banner images (base64 stored in DB, not needed in repo)
 download/banners/

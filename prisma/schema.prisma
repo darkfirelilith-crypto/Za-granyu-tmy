@@ -170,6 +170,7 @@ model WorldSystem {
   category    String   // POLITICS | ECONOMY | MILITARY | MAGIC | RELIGION | LAW
   description String
   icon        String?
+  image       String?  // base64 image (illustration)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -181,6 +182,7 @@ model God {
   domain      String   // war, love, death, knowledge, etc.
   description String
   symbol      String?  // emoji
+  image       String?  // base64 image (portrait/illustration)
   alignment   String?  // good | neutral | evil
   pantheon    String?
   createdAt   DateTime @default(now())
@@ -193,6 +195,7 @@ model Legend {
   content     String
   era         String?
   icon        String?
+  image       String?  // base64 image (illustration)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

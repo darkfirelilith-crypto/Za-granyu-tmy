@@ -22,9 +22,9 @@ const ENTITIES = {
   personalities: { label: "Личности", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","race","age","gender","appearance","description","portrait","affiliation","role","status","isNpc","isKeyNpc","isAdventurer"] },
   beings: { label: "Важные Существа", icon: Sparkles, api: "/api/lore/beings", fields: ["name","title","race","age","gender","appearance","loreDescription","characterDescription","status","whereToMeet","notes","portrait"] },
   relations: { label: "Отношения", icon: Link2, api: "/api/lore/relations", fields: ["countryAName","countryBName","relationType","description"] },
-  systems: { label: "Мир. Система", icon: Scale, api: "/api/lore/systems", fields: ["title","category","description","icon"] },
-  gods: { label: "Пантеон", icon: Sun, api: "/api/lore/gods", fields: ["name","title","domain","description","symbol","alignment","pantheon"] },
-  legends: { label: "Легенды", icon: BookMarked, api: "/api/lore/legends", fields: ["title","content","era","icon"] },
+  systems: { label: "Мир. Система", icon: Scale, api: "/api/lore/systems", fields: ["title","category","description","icon","image"] },
+  gods: { label: "Пантеон", icon: Sun, api: "/api/lore/gods", fields: ["name","title","domain","description","symbol","image","alignment","pantheon"] },
+  legends: { label: "Легенды", icon: BookMarked, api: "/api/lore/legends", fields: ["title","content","era","icon","image"] },
 } as const;
 
 type EntityKey = keyof typeof ENTITIES;
@@ -192,7 +192,7 @@ function Overview() {
 }
 
 /* ===== GENERIC ENTITY EDITOR ===== */
-const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"|"checkbox"; options?: string[]; label: string }> = {
+const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"|"checkbox"|"country-select"; options?: string[]; label: string }> = {
   name: { type: "text", label: "Название" },
   title: { type: "text", label: "Титул" },
   description: { type: "textarea", label: "Описание" },
@@ -214,12 +214,13 @@ const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"|"che
   whereToMeet: { type: "text", label: "Где можно встретить" },
   notes: { type: "textarea", label: "Заметка о персонаже" },
   portrait: { type: "image", label: "Портрет (изображение)" },
+  image: { type: "image", label: "Изображение (иллюстрация)" },
   status: { type: "select", label: "Статус", options: ["alive","deceased","missing"] },
   isNpc: { type: "checkbox", label: "Это НПС (встречается в группе)" },
   isKeyNpc: { type: "checkbox", label: "Ключевой НПС (показывается в «Важные Существа»)" },
   isAdventurer: { type: "checkbox", label: "Авантюрист (показывается в «Братья по оружию»)" },
-  countryAName: { type: "text", label: "Страна A" },
-  countryBName: { type: "text", label: "Страна B" },
+  countryAName: { type: "country-select", label: "Страна A" },
+  countryBName: { type: "country-select", label: "Страна B" },
   relationType: { type: "select", label: "Тип связи", options: ["ally","enemy","neutral","trade","vassal"] },
   category: { type: "select", label: "Категория", options: ["POLITICS","ECONOMY","MILITARY","MAGIC","RELIGION","LAW"] },
   domain: { type: "text", label: "Домен" },
@@ -232,6 +233,27 @@ const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"|"che
   level: { type: "text", label: "Уровень (число)" },
   minXp: { type: "text", label: "Минимальный опыт (XP)" },
 };
+
+/* Country-select dropdown — fetches countries list, used for relations A/B */
+function CountrySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { data } = useQuery<any[]>({
+    queryKey: ["countries-for-select"],
+    queryFn: () => fetch("/api/lore/countries").then((r) => r.json()).catch(() => []),
+  });
+  const countries = (Array.isArray(data) ? data : []).sort((a, b) => a.name.localeCompare(b.name));
+  return (
+    <Select value={value || ""} onValueChange={onChange}>
+      <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 h-10"><SelectValue placeholder="Выбери страну..." /></SelectTrigger>
+      <SelectContent className="parchment max-h-72">
+        {countries.map((c) => (
+          <SelectItem key={c.id} value={c.name}>
+            {c.emblem ? `${c.emblem} ` : ""}{c.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 function EntityEditor({ entityKey }: { entityKey: EntityKey }) {
   const meta = ENTITIES[entityKey];
@@ -424,6 +446,19 @@ function EntityFormDialog({
                       {meta.options!.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                </div>
+              );
+            })}
+            {/* Country-select: dropdown populated from /api/lore/countries (for relations) */}
+            {fields.filter((f) => FIELD_META[f]?.type === "country-select").map((f) => {
+              const meta = FIELD_META[f];
+              const req = requiredFields.includes(f);
+              return (
+                <div key={f} className="space-y-1">
+                  <Label className="parchment-heading text-sm">
+                    {meta.label}{req && <span className="text-red-700 ml-0.5">*</span>}
+                  </Label>
+                  <CountrySelect value={getVal(f)} onChange={(v) => setVal(f, v)} />
                 </div>
               );
             })}

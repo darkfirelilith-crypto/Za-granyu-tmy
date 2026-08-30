@@ -100,6 +100,7 @@ export interface WorldSystem {
   category: string;
   description: string;
   icon: string | null;
+  image?: string | null;
 }
 
 export interface God {
@@ -109,6 +110,7 @@ export interface God {
   domain: string;
   description: string;
   symbol: string | null;
+  image?: string | null;
   alignment: string | null;
   pantheon: string | null;
 }
@@ -119,6 +121,7 @@ export interface Legend {
   content: string;
   era: string | null;
   icon: string | null;
+  image?: string | null;
 }
 
 export interface GuildRank {

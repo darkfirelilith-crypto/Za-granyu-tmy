@@ -236,7 +236,9 @@ function GrimoirePage({
 
       {/* When unlocked and expanded — show full book page */}
       {entry.unlocked && expanded && (
-        <div className={`grimoire-page ${paperClass} animate-reveal`}>
+        <div className="grimoire-page animate-reveal">
+          {/* Paper effect overlay (separate div to avoid ::before conflict with grimoire-page lines) */}
+          <div className={`paper-effect ${paperClass}`} aria-hidden />
           {/* Margin note top */}
           {entry.marginTop && (
             <div className="margin-note mb-4 ml-12">{entry.marginTop}</div>

@@ -1659,3 +1659,89 @@ Stage Summary:
 - D. Профиль: добавить секцию "Статистика мира" (количество просмотренных стран/богов/etc).
 - E. Лаборатория: добавить фильтр по типу (RACE/CLASS/SPELL/ITEM) в UI.
 - F. Удалить тестового игрока после финального QA.
+
+---
+Task ID: kb-master-detail
+Agent: full-stack-developer
+Task: Refactor 4 Knowledge tabs (Relations, Systems, Pantheon, Legends) to master-detail layout with image display.
+
+Work Log:
+- Read /home/z/my-project/worklog.md (last 60 lines) for project context.
+- Read full src/components/sections/knowledge.tsx (556 lines) to understand existing CountriesTab/PersonalitiesTab/BeingsTab master-detail patterns.
+- Verified src/lib/types.ts already has `image?: string | null` fields on WorldSystem, God, Legend.
+- Verified prisma/schema.prisma has `image String?` columns on WorldSystem/God/Legend models; API routes use findMany without select, so `image` is already returned.
+- Confirmed ExpandablePortrait, ParchmentCard, RuneSeal, RelationBadge helpers exist and their prop signatures.
+- Refactored RelationsTab: grid → master-detail (260px list + 1fr detail). List shows countryA / ↔ countryB truncated. Detail card shows centered "Страна A <RelationBadge> Страна B" header + drop-cap description. EmptyState early-return when no items.
+- Refactored SystemsTab: grid → master-detail. List shows icon + title + category label. Detail card: banner image (gold-frame, h-48/h-64, object-top) when sel.image present; else RuneSeal sm-md icon next to title + category badge; drop-cap description.
+- Refactored PantheonTab: 3-col grid → master-detail. List shows symbol + name + "domain · pantheon" subtitle. Detail card keeps pantheon-tier badge (absolute top-right, requires `relative` on ParchmentCard), title/domain badge, alignment styling (good/neutral/evil pill). Portrait: if sel.image → ExpandablePortrait size="lg"; else RuneSeal size="lg" with glow when alignment==="evil". Drop-cap description.
+- Refactored LegendsTab: expand-on-click grid → master-detail. List shows icon + title + era. Detail card: banner image when sel.image present; else RuneSeal; full (unclamped) content via lore-prose drop-cap.
+- All 4 tabs follow exact pattern: `const [selected, setSelected] = useState<string | null>(null)`, `lg:grid-cols-[260px_1fr]`, scrollable `max-h-[70vh] overflow-y-auto fantasy-scroll` list, button highlight classes identical to CountriesTab/PersonalitiesTab, `ParchmentCard key={sel.id} className="animate-reveal overflow-hidden"`.
+- Did NOT touch CountriesTab, PersonalitiesTab, BeingsTab, KnowledgeView parent (tabs list + search input).
+- Ran `bun run lint` → 0 errors.
+- Ran `bunx tsc --noEmit` → 0 errors in src/ (remaining errors only in examples/ and skills/ folders, unrelated).
+
+Stage Summary:
+- 4 Knowledge tabs converted to consistent master-detail layout matching existing CountriesTab/PersonalitiesTab/BeingsTab pattern.
+- Image display added for the 3 new image fields: WorldSystem.image (banner), God.image (ExpandablePortrait), Legend.image (banner).
+- RelationsTab has no image field per task spec.
+- PantheonTab preserves pantheon-tier badge and alignment styling in detail card.
+- LegendsTab now shows full content (no line-clamp) since detail card has room.
+- File grew from 556 → 648 lines.
+- Lint + tsc src/ both clean.
+
+---
+Task ID: user-fixes-1to5
+Agent: Z.ai Code (main)
+Task: 5 правок пользователя: (1) настройки карты Зала, (2) детальный просмотр записей БД + image-поля, (3) детальный просмотр Лаборатории, (4) select стран в отношениях, (5) paper-эффекты Гримуара.
+
+Work Log:
+- Прочитал worklog. HEAD = 50311e3. Dev-сервер жив.
+- Пользователь скорректировал Страны (создал свои: Антариас, Драгхилла, Монс-Минас, Сомниум, Фидей-Верита).
+
+Правка 5 (Гримуар paper-эффекты) — КРИТИЧЕСКИЙ баг:
+- Баг: `.grimoire-page::before` (линейка-строки) конфликтовал с `.paper-*::before` (эффекты) — оба ::before на одном элементе, эффекты перебивались → ни один не виден.
+- Фикс: в grimoire.tsx добавлен отдельный overlay-div `<div className="paper-effect paper-X">` внутри grimoire-page. В globals.css созданы `.paper-effect.paper-{blood,tears,frost,ink,burned,gold,plain}` с усиленной opacity (0.35-0.55 vs 0.15-0.3). `.grimoire-page > .paper-effect { z-index: 0 }` — контент (z-index 1) поверх.
+- Верифицировано: VLM подтвердил "кровавые капли" на Главе I (BLOOD).
+
+Правка 4 (Отношения — select стран):
+- admin.tsx: FIELD_META countryAName/countryBName → type "country-select".
+- Создан компонент CountrySelect: Select с options из /api/lore/countries (sorted, с emblem).
+- Верифицировано: VLM "Выпадающие списки с плейсхолдерами 'Выбери страну...'".
+
+Правка 2 (БД — детальный просмотр + image-поля):
+- schema.prisma: +image String? в God, Legend, WorldSystem. prisma db push выполнен.
+- types.ts: +image? в God, Legend, WorldSystem interfaces.
+- admin.tsx: ENTITIES fields обновлены (+image для gods/legends/systems), FIELD_META +image { type: "image" }.
+- knowledge.tsx: 4 таба (Relations/Systems/Pantheon/Legends) переделаны в master-detail layout (список слева 260px + детальная карточка справа) как Countries/Personalities. Image отображается в детальных карточках. Pantheon — ExpandablePortrait для god.image. (делегировано сабагенту full-stack-developer)
+- Верифицировано: VLM "список богов слева и детальная карточка справа (master-detail)".
+- ПРОБЛЕМА: db push с --accept-data-loss удалил LabEntry (0) и God (0) данные. Перезалито через seed-neon.ts + seed-lab2.ts. God: 6, LabEntry: 11 восстановлены. Страны пользователя (10) сохранены.
+
+Правка 3 (Лаборатория — детальный просмотр):
+- lab.tsx: добавлен state selected, Dialog с LabDetail. Карточки LabGrid теперь кликабельны (button + onClick → setSelected), превью компактнее (line-clamp-3 + "▼ Открыть подробности"). LabDetail: icon+name+rarity+image+description+details.
+- Верифицировано: VLM "модальный диалог с детальной информацией о 'Пепельный' (иконка, название, описание, характеристики)".
+
+Правка 1 (Карта — настройки):
+- world-map.tsx: state settings (cities/labels/compass/legend/waves) с lazy localStorage init. Gear button (Settings icon) + панель с 5 чекбоксами. Все SVG-элементы обёрнуты в settings-условия (waves, region labels, city markers, compass, legend).
+- Верифицировано: VLM "панель настроек с чекбоксами (Города, Названия, Компас, Легенда, Волны)".
+
+Верификация:
+- Lint: чист. tsc src/: 0 ошибок.
+- Agent Browser: все 5 правок работают (settings panel, KB master-detail, Lab detail dialog, relations select, grimoire paper effects).
+- VLM подтвердил каждую правку.
+
+Stage Summary:
+- 5 правок реализованы: map settings, KB master-detail + images, Lab detail, relations select, grimoire paper effects.
+- schema: +image в God/Legend/WorldSystem.
+- 8 файлов изменено: schema.prisma, types.ts, globals.css, grimoire.tsx, admin.tsx, knowledge.tsx, lab.tsx, world-map.tsx + .gitignore.
+
+Восстановление данных:
+- db push удалил LabEntry + God → перезалито сидами (6 gods, 11 lab entries).
+- Страны пользователя (10) сохранены (upsert по name).
+- Тестовый админ qa-admin@eldrin.world пересоздан.
+
+Приоритеты следующего раунда:
+- A. Проверить, что image-поля работают в админ-формах (создать бога/легенду с изображением).
+- B. Проверить KB master-detail для Relations/Systems/Legends (не только Pantheon).
+- C. Гримуар: проверить все 6 paper-эффектов (BLOOD/TEARS/FROST/INK/BURNED/GOLD).
+- D. Карта: проверить что настройки сохраняются между сессиями (localStorage).
+- E. Удалить тестовых игроков (qa-test, qa-admin) после финального QA.

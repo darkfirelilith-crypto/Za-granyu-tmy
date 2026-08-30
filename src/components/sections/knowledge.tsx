@@ -242,25 +242,49 @@ function RelationsTab({ search }: { search: string }) {
     queryKey: ["relations"],
     queryFn: () => fetch("/api/lore/relations").then((r) => r.json()),
   });
+  const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
   const items = (data ?? []).filter(
     (r) =>
       r.countryAName.toLowerCase().includes(search.toLowerCase()) ||
       r.countryBName.toLowerCase().includes(search.toLowerCase())
   );
+  if (items.length === 0) {
+    return <EmptyState text={search ? "Связей не найдено" : "Межгосударственные связи ещё не записаны"} sub={search ? "Попробуй иной поиск" : undefined} />;
+  }
+  const sel = items.find((r) => r.id === selected) ?? items[0];
   return (
-    <div className="grid md:grid-cols-2 gap-4">
-      {items.map((r) => (
-        <ParchmentCard key={r.id} hover className="space-y-2">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="font-[family-name:var(--font-cinzel)] parchment-heading">{r.countryAName}</span>
-            <RelationBadge type={r.relationType} />
-            <span className="font-[family-name:var(--font-cinzel)] parchment-heading">{r.countryBName}</span>
+    <div className="grid lg:grid-cols-[260px_1fr] gap-5">
+      <div className="space-y-2 max-h-[70vh] overflow-y-auto fantasy-scroll pr-2">
+        {items.map((r) => (
+          <button
+            key={r.id}
+            onClick={() => setSelected(r.id)}
+            className={`w-full text-left px-3 py-2 rounded border transition-all ${
+              sel?.id === r.id
+                ? "bg-gold/10 border-gold/40 text-gold"
+                : "bg-background/30 border-gold/10 text-foreground/70 hover:border-gold/30 hover:text-gold"
+            }`}
+          >
+            <p className="font-[family-name:var(--font-cinzel)] text-sm truncate">{r.countryAName}</p>
+            <p className="text-xs parchment-muted/80 truncate">↔ {r.countryBName}</p>
+          </button>
+        ))}
+      </div>
+      {sel && (
+        <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
+          <div className="flex items-center justify-center gap-4 flex-wrap text-center mb-4">
+            <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.countryAName}</h3>
+            <RelationBadge type={sel.relationType} />
+            <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.countryBName}</h3>
           </div>
-          {r.description && <p className="parchment-muted text-sm">{r.description}</p>}
+          {sel.description ? (
+            <div className="lore-prose drop-cap text-base leading-relaxed whitespace-pre-line">{sel.description}</div>
+          ) : (
+            <p className="parchment-muted italic text-center">Описание связи не записано.</p>
+          )}
         </ParchmentCard>
-      ))}
-      {items.length === 0 && <EmptyState text={search ? "Связей не найдено" : "Межгосударственные связи ещё не записаны"} sub={search ? "Попробуй иной поиск" : undefined} />}
+      )}
     </div>
   );
 }
@@ -271,31 +295,57 @@ function SystemsTab({ search }: { search: string }) {
     queryKey: ["systems"],
     queryFn: () => fetch("/api/lore/systems").then((r) => r.json()),
   });
+  const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
   const items = (data ?? []).filter((s) => s.title.toLowerCase().includes(search.toLowerCase()) || s.category.toLowerCase().includes(search.toLowerCase()));
   const catLabel: Record<string, string> = {
     POLITICS: "Политика", ECONOMY: "Экономика", MILITARY: "Военное дело",
     MAGIC: "Магия", RELIGION: "Религия", LAW: "Закон",
   };
+  if (items.length === 0) {
+    return <EmptyState text={search ? "Систем не найдено" : "Мировые системы ещё не описаны"} sub={search ? "Попробуй иной поиск" : undefined} />;
+  }
+  const sel = items.find((s) => s.id === selected) ?? items[0];
   return (
-    <div className="grid md:grid-cols-2 gap-4">
-      {items.map((s) => (
-        <ParchmentCard key={s.id} hover className="space-y-2">
-          <div className="flex items-start gap-3">
-            <RuneSeal icon={<span className="text-2xl">{s.icon ?? "📜"}</span>} size="sm" />
-            <div className="flex-1">
+    <div className="grid lg:grid-cols-[260px_1fr] gap-5">
+      <div className="space-y-2 max-h-[70vh] overflow-y-auto fantasy-scroll pr-2">
+        {items.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => setSelected(s.id)}
+            className={`w-full text-left px-3 py-2 rounded border transition-all ${
+              sel?.id === s.id
+                ? "bg-gold/10 border-gold/40 text-gold"
+                : "bg-background/30 border-gold/10 text-foreground/70 hover:border-gold/30 hover:text-gold"
+            }`}
+          >
+            <span className="mr-2">{s.icon ?? "📜"}</span>
+            <span className="font-[family-name:var(--font-cinzel)] text-sm">{s.title}</span>
+            <p className="text-xs parchment-muted/80">{catLabel[s.category] ?? s.category}</p>
+          </button>
+        ))}
+      </div>
+      {sel && (
+        <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
+          {sel.image && (
+            <div className="w-full h-48 md:h-64 overflow-hidden mb-4 rounded-lg gold-frame">
+              <img src={sel.image} alt={sel.title} className="w-full h-full object-cover object-top" />
+            </div>
+          )}
+          <div className="flex items-start gap-4 mb-4">
+            {!sel.image && <RuneSeal icon={<span className="text-3xl">{sel.icon ?? "📜"}</span>} size="md" />}
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-[family-name:var(--font-cinzel)] parchment-heading">{s.title}</h3>
+                <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.title}</h3>
                 <Badge variant="outline" className="border-gold/30 text-gold/70 text-xs">
-                  {catLabel[s.category] ?? s.category}
+                  {catLabel[sel.category] ?? sel.category}
                 </Badge>
               </div>
-              <p className="parchment-muted text-sm mt-1">{s.description}</p>
             </div>
           </div>
+          <div className="lore-prose drop-cap text-base leading-relaxed whitespace-pre-line">{sel.description}</div>
         </ParchmentCard>
-      ))}
-      {items.length === 0 && <EmptyState text={search ? "Систем не найдено" : "Мировые системы ещё не описаны"} sub={search ? "Попробуй иной поиск" : undefined} />}
+      )}
     </div>
   );
 }
@@ -306,6 +356,7 @@ function PantheonTab({ search }: { search: string }) {
     queryKey: ["gods"],
     queryFn: () => fetch("/api/lore/gods").then((r) => r.json()),
   });
+  const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
   const items = (data ?? []).filter((g) => g.name.toLowerCase().includes(search.toLowerCase()) || g.domain.toLowerCase().includes(search.toLowerCase()));
   if (items.length === 0) {
@@ -317,43 +368,69 @@ function PantheonTab({ search }: { search: string }) {
     Младшие: "border-zinc-400/50 text-zinc-600 bg-zinc-300/10",
     Алый: "border-wine/50 text-wine/90 bg-wine/10",
   };
+  const sel = items.find((g) => g.id === selected) ?? items[0];
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-      {items.map((g) => (
-        <ParchmentCard key={g.id} hover className="text-center space-y-3 relative">
-          {g.pantheon && (
-            <span className={`absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full border font-[family-name:var(--font-cinzel)] uppercase tracking-wider ${pantheonStyle[g.pantheon] ?? "border-gold/30 text-gold/70"}`}>
-              {g.pantheon}
+    <div className="grid lg:grid-cols-[260px_1fr] gap-5">
+      <div className="space-y-2 max-h-[70vh] overflow-y-auto fantasy-scroll pr-2">
+        {items.map((g) => (
+          <button
+            key={g.id}
+            onClick={() => setSelected(g.id)}
+            className={`w-full text-left px-3 py-2 rounded border transition-all ${
+              sel?.id === g.id
+                ? "bg-gold/10 border-gold/40 text-gold"
+                : "bg-background/30 border-gold/10 text-foreground/70 hover:border-gold/30 hover:text-gold"
+            }`}
+          >
+            <span className="mr-2">{g.symbol ?? "✨"}</span>
+            <span className="font-[family-name:var(--font-cinzel)] text-sm">{g.name}</span>
+            <p className="text-xs parchment-muted/80 truncate">{g.domain}{g.pantheon ? ` · ${g.pantheon}` : ""}</p>
+          </button>
+        ))}
+      </div>
+      {sel && (
+        <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden relative">
+          {/* Pantheon tier badge top-right */}
+          {sel.pantheon && (
+            <span className={`absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full border font-[family-name:var(--font-cinzel)] uppercase tracking-wider ${pantheonStyle[sel.pantheon] ?? "border-gold/30 text-gold/70"}`}>
+              {sel.pantheon}
             </span>
           )}
-          <RuneSeal
-            icon={<span className="text-3xl">{g.symbol ?? "✨"}</span>}
-            size="lg"
-            className="mx-auto"
-            glow={g.alignment === "evil"}
-          />
-          <div>
-            <h3 className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{g.name}</h3>
-            {g.title && <p className="parchment-heading text-xs uppercase tracking-wider">{g.title}</p>}
-          </div>
-          <Badge variant="outline" className="border-gold/30 text-gold/70 text-xs">
-            {g.domain}
-          </Badge>
-          <p className="parchment-muted text-sm text-left">{g.description}</p>
-          {g.alignment && (
-            <div className="pt-2 border-t border-parchment-dark/20">
-              <span className={`inline-flex items-center gap-1 text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider px-2 py-1 rounded ${
-                g.alignment === "good" ? "text-green-700 bg-green-100/40 border border-green-600/30" :
-                g.alignment === "evil" ? "text-red-800 bg-red-100/40 border border-red-700/30" :
-                "text-zinc-600 bg-zinc-200/40 border border-zinc-500/30"
-              }`}>
-                <span className="text-base leading-none">{g.alignment === "good" ? "☀" : g.alignment === "evil" ? "🌑" : "⚖"}</span>
-                {g.alignment === "good" ? "Добро" : g.alignment === "evil" ? "Зло" : "Нейтралитет"}
-              </span>
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.name}</h3>
+                <Badge variant="outline" className="border-gold/30 text-gold/70 text-xs">
+                  {sel.domain}
+                </Badge>
+              </div>
+              {sel.title && <p className="parchment-heading text-sm uppercase tracking-wider mb-2">{sel.title}</p>}
+              {sel.alignment && (
+                <span className={`inline-flex items-center gap-1 text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider px-2 py-1 rounded ${
+                  sel.alignment === "good" ? "text-green-700 bg-green-100/40 border border-green-600/30" :
+                  sel.alignment === "evil" ? "text-red-800 bg-red-100/40 border border-red-700/30" :
+                  "text-zinc-600 bg-zinc-200/40 border border-zinc-500/30"
+                }`}>
+                  <span className="text-base leading-none">{sel.alignment === "good" ? "☀" : sel.alignment === "evil" ? "🌑" : "⚖"}</span>
+                  {sel.alignment === "good" ? "Добро" : sel.alignment === "evil" ? "Зло" : "Нейтралитет"}
+                </span>
+              )}
             </div>
-          )}
+            {sel.image ? (
+              <ExpandablePortrait src={sel.image} alt={sel.name} size="lg" />
+            ) : (
+              <div className="shrink-0">
+                <RuneSeal
+                  icon={<span className="text-3xl">{sel.symbol ?? "✨"}</span>}
+                  size="lg"
+                  glow={sel.alignment === "evil"}
+                />
+              </div>
+            )}
+          </div>
+          <div className="lore-prose drop-cap text-base leading-relaxed whitespace-pre-line">{sel.description}</div>
         </ParchmentCard>
-      ))}
+      )}
     </div>
   );
 }
@@ -364,34 +441,49 @@ function LegendsTab({ search }: { search: string }) {
     queryKey: ["legends"],
     queryFn: () => fetch("/api/lore/legends").then((r) => r.json()),
   });
-  const [open, setOpen] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
   const items = (data ?? []).filter((l) => l.title.toLowerCase().includes(search.toLowerCase()));
+  if (items.length === 0) {
+    return <EmptyState text={search ? "Легенд не найдено" : "Легенды этого мира ещё не поведаны"} sub={search ? "Попробуй иной поиск" : undefined} />;
+  }
+  const sel = items.find((l) => l.id === selected) ?? items[0];
   return (
-    <div className="grid md:grid-cols-2 gap-4">
-      {items.map((l) => {
-        const isOpen = open === l.id;
-        return (
-          <ParchmentCard key={l.id} hover className="space-y-2 cursor-pointer" >
-            <div onClick={() => setOpen(isOpen ? null : l.id)}>
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{l.icon ?? "📖"}</span>
-                <div className="flex-1">
-                  <h3 className="font-[family-name:var(--font-cinzel)] parchment-heading">{l.title}</h3>
-                  {l.era && <p className="parchment-muted text-xs italic">{l.era}</p>}
-                </div>
-              </div>
-              <p className={`parchment-muted text-sm mt-2 ${isOpen ? "" : "line-clamp-2"}`}>
-                {l.content}
-              </p>
-              <span className="text-xs text-wine font-[family-name:var(--font-cinzel)]">
-                {isOpen ? "▲ Свернуть" : "▼ Читать далее"}
-              </span>
+    <div className="grid lg:grid-cols-[260px_1fr] gap-5">
+      <div className="space-y-2 max-h-[70vh] overflow-y-auto fantasy-scroll pr-2">
+        {items.map((l) => (
+          <button
+            key={l.id}
+            onClick={() => setSelected(l.id)}
+            className={`w-full text-left px-3 py-2 rounded border transition-all ${
+              sel?.id === l.id
+                ? "bg-gold/10 border-gold/40 text-gold"
+                : "bg-background/30 border-gold/10 text-foreground/70 hover:border-gold/30 hover:text-gold"
+            }`}
+          >
+            <span className="mr-2">{l.icon ?? "📖"}</span>
+            <span className="font-[family-name:var(--font-cinzel)] text-sm">{l.title}</span>
+            {l.era && <p className="text-xs parchment-muted/80 italic truncate">{l.era}</p>}
+          </button>
+        ))}
+      </div>
+      {sel && (
+        <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
+          {sel.image && (
+            <div className="w-full h-48 md:h-64 overflow-hidden mb-4 rounded-lg gold-frame">
+              <img src={sel.image} alt={sel.title} className="w-full h-full object-cover object-top" />
             </div>
-          </ParchmentCard>
-        );
-      })}
-      {items.length === 0 && <EmptyState text={search ? "Легенд не найдено" : "Легенды этого мира ещё не поведаны"} sub={search ? "Попробуй иной поиск" : undefined} />}
+          )}
+          <div className="flex items-start gap-4 mb-4">
+            {!sel.image && <RuneSeal icon={<span className="text-3xl">{sel.icon ?? "📖"}</span>} size="md" />}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.title}</h3>
+              {sel.era && <p className="parchment-muted text-sm italic mt-0.5">{sel.era}</p>}
+            </div>
+          </div>
+          <div className="lore-prose drop-cap text-base leading-relaxed whitespace-pre-line">{sel.content}</div>
+        </ParchmentCard>
+      )}
     </div>
   );
 }
