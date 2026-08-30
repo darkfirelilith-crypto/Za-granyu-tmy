@@ -328,7 +328,7 @@ function EntityFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="parchment gold-frame max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="parchment gold-frame max-w-5xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{title}</DialogTitle>
           <DialogDescription className="parchment-muted">Внеси изменения в свиток</DialogDescription>
@@ -528,7 +528,7 @@ function QuestFormDialog({ open,onOpenChange,item,onSave,pending }:{open:boolean
   const setVal = (f:string,v:any) => setForm({...form,[f]:v});
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="parchment gold-frame max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="parchment gold-frame max-w-4xl max-h-[92vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id?"Редактировать":"Создать"} задание</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div><Label className="parchment-heading text-sm">Название</Label><Input value={getVal("title")} onChange={e=>setVal("title",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
@@ -907,7 +907,7 @@ function AchievementsEditor() {
 
       {/* Grant dialog */}
       <Dialog open={!!grant} onOpenChange={(v)=>!v && setGrant(null)}>
-        <DialogContent className="parchment gold-frame max-w-sm">
+        <DialogContent className="parchment gold-frame max-w-lg">
           <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] parchment-heading">Даровать достижение</DialogTitle></DialogHeader>
           {grant && (
             <div className="space-y-3">
@@ -936,7 +936,7 @@ function AchFormDialog({ open,onOpenChange,item,onSave,pending }:{open:boolean;o
   const setVal = (f:string,v:any) => setForm({...form,[f]:v});
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="parchment gold-frame max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="parchment gold-frame max-w-4xl max-h-[92vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id?"Редактировать":"Создать"} достижение</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div><Label className="parchment-heading text-sm">Название</Label><Input value={getVal("name")} onChange={e=>setVal("name",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
@@ -1115,7 +1115,7 @@ function LabFormDialog({ open, onOpenChange, item, onSave, pending }: { open: bo
   const setVal = (f: string, v: any) => setForm({ ...form, [f]: v });
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="parchment gold-frame max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="parchment gold-frame max-w-4xl max-h-[92vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id ? "Редактировать" : "Создать"} запись Лаборатории</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div>

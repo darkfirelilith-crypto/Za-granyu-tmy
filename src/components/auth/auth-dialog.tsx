@@ -85,7 +85,7 @@ export function AuthDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="parchment gold-frame max-w-md">
+      <DialogContent className="parchment gold-frame max-w-lg">
         <DialogHeader>
           <OrnamentTitle size="md" className="mb-2">
             {mode === "login" ? "Вход в Хроникаль" : "Рождение Героя"}
