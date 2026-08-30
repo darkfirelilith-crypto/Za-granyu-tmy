@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import type { Country, Personality, CountryRelation, WorldSystem, God, Legend } from "@/lib/types";
+import { ExpandablePortrait } from "@/components/fantasy/expandable-portrait";
 import { Search, MapPin, Crown, Link2, Scale, Sun, BookMarked, Globe2, Sparkle as SparkleIcon } from "lucide-react";
 
 export function KnowledgeView() {
@@ -173,21 +174,13 @@ function PersonalitiesTab({ search }: { search: string }) {
       </div>
       {sel && (
         <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
-          {/* Header with portrait — side by side, no cropping */}
-          <div className="flex items-start gap-5 mb-5">
-            {sel.portrait ? (
-              <div className="w-28 h-36 md:w-32 md:h-40 rounded-lg overflow-hidden gold-frame shrink-0">
-                <img src={sel.portrait} alt={sel.name} className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="shrink-0">
-                <RuneSeal icon={<span className="text-3xl">{getPersonIcon(sel)}</span>} size="lg" />
-              </div>
-            )}
-            <div className="flex-1 min-w-0 pt-1">
+          {/* Header with portrait — expandable thumbnail in corner */}
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.name}</h3>
                 <StatusBadge status={sel.status} />
+                {sel.isNpc && <Badge variant="outline" className="border-wine/30 text-wine text-xs">🎭 НПС</Badge>}
               </div>
               {sel.title && <p className="parchment-heading text-sm mb-2">{sel.title}</p>}
               {/* Race / age / gender info */}
@@ -198,6 +191,13 @@ function PersonalitiesTab({ search }: { search: string }) {
                 {sel.affiliation && <span>🏛️ {sel.affiliation}</span>}
               </div>
             </div>
+            {sel.portrait ? (
+              <ExpandablePortrait src={sel.portrait} alt={sel.name} size="lg" />
+            ) : (
+              <div className="shrink-0">
+                <RuneSeal icon={<span className="text-3xl">{getPersonIcon(sel)}</span>} size="lg" />
+              </div>
+            )}
           </div>
           {/* Appearance (if exists) */}
           {sel.appearance && (
@@ -454,17 +454,15 @@ function BeingsTab({ search }: { search: string }) {
 
       {/* Detail */}
       {sel ? (
-        <ParchmentCard key={sel.id} className="animate-reveal space-y-4 overflow-hidden">
-          {sel.portrait && (
-            <div className="h-48 md:h-56 -mx-5 -mt-5 md:-mx-6 md:-mt-6 overflow-hidden gold-frame">
-              <img src={sel.portrait} alt={sel.name} className="w-full h-full object-cover" />
-            </div>
-          )}
-          <div className="flex items-start gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
+        <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
+          {/* Header — name + status + portrait thumbnail in corner */}
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
                 <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.name}</h3>
                 {sel.title && <Badge variant="outline" className="border-gold/30 text-gold/70">{sel.title}</Badge>}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-xs px-2 py-0.5 rounded border font-[family-name:var(--font-cinzel)] uppercase ${
                   sel.status === "alive" ? "border-green-600/30 text-green-700" :
                   sel.status === "deceased" ? "border-red-700/30 text-red-700" : "border-amber-700/30 text-amber-700"
@@ -472,44 +470,55 @@ function BeingsTab({ search }: { search: string }) {
                   {sel.status === "alive" ? "Жив" : sel.status === "deceased" ? "Погиб" : "Пропал"}
                 </span>
               </div>
-              <div className="flex flex-wrap gap-3 mt-2 text-sm parchment-muted">
+              <div className="flex flex-wrap gap-3 mt-3 text-sm parchment-muted">
                 {sel.race && <span>🧬 {sel.race}</span>}
                 {sel.age && <span>📅 {sel.age}</span>}
                 {sel.gender && <span>⚧ {sel.gender}</span>}
               </div>
             </div>
+            {/* Expandable portrait in the corner */}
+            {sel.portrait && <ExpandablePortrait src={sel.portrait} alt={sel.name} size="lg" />}
           </div>
 
+          {/* Appearance — in a styled block */}
           {sel.appearance && (
-            <div>
-              <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Внешность</p>
+            <div className="mb-4 p-3 bg-parchment-dark/10 rounded-lg">
+              <p className="parchment-heading text-xs uppercase tracking-wider mb-1">Внешность</p>
               <p className="parchment-muted text-sm whitespace-pre-line">{sel.appearance}</p>
             </div>
           )}
+
+          {/* Lore — main text with drop-cap */}
           {sel.loreDescription && (
-            <div>
-              <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Лор</p>
-              <p className="lore-prose drop-cap whitespace-pre-line">{sel.loreDescription}</p>
+            <div className="mb-4">
+              <p className="parchment-heading text-xs uppercase tracking-wider mb-1">Лор</p>
+              <div className="lore-prose drop-cap text-base leading-relaxed whitespace-pre-line">{sel.loreDescription}</div>
             </div>
           )}
+
+          {/* Character description */}
           {sel.characterDescription && (
-            <div>
-              <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Характер</p>
+            <div className="mb-4">
+              <p className="parchment-heading text-xs uppercase tracking-wider mb-1">Характер</p>
               <p className="parchment-muted text-sm whitespace-pre-line">{sel.characterDescription}</p>
             </div>
           )}
-          {sel.whereToMeet && (
-            <div>
-              <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Где встретить</p>
-              <p className="parchment-muted text-sm">{sel.whereToMeet}</p>
-            </div>
-          )}
-          {sel.notes && (
-            <div className="pt-3 border-t border-parchment-dark/20">
-              <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Заметки</p>
-              <p className="parchment-muted text-sm italic whitespace-pre-line">{sel.notes}</p>
-            </div>
-          )}
+
+          {/* Info grid — where to meet + notes */}
+          <div className="grid sm:grid-cols-2 gap-4 pt-4 border-t border-parchment-dark/30">
+            {sel.whereToMeet && (
+              <div>
+                <p className="parchment-heading text-xs uppercase tracking-wider mb-1">📍 Где встретить</p>
+                <p className="parchment-muted text-sm">{sel.whereToMeet}</p>
+              </div>
+            )}
+            {sel.notes && (
+              <div>
+                <p className="parchment-heading text-xs uppercase tracking-wider mb-1">📝 Заметки</p>
+                <p className="parchment-muted text-sm italic whitespace-pre-line">{sel.notes}</p>
+              </div>
+            )}
+          </div>
         </ParchmentCard>
       ) : (
         <ParchmentCard className="empty-portal">

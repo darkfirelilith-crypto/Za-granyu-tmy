@@ -78,6 +78,7 @@ export interface Personality {
   affiliation: string | null;
   role: string | null;
   status: string;
+  isNpc?: boolean;
   visibleGroupId?: string | null;
 }
 

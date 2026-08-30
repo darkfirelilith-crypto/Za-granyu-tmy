@@ -112,14 +112,14 @@ model Personality {
   title       String?
   description String
   portrait    String?
-  race        String?  // раса (человек, эльф, гном, ...)
-  age         String?  // возраст (строка — может быть "неизвестно" или "~300 лет")
-  gender      String?  // пол
-  appearance  String?  // описание внешности
-  affiliation String?  // country name / faction
-  role        String?  // king, archmage, etc.
-  status      String   @default("alive") // alive | deceased | missing
-  // Visibility: null = visible to everyone; otherwise only visible to members of the listed group
+  race        String?
+  age         String?
+  gender      String?
+  appearance  String?
+  affiliation String?
+  role        String?
+  status      String   @default("alive")
+  isNpc       Boolean  @default(false) // true = this is an NPC, can be assigned to groups
   visibleGroupId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

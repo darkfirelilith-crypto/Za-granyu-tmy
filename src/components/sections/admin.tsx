@@ -19,7 +19,7 @@ import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Use
 
 const ENTITIES = {
   countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries", fields: ["name","description","emblem","banner","capital","government","population","culture","climate"] },
-  personalities: { label: "Личности", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","race","age","gender","appearance","description","portrait","affiliation","role","status"] },
+  personalities: { label: "Личности", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","race","age","gender","appearance","description","portrait","affiliation","role","status","isNpc"] },
   beings: { label: "Важные Существа", icon: Sparkles, api: "/api/lore/beings", fields: ["name","title","race","age","gender","appearance","loreDescription","characterDescription","status","whereToMeet","notes","portrait"] },
   relations: { label: "Отношения", icon: Link2, api: "/api/lore/relations", fields: ["countryAName","countryBName","relationType","description"] },
   systems: { label: "Мир. Система", icon: Scale, api: "/api/lore/systems", fields: ["title","category","description","icon"] },
@@ -193,7 +193,7 @@ function Overview() {
 }
 
 /* ===== GENERIC ENTITY EDITOR ===== */
-const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"; options?: string[]; label: string }> = {
+const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"|"checkbox"; options?: string[]; label: string }> = {
   name: { type: "text", label: "Название" },
   title: { type: "text", label: "Титул" },
   description: { type: "textarea", label: "Описание" },
@@ -216,6 +216,7 @@ const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"; opt
   notes: { type: "textarea", label: "Заметка о персонаже" },
   portrait: { type: "image", label: "Портрет (изображение)" },
   status: { type: "select", label: "Статус", options: ["alive","deceased","missing"] },
+  isNpc: { type: "checkbox", label: "Это НПС (встречается в группе)" },
   countryAName: { type: "text", label: "Страна A" },
   countryBName: { type: "text", label: "Страна B" },
   relationType: { type: "select", label: "Тип связи", options: ["ally","enemy","neutral","trade","vassal"] },
@@ -384,6 +385,22 @@ function EntityFormDialog({
                 <Label className="parchment-heading text-sm">{meta.label}</Label>
                 <Textarea value={getVal(f)} onChange={(e) => setVal(f, e.target.value)} rows={4} className="bg-parchment/60 border-parchment-dark/40" />
               </div>
+            );
+          })}
+
+          {/* Checkboxes — full width */}
+          {fields.filter((f) => FIELD_META[f]?.type === "checkbox").map((f) => {
+            const meta = FIELD_META[f];
+            return (
+              <label key={f} className="flex items-center gap-2 cursor-pointer pt-2">
+                <input
+                  type="checkbox"
+                  checked={!!getVal(f)}
+                  onChange={(e) => setVal(f, e.target.checked)}
+                  className="w-5 h-5 rounded accent-wine"
+                />
+                <Label className="parchment-heading text-sm">{meta.label}</Label>
+              </label>
             );
           })}
 
@@ -1421,7 +1438,12 @@ function GroupsEditor() {
                 {addNpcGroup === g.id && (
                   <div className="mt-2 space-y-2">
                     <select id={`npc-${g.id}`} className="w-full px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm">
-                      {(personalities ?? []).filter((p) => !(g.npcs ?? []).some((n: any) => n.personalityId === p.id)).map((p) => <option key={p.id} value={p.id}>{p.name}{p.title ? ` — ${p.title}` : ""}</option>)}
+                      <optgroup label="Личности (НПС)">
+                      {(personalities ?? []).filter((p) => p.isNpc && !(g.npcs ?? []).some((n: any) => n.personalityId === p.id)).map((p) => <option key={p.id} value={p.id}>{p.name}{p.title ? ` — ${p.title}` : ""}</option>)}
+                      </optgroup>
+                      <optgroup label="Все личности">
+                      {(personalities ?? []).filter((p) => !p.isNpc && !(g.npcs ?? []).some((n: any) => n.personalityId === p.id)).map((p) => <option key={p.id} value={p.id}>{p.name}{p.title ? ` — ${p.title}` : ""}</option>)}
+                      </optgroup>
                     </select>
                     <input id={`nrole-${g.id}`} placeholder="роль (Союзник/Контакт/Враг...)" className="w-full px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm" />
                     <input id={`nnotes-${g.id}`} placeholder="заметки" className="w-full px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm" />
