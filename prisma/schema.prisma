@@ -121,7 +121,8 @@ model Personality {
   role        String?
   status      String   @default("alive")
   isNpc       Boolean  @default(false)
-  isKeyNpc    Boolean  @default(false) // true = key NPC (shows in "Важные Существа" tab too)
+  isKeyNpc    Boolean  @default(false)
+  isAdventurer Boolean @default(false) // true = shows in Guild members list
   visibleGroupId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

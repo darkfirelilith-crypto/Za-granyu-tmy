@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
+import { useAppStore } from "@/store/app-store";
 import { OrnamentTitle } from "@/components/fantasy/ornament-title";
 import { ParchmentCard, RuneSeal, DifficultyBadge } from "@/components/fantasy/ui";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -122,50 +123,127 @@ function RanksTab() {
 }
 
 function MembersTab() {
-  const { data, isLoading } = useQuery<any[]>({
+  const { setView, setKnowledgeTab } = useAppStore();
+  const { data: charsData, isLoading } = useQuery<any[]>({
     queryKey: ["characters"],
     queryFn: () => fetch("/api/characters").then((r) => r.json()),
   });
+  const { data: personalData } = useQuery<any[]>({
+    queryKey: ["personalities"],
+    queryFn: () => fetch("/api/lore/personalities").then((r) => r.json()),
+  });
   if (isLoading) return <LoadingScroll />;
-  // Only show characters that are adventurers (isAdventurer !== false)
-  const chars = (data ?? []).filter((c) => c.isAdventurer !== false).sort((a, b) => (b.xp ?? 0) - (a.xp ?? 0));
+
+  // Player characters that are adventurers
+  const chars = (Array.isArray(charsData) ? charsData : [])
+    .filter((c) => c.isAdventurer !== false)
+    .sort((a, b) => (b.xp ?? 0) - (a.xp ?? 0));
+
+  // NPC personalities that are marked as adventurers
+  const npcAdventurers = (Array.isArray(personalData) ? personalData : [])
+    .filter((p) => p.isAdventurer === true);
+
+  // Go to Knowledge → Personalities for this NPC
+  const goToNpc = () => {
+    setKnowledgeTab("personalities");
+    setView("knowledge");
+  };
+
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {chars.map((c, idx) => (
-        <ParchmentCard key={c.id} hover className="space-y-3">
-          <div className="flex items-center gap-3">
-            {idx === 0 && <Crown className="w-5 h-5 text-gold fill-gold animate-flicker" />}
-            <RuneSeal icon={<span className="text-xl">{c.guildRank?.icon ?? "🛡️"}</span>} size="sm" />
-            <div className="flex-1 min-w-0">
-              <h3 className="font-[family-name:var(--font-cinzel)] text-base parchment-heading truncate">{c.name}</h3>
-              <p className="text-xs parchment-muted truncate">
-                {c.race ?? "—"} · {c.charClass ?? "—"} · Ур. {c.level}
-              </p>
-            </div>
+    <div className="space-y-6">
+      {/* Player characters */}
+      <div>
+        <h3 className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading uppercase tracking-wider text-wine mb-3">
+          ⚔️ Герои-авантюристы ({chars.length})
+        </h3>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {chars.map((c, idx) => (
+            <ParchmentCard key={c.id} hover className="space-y-3">
+              <div className="flex items-center gap-3">
+                {idx === 0 && chars.length > 1 && <Crown className="w-5 h-5 text-gold fill-gold animate-flicker" />}
+                <RuneSeal icon={<span className="text-xl">{c.guildRank?.icon ?? "🛡️"}</span>} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-[family-name:var(--font-cinzel)] text-base parchment-heading truncate">{c.name}</h3>
+                  <p className="text-xs parchment-muted truncate">
+                    {c.race ?? "—"} · {c.charClass ?? "—"} · Ур. {c.level}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs parchment-muted">
+                  <span>{c.guildRank?.name ?? "Без ранга"}</span>
+                  <span>{c.xp ?? 0} XP</span>
+                </div>
+                <Progress value={Math.min(100, ((c.xp ?? 0) % 100))} className="h-1.5 bg-parchment-dark/30" />
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-parchment-dark/20 text-xs">
+                <span className="flex items-center gap-1 parchment-muted">
+                  <Award className="w-3.5 h-3.5 text-gold" />
+                  {c.achievements?.length ?? 0} достижений
+                </span>
+                <span className="flex items-center gap-1 parchment-muted">
+                  <Sword className="w-3.5 h-3.5 text-wine" />
+                  {c._count?.questProgress ?? 0} заданий
+                </span>
+              </div>
+              {c.user?.role === "ADMIN" && (
+                <Badge variant="outline" className="border-gold/40 text-gold text-[10px]">✦ Божество</Badge>
+              )}
+            </ParchmentCard>
+          ))}
+        </div>
+      </div>
+
+      {/* NPC Adventurers — clickable → Knowledge */}
+      {npcAdventurers.length > 0 && (
+        <div>
+          <h3 className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading uppercase tracking-wider text-wine mb-3">
+            🎭 НПС-авантюристы ({npcAdventurers.length})
+          </h3>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {npcAdventurers.map((p) => (
+              <ParchmentCard
+                key={p.id}
+                hover
+                className="space-y-3 cursor-pointer"
+              >
+                <div onClick={goToNpc} className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden gold-frame shrink-0 bg-parchment-dark/20 flex items-center justify-center">
+                      {p.portrait ? (
+                        <img src={p.portrait} alt={p.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <RuneSeal icon={<span className="text-xl">🎭</span>} size="sm" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-[family-name:var(--font-cinzel)] text-base parchment-heading truncate">{p.name}</h3>
+                      <p className="text-xs parchment-muted truncate">
+                        {p.race ?? "—"} · {p.role ?? p.title ?? "—"}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="border-wine/30 text-wine text-[10px] shrink-0">🎭 НПС</Badge>
+                  </div>
+                  {p.description && (
+                    <p className="text-xs parchment-muted line-clamp-2">{p.description}</p>
+                  )}
+                  <div className="flex items-center gap-2 pt-2 border-t border-parchment-dark/20 text-xs">
+                    {p.affiliation && <span className="parchment-muted">🏛️ {p.affiliation}</span>}
+                    {p.status && (
+                      <span className={`parchment-muted ${p.status === "alive" ? "text-green-700" : p.status === "deceased" ? "text-red-700" : "text-amber-700"}`}>
+                        {p.status === "alive" ? "✓ Жив" : p.status === "deceased" ? "✗ Погиб" : "? Пропал"}
+                      </span>
+                    )}
+                    <span className="ml-auto text-gold/60 text-xs">📖 Открыть →</span>
+                  </div>
+                </div>
+              </ParchmentCard>
+            ))}
           </div>
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs parchment-muted">
-              <span>{c.guildRank?.name ?? "Без ранга"}</span>
-              <span>{c.xp ?? 0} XP</span>
-            </div>
-            <Progress value={Math.min(100, ((c.xp ?? 0) % 100))} className="h-1.5 bg-parchment-dark/30" />
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t border-parchment-dark/20 text-xs">
-            <span className="flex items-center gap-1 parchment-muted">
-              <Award className="w-3.5 h-3.5 text-gold" />
-              {c.achievements?.length ?? 0} достижений
-            </span>
-            <span className="flex items-center gap-1 parchment-muted">
-              <Sword className="w-3.5 h-3.5 text-wine" />
-              {c._count?.questProgress ?? 0} заданий
-            </span>
-          </div>
-          {c.user?.role === "ADMIN" && (
-            <Badge variant="outline" className="border-gold/40 text-gold text-[10px]">✦ Божество</Badge>
-          )}
-        </ParchmentCard>
-      ))}
-      {chars.length === 0 && (
+        </div>
+      )}
+
+      {chars.length === 0 && npcAdventurers.length === 0 && (
         <div className="col-span-full text-center py-12 text-foreground/40 italic">
           Пока ни один герой не вписал своё имя в Книгу Гильдии.
         </div>

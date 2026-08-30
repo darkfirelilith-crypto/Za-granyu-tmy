@@ -19,7 +19,7 @@ import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Use
 
 const ENTITIES = {
   countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries", fields: ["name","description","emblem","banner","capital","government","population","culture","climate"] },
-  personalities: { label: "Личности", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","race","age","gender","appearance","description","portrait","affiliation","role","status","isNpc","isKeyNpc"] },
+  personalities: { label: "Личности", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","race","age","gender","appearance","description","portrait","affiliation","role","status","isNpc","isKeyNpc","isAdventurer"] },
   beings: { label: "Важные Существа", icon: Sparkles, api: "/api/lore/beings", fields: ["name","title","race","age","gender","appearance","loreDescription","characterDescription","status","whereToMeet","notes","portrait"] },
   relations: { label: "Отношения", icon: Link2, api: "/api/lore/relations", fields: ["countryAName","countryBName","relationType","description"] },
   systems: { label: "Мир. Система", icon: Scale, api: "/api/lore/systems", fields: ["title","category","description","icon"] },
@@ -217,6 +217,7 @@ const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"|"che
   status: { type: "select", label: "Статус", options: ["alive","deceased","missing"] },
   isNpc: { type: "checkbox", label: "Это НПС (встречается в группе)" },
   isKeyNpc: { type: "checkbox", label: "Ключевой НПС (показывается в «Важные Существа»)" },
+  isAdventurer: { type: "checkbox", label: "Авантюрист (показывается в «Братья по оружию»)" },
   countryAName: { type: "text", label: "Страна A" },
   countryBName: { type: "text", label: "Страна B" },
   relationType: { type: "select", label: "Тип связи", options: ["ally","enemy","neutral","trade","vassal"] },
@@ -251,8 +252,10 @@ function EntityEditor({ entityKey }: { entityKey: EntityKey }) {
         if (v === "" && k !== "description" && k !== "name" && k !== "title" && k !== "encodedContent" && k !== "realContent") continue;
         clean[k] = v;
       }
-      // Convert isNpc/isAdventurer to boolean if present
+      // Convert booleans if present
       if (clean.isNpc !== undefined) clean.isNpc = Boolean(clean.isNpc);
+      if (clean.isKeyNpc !== undefined) clean.isKeyNpc = Boolean(clean.isKeyNpc);
+      if (clean.isAdventurer !== undefined) clean.isAdventurer = Boolean(clean.isAdventurer);
       if (clean.visibleGroupId === "") clean.visibleGroupId = null;
       if (clean.order !== undefined) clean.order = Number(clean.order) || 0;
 
