@@ -100,6 +100,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
   }
 
+  // On a fresh assignment (OPEN -> ASSIGNED), also evaluate conditions so that
+  // QUEST_ASSIGNED / QUEST_ASSIGNED_COUNT achievements (e.g. "Первый Шаг во Тьму")
+  // fire immediately when the player accepts their first quest — not only on completion.
+  if (status === "ASSIGNED" && quest.status === "OPEN") {
+    try {
+      const { evaluateConditions } = await import("@/lib/conditions");
+      const result = await evaluateConditions(characterId, id);
+      return NextResponse.json({
+        ...progress,
+        autoUnlocked: result.unlockedGrimoire,
+        autoGranted: result.grantedAchievements,
+      });
+    } catch (e) {
+      console.error("conditions engine error (assign):", e);
+    }
+  }
+
   return NextResponse.json(progress);
 }
 

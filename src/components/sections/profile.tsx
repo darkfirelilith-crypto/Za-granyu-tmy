@@ -246,21 +246,26 @@ export function ProfileView() {
           </ParchmentCard>
 
           {/* Stats grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <ParchmentCard className="text-center space-y-1">
               <Award className="w-7 h-7 text-gold mx-auto" />
               <p className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{achievements.length}</p>
-              <p className="parchment-muted text-sm">Достижений</p>
+              <p className="parchment-muted text-xs sm:text-sm">Достижений</p>
             </ParchmentCard>
             <ParchmentCard className="text-center space-y-1">
               <Sword className="w-7 h-7 text-wine mx-auto" />
-              <p className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{quests.filter((q: any) => q.status === "COMPLETED").length}</p>
-              <p className="parchment-muted text-sm">Завершено заданий</p>
+              <p className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{quests.filter((q: any) => q.status === "ASSIGNED").length}</p>
+              <p className="parchment-muted text-xs sm:text-sm">Активных заданий</p>
             </ParchmentCard>
-            <ParchmentCard className="text-center space-y-1 col-span-2 sm:col-span-1">
+            <ParchmentCard className="text-center space-y-1">
+              <Trophy className="w-7 h-7 text-gold mx-auto" />
+              <p className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{quests.filter((q: any) => q.status === "COMPLETED").length}</p>
+              <p className="parchment-muted text-xs sm:text-sm">Завершено</p>
+            </ParchmentCard>
+            <ParchmentCard className="text-center space-y-1">
               <BookOpen className="w-7 h-7 text-gold mx-auto" />
               <p className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{notes.length}</p>
-              <p className="parchment-muted text-sm">Заметок в журнале</p>
+              <p className="parchment-muted text-xs sm:text-sm">Заметок</p>
             </ParchmentCard>
           </div>
 

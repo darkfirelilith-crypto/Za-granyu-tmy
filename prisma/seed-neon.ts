@@ -184,7 +184,7 @@ async function main() {
 
   // ===== ACHIEVEMENTS =====
   const achievements = [
-    { name: "Первый Шаг во Тьму", description: "Принят первый квест Гильдии.", icon: "👣", rarity: "COMMON", category: "Начальные", autoGrant: true, conditionType: "QUEST_COUNT", conditionValue: "1" },
+    { name: "Первый Шаг во Тьму", description: "Принят первый квест Гильдии.", icon: "👣", rarity: "COMMON", category: "Начальные", autoGrant: true, conditionType: "QUEST_ASSIGNED_COUNT", conditionValue: "1" },
     { name: "Закалённый в Пепле", description: "Достиг 200 XP — прошёл первое испытание.", icon: "🔥", rarity: "COMMON", category: "Прогресс", autoGrant: true, conditionType: "XP_THRESHOLD", conditionValue: "200" },
     { name: "Клинок Алого", description: "Принят в Слёзы Алого (ранг Серебряный).", icon: "🗡️", rarity: "RARE", category: "Ранг", autoGrant: true, conditionType: "RANK_REACHED", conditionValue: "2" },
     { name: "Покоритель Мёртвых Земель", description: "Завершил квест из Мёртвых Земель.", icon: "💀", rarity: "EPIC", category: "Боевые", autoGrant: false },

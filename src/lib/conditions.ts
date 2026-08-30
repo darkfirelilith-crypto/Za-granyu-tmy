@@ -5,10 +5,12 @@ import { db } from "@/lib/db";
  * character's current state and auto-unlocks / auto-grants matching items.
  *
  * Condition types:
- *  - QUEST_COMPLETED  value = questId
- *  - XP_THRESHOLD     value = xp number string
- *  - RANK_REACHED     value = rank level string
- *  - QUEST_COUNT      value = number of completed quests
+ *  - QUEST_COMPLETED   value = questId
+ *  - QUEST_ASSIGNED    value = questId (fires when a quest is accepted, not completed)
+ *  - XP_THRESHOLD      value = xp number string
+ *  - RANK_REACHED      value = rank level string
+ *  - QUEST_COUNT       value = number of completed quests
+ *  - QUEST_ASSIGNED_COUNT value = number of assigned (active) quests
  *  - ACHIEVEMENT_EARNED value = achievementId
  */
 export interface ConditionContext {
@@ -16,8 +18,9 @@ export interface ConditionContext {
   xp: number;
   rankLevel: number;
   completedQuestIds: string[];
+  assignedQuestIds: string[];
   earnedAchievementIds: string[];
-  /** Optional trigger: the quest that was just completed (if any) */
+  /** Optional trigger: the quest that was just assigned or completed (if any) */
   triggerQuestId?: string;
 }
 
@@ -30,12 +33,16 @@ export function checkCondition(
   switch (type) {
     case "QUEST_COMPLETED":
       return ctx.triggerQuestId === value || ctx.completedQuestIds.includes(value);
+    case "QUEST_ASSIGNED":
+      return ctx.triggerQuestId === value || ctx.assignedQuestIds.includes(value);
     case "XP_THRESHOLD":
       return ctx.xp >= Number(value);
     case "RANK_REACHED":
       return ctx.rankLevel >= Number(value);
     case "QUEST_COUNT":
       return ctx.completedQuestIds.length >= Number(value);
+    case "QUEST_ASSIGNED_COUNT":
+      return ctx.assignedQuestIds.length >= Number(value);
     case "ACHIEVEMENT_EARNED":
       return ctx.earnedAchievementIds.includes(value);
     default:
@@ -61,6 +68,9 @@ export async function buildContext(characterId: string, triggerQuestId?: string)
   const completedQuestIds = char.questProgress
     .filter((q) => q.status === "COMPLETED")
     .map((q) => q.questId);
+  const assignedQuestIds = char.questProgress
+    .filter((q) => q.status === "ASSIGNED")
+    .map((q) => q.questId);
   const earnedAchievementIds = char.achievements.map((a) => a.achievementId);
 
   return {
@@ -68,6 +78,7 @@ export async function buildContext(characterId: string, triggerQuestId?: string)
     xp: char.xp,
     rankLevel: char.guildRank?.level ?? 1,
     completedQuestIds,
+    assignedQuestIds,
     earnedAchievementIds,
     triggerQuestId,
   };
