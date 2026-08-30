@@ -50,6 +50,7 @@ const SECTIONS = [
   { key: "achievements", label: "Достижения", icon: Award },
   { key: "groups", label: "Группы игроков", icon: Users },
   { key: "content", label: "Контент страниц", icon: FileText },
+  { key: "map", label: "Карта мира", icon: MapPin },
   { key: "users", label: "Пользователи", icon: ShieldCheck },
 ] as const;
 
@@ -126,6 +127,7 @@ export function AdminView() {
           {section === "achievements" && <AchievementsEditor />}
           {section === "groups" && <GroupsEditor />}
           {section === "content" && <ContentEditor />}
+          {section === "map" && <MapRegionsEditor />}
           {section === "users" && <UsersEditor />}
         </div>
       </div>
@@ -1689,6 +1691,224 @@ function ContentEditor() {
           })}
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ===== MAP REGIONS EDITOR — create/edit/delete world map regions ===== */
+function MapRegionsEditor() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const { data, isLoading } = useQuery<any[]>({
+    queryKey: ["map-regions"],
+    queryFn: () => fetch("/api/lore/map-regions").then((r) => r.json()),
+  });
+  const { data: countries } = useQuery<any[]>({
+    queryKey: ["countries-for-map"],
+    queryFn: () => fetch("/api/lore/countries").then((r) => r.json()).catch(() => []),
+  });
+  const [editing, setEditing] = useState<any | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const saveMut = useMutation({
+    mutationFn: async (item: any) => {
+      const { id, ...rest } = item;
+      // clean
+      const clean: any = {};
+      for (const [k, v] of Object.entries(rest)) {
+        if (v === undefined) continue;
+        clean[k] = v;
+      }
+      if (clean.labelX !== undefined && clean.labelX !== "") clean.labelX = Number(clean.labelX); else clean.labelX = null;
+      if (clean.labelY !== undefined && clean.labelY !== "") clean.labelY = Number(clean.labelY); else clean.labelY = null;
+      if (clean.order !== undefined) clean.order = Number(clean.order) || 0;
+      if (clean.countryName === "") clean.countryName = null;
+      if (clean.fill === "") clean.fill = null;
+      if (clean.stroke === "") clean.stroke = null;
+      const res = id
+        ? await fetch(`/api/lore/map-regions/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(clean) })
+        : await fetch("/api/lore/map-regions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(clean) });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      return json;
+    },
+    onSuccess: () => {
+      toast({ title: "Регион сохранён", description: "Карта мира обновлена." });
+      setOpen(false);
+      qc.invalidateQueries({ queryKey: ["map-regions"] });
+    },
+    onError: (e: Error) => toast({ title: "Ошибка", description: e.message, variant: "destructive" }),
+  });
+
+  const delMut = useMutation({
+    mutationFn: (id: string) => fetch(`/api/lore/map-regions/${id}`, { method: "DELETE" }).then((r) => r.json()),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["map-regions"] }); toast({ title: "Регион удалён" }); },
+  });
+
+  const items = (data ?? []).sort((a, b) => a.order - b.order);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h3 className="font-[family-name:var(--font-cinzel)] text-lg text-gold">Регионы карты мира</h3>
+          <p className="text-xs parchment-muted">Создавай регионы карты. Координаты — в системе 1000×680.</p>
+        </div>
+        <Button onClick={() => { setEditing({ order: items.length, points: "", cities: "[]" }); setOpen(true); }} className="btn-rune bg-primary hover:bg-primary/90 text-primary-foreground">
+          <Plus className="w-4 h-4 mr-1" /> Создать регион
+        </Button>
+      </div>
+
+      {/* Live preview of all regions */}
+      <ParchmentCard className="p-3">
+        <p className="text-xs parchment-heading uppercase tracking-wider mb-2">Предпросмотр карты</p>
+        <svg viewBox="0 0 1000 680" className="w-full h-auto rounded-lg" style={{ background: "oklch(0.30 0.04 240 / 0.08)" }}>
+          <rect x="0" y="0" width="1000" height="680" fill="oklch(0.30 0.04 240 / 0.08)" />
+          {items.map((r, idx) => {
+            const pts = r.points || "";
+            const fill = r.fill || ["oklch(0.55 0.12 75 / 0.35)","oklch(0.45 0.08 250 / 0.35)","oklch(0.45 0.12 150 / 0.35)","oklch(0.50 0.10 70 / 0.35)","oklch(0.50 0.14 30 / 0.35)","oklch(0.40 0.10 290 / 0.35)"][idx % 6];
+            const stroke = r.stroke || "oklch(0.65 0.11 75 / 0.6)";
+            const lx = r.labelX ?? (pts.split(/\s+/).filter(Boolean).reduce((a: number, p: string) => a + Number(p.split(",")[0]), 0) / (pts.split(/\s+/).filter(Boolean).length || 1));
+            const ly = r.labelY ?? (pts.split(/\s+/).filter(Boolean).reduce((a: number, p: string) => a + Number(p.split(",")[1]), 0) / (pts.split(/\s+/).filter(Boolean).length || 1));
+            return (
+              <g key={r.id}>
+                <polygon points={pts} fill={fill} stroke={stroke} strokeWidth={1.5} />
+                <text x={lx} y={ly} textAnchor="middle" fontSize="14" fontWeight="600" fill="oklch(0.25 0.03 50)" className="font-[family-name:var(--font-cinzel)] pointer-events-none" style={{ textShadow: "0 1px 2px oklch(0.95 0.04 75 / 0.7)" }}>{r.name}</text>
+              </g>
+            );
+          })}
+          {items.length === 0 && <text x="500" y="340" textAnchor="middle" fontSize="18" fill="oklch(0.40 0.05 50 / 0.5)" className="font-[family-name:var(--font-cinzel)]">Карта пуста — создай первый регион</text>}
+        </svg>
+      </ParchmentCard>
+
+      {/* List of regions */}
+      <div className="grid sm:grid-cols-2 gap-3">
+        {items.map((r) => (
+          <ParchmentCard key={r.id} className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading truncate">{r.name || "(без названия)"}</p>
+              <p className="text-xs parchment-muted truncate">{r.countryName ? `→ ${r.countryName}` : "без страны"} · {r.order}</p>
+            </div>
+            <div className="flex gap-1 shrink-0">
+              <Button size="icon" variant="ghost" onClick={() => { setEditing(r); setOpen(true); }} className="text-wine"><Pencil className="w-4 h-4" /></Button>
+              <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Удалить регион «${r.name}»?`)) delMut.mutate(r.id); }} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
+            </div>
+          </ParchmentCard>
+        ))}
+        {items.length === 0 && <p className="col-span-full text-center parchment-muted italic py-8">Пока нет регионов. Создай первый.</p>}
+      </div>
+
+      {/* Edit dialog */}
+      {open && (
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="parchment gold-frame max-w-2xl max-h-[92vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{editing?.id ? "Редактировать регион" : "Создать регион"}</DialogTitle>
+              <DialogDescription className="parchment-muted">Координаты — в системе 1000×680. Точки полигона: "x,y x,y x,y ..."</DialogDescription>
+            </DialogHeader>
+            <MapRegionForm
+              key={editing?.id ?? "new"}
+              item={editing}
+              countries={countries ?? []}
+              onSave={(item) => saveMut.mutate(item)}
+              onCancel={() => setOpen(false)}
+              pending={saveMut.isPending}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
+
+function MapRegionForm({ item, countries, onSave, onCancel, pending }: { item: any; countries: any[]; onSave: (item: any) => void; onCancel: () => void; pending: boolean }) {
+  const [form, setForm] = useState<any>(item ?? {});
+  const get = (k: string) => form[k] ?? "";
+  const setVal = (k: string, v: any) => setForm({ ...form, [k]: v });
+
+  // Live preview of THIS region
+  const pts = get("points") || "";
+  const previewFill = get("fill") || "oklch(0.55 0.12 75 / 0.35)";
+  const previewStroke = get("stroke") || "oklch(0.65 0.11 75 / 0.6)";
+
+  return (
+    <div className="space-y-4">
+      {/* Live preview */}
+      <div className="rounded-lg overflow-hidden border border-parchment-dark/20">
+        <svg viewBox="0 0 1000 680" className="w-full h-auto" style={{ background: "oklch(0.30 0.04 240 / 0.08)" }}>
+          <rect x="0" y="0" width="1000" height="680" fill="oklch(0.30 0.04 240 / 0.08)" />
+          {pts && <polygon points={pts} fill={previewFill} stroke={previewStroke} strokeWidth={2} />}
+          {get("labelX") && get("labelY") && (
+            <text x={Number(get("labelX"))} y={Number(get("labelY"))} textAnchor="middle" fontSize="16" fontWeight="600" fill="oklch(0.25 0.03 50)" className="font-[family-name:var(--font-cinzel)]">{get("name") || "Регион"}</text>
+          )}
+          {/* city markers preview */}
+          {(() => { try { return JSON.parse(get("cities") || "[]"); } catch { return []; } })().map((c: any, i: number) => (
+            <g key={i}>
+              <circle cx={c.x} cy={c.y} r="6" fill="oklch(0.55 0.17 30)" stroke="oklch(0.30 0.10 25)" strokeWidth="1" />
+              <text x={c.x} y={c.y - 10} textAnchor="middle" fontSize="12">{c.icon || "📍"}</text>
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label className="parchment-heading text-sm">Название *</Label>
+          <Input value={get("name")} onChange={(e) => setVal("name", e.target.value)} className="bg-parchment/60 border-parchment-dark/40 h-10" />
+        </div>
+        <div className="space-y-1">
+          <Label className="parchment-heading text-sm">Связать со страной (опц.)</Label>
+          <Select value={get("countryName") || ""} onValueChange={(v) => setVal("countryName", v === "__none" ? "" : v)}>
+            <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 h-10"><SelectValue placeholder="Без страны" /></SelectTrigger>
+            <SelectContent className="parchment max-h-72">
+              <SelectItem value="__none">— Без страны —</SelectItem>
+              {countries.map((c) => <SelectItem key={c.id} value={c.name}>{c.emblem ? `${c.emblem} ` : ""}{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <Label className="parchment-heading text-sm">Точки полигона * <span className="parchment-muted font-normal">(формат: "x,y x,y x,y ...")</span></Label>
+        <Textarea value={get("points")} onChange={(e) => setVal("points", e.target.value)} rows={3} placeholder="380,240 470,220 520,250 540,310 510,360 440,380 380,350 360,290" className="bg-parchment/60 border-parchment-dark/40 font-mono text-sm" />
+        <p className="text-xs parchment-muted">Координаты в системе 1000×680. Минимум 3 точки.</p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="space-y-1">
+          <Label className="parchment-heading text-xs">Позиция X подписи</Label>
+          <Input value={get("labelX")} onChange={(e) => setVal("labelX", e.target.value)} type="number" className="bg-parchment/60 border-parchment-dark/40 h-10" />
+        </div>
+        <div className="space-y-1">
+          <Label className="parchment-heading text-xs">Позиция Y подписи</Label>
+          <Input value={get("labelY")} onChange={(e) => setVal("labelY", e.target.value)} type="number" className="bg-parchment/60 border-parchment-dark/40 h-10" />
+        </div>
+        <div className="space-y-1">
+          <Label className="parchment-heading text-xs">Порядок</Label>
+          <Input value={get("order")} onChange={(e) => setVal("order", e.target.value)} type="number" className="bg-parchment/60 border-parchment-dark/40 h-10" />
+        </div>
+        <div className="space-y-1">
+          <Label className="parchment-heading text-xs">Заливка (oklch, опц.)</Label>
+          <Input value={get("fill")} onChange={(e) => setVal("fill", e.target.value)} placeholder="auto" className="bg-parchment/60 border-parchment-dark/40 h-10 font-mono text-xs" />
+        </div>
+      </div>
+      <div className="space-y-1">
+        <Label className="parchment-heading text-xs">Обводка (oklch, опц.)</Label>
+        <Input value={get("stroke")} onChange={(e) => setVal("stroke", e.target.value)} placeholder="auto" className="bg-parchment/60 border-parchment-dark/40 h-10 font-mono text-xs" />
+      </div>
+
+      <div className="space-y-1">
+        <Label className="parchment-heading text-sm">Города и локации <span className="parchment-muted font-normal">(JSON)</span></Label>
+        <Textarea value={get("cities")} onChange={(e) => setVal("cities", e.target.value)} rows={4} placeholder='[{"name":"Столица","x":450,"y":320,"icon":"🏛️"}]' className="bg-parchment/60 border-parchment-dark/40 font-mono text-xs" />
+        <p className="text-xs parchment-muted">Формат: JSON-массив объектов с name, x, y, icon (эмодзи).</p>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2 border-t border-parchment-dark/20">
+        <Button variant="ghost" onClick={onCancel} className="btn-parchment h-9 px-3"><X className="w-3.5 h-3.5 mr-1" /> Отмена</Button>
+        <Button onClick={() => onSave(form)} disabled={pending || !get("name") || !get("points")} className="btn-wine-solid h-9 px-4">
+          {pending ? "Пишем..." : "Сохранить"}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -1745,3 +1745,92 @@ Stage Summary:
 - C. Гримуар: проверить все 6 paper-эффектов (BLOOD/TEARS/FROST/INK/BURNED/GOLD).
 - D. Карта: проверить что настройки сохраняются между сессиями (localStorage).
 - E. Удалить тестовых игроков (qa-test, qa-admin) после финального QA.
+
+---
+Task ID: worldmap-dynamic
+Agent: Z.ai Code (main)
+Task: Refactor src/components/fantasy/world-map.tsx so the world map renders regions from /api/lore/map-regions (DB) instead of the hardcoded REGIONS array. No seeding — admin creates regions themselves.
+
+Work Log:
+- Read worklog.md (last 100 lines) for project context and prior work on world-map settings.
+- Read full world-map.tsx (495 lines): hardcoded REGIONS array (6 countries with SVG `d` paths + emojis + cities), REGION_COLORS Record keyed by region name, settings panel (5 toggles in localStorage), city hover tooltips, click-to-select + KB navigation, dead-lands special-casing (cracks, purple label, red pins), legend with emojis, detail panel with country lookup.
+- Verified API: GET /api/lore/map-regions (public, returns array sorted by order asc) + [id] route for PUT/DELETE. Confirmed MapRegion prisma model (id, name, countryName?, points, labelX?, labelY?, fill?, stroke?, order, cities JSON).
+- Verified types.ts had no MapRegion/MapCity types → added both interfaces.
+- Removed hardcoded REGIONS array entirely. Removed REGION_COLORS Record keyed by name → replaced with REGION_COLORS as an ARRAY of {fill, stroke} (6 oklch entries, same hues as before) used as auto-palette by region index.
+- Added 3 helper functions: parsePoints (points string → [[x,y],...]), parseCities (JSON string → MapCity[] with try/catch + field validation + icon fallback "📍"), centroid (avg of points for label fallback).
+- Added useQuery for /api/lore/map-regions (key "map-regions"). Existing useQuery for /api/lore/countries kept.
+- ParsedRegion interface: id, name, countryName, points (raw string for <polygon points>), labelX, labelY (fallback to centroid), fill/stroke (fallback to palette[idx % 6]), cities (parsed).
+- Rendering: <polygon points={r.points}> replaces <path d={r.d}>. Same 1000×680 viewBox, same defs (sea-grad, parchment-tex, region-glow filter), same sea background + waves + compass + title cartouche.
+- Region click handler (handleRegionActivate): setSelected(region.name); if countryName → setSelectedCountryName(countryName) + onNavigateToCountry(). Same handler wired to city onClick. Matches task spec exactly.
+- Removed dead-lands special-casing (cracks paths, purple label color, red pin color) since it was tied to hardcoded region name "Мёртвые Земли". Regions now use their own fill/stroke from DB; admin can set dark colors for any "dead" region.
+- Empty state: when regions.length === 0 (and not loading), the entire SVG area is replaced with a centered message "Карта мира пуста" + admin hint "Создайте регионы в Чертоге Божества → Карта мира." Settings gear button + settings panel + legend all hidden when empty (gated by !isEmpty). Loading state shows "Разворачиваем карту..." placeholder (h-[420px]).
+- Detail panel: 4 branches — (1) regions empty → "✦ Карта мира пуста ✦" italic card; (2) countriesLoading → spinner card; (3) selRegion && selCountry → full country card (banner, emblem+name+capital, description, government/population/climate facts, cities list from selRegion.cities with capital badge on first); (4) selRegion && !selCountry → simple card with region name + cities list (or "У этого региона пока нет городов." fallback); (5) no selection → generic "Кликни по земле на карте" empty state (removed hardcoded 6-kingdom badges since regions are now dynamic).
+- Legend at bottom: now shows region names from DB with a color swatch (background=r.fill, border=r.stroke) instead of emojis. Toggleable via settings.legend. Hidden when empty/loading.
+- Settings panel (gear + 5 checkboxes cities/labels/compass/legend/waves) and localStorage persistence unchanged. Hover tooltip behavior (transparent 12px hit circle + drop pin + icon + capital label + tooltip box with stem) preserved exactly.
+- Did NOT touch mini-world-map.tsx (separate component, still hardcoded — out of scope for this task).
+- Did NOT seed any data. Did NOT add countries. Only rendering logic.
+
+Verification:
+- bun run lint → 0 errors.
+- bunx tsc --noEmit → 0 errors in src/ (MapRegion + MapCity types added to types.ts, imported correctly).
+- dev.log: server healthy, no compile errors.
+
+Stage Summary:
+- world-map.tsx now fully data-driven: regions, cities, colors, labels all come from DB via /api/lore/map-regions.
+- Hardcoded REGIONS array removed; REGION_COLORS kept as 6-entry array (auto-palette by index).
+- Empty state + loading state handled gracefully; settings gear hidden when empty.
+- Detail panel shows full country card (when countryName links to a real Country) OR a simple region card (no link / no match) OR generic empty state.
+- All existing features preserved: settings toggles, city hover tooltips, click→KB navigation, region highlight (thicker stroke + glow), legend, compass, waves, title cartouche.
+- 2 files changed: src/lib/types.ts (+22 lines: MapRegion, MapCity interfaces), src/components/fantasy/world-map.tsx (rewritten, 495 → ~480 lines).
+
+---
+Task ID: user-map-editor
+Agent: Z.ai Code (main)
+Task: Сделать карту в Зале создаваемой пользователем через админку. Больше не добавлять свои данные в БД — только настраивать схему.
+
+Work Log:
+- Прочитал worklog. HEAD = 48885c6. Dev-сервер жив.
+- Пользователь: не могу сам создать карту; просьба не добавлять свои страны/данные в БД, только настраивать схему.
+
+Сделано:
+
+1. Schema: model MapRegion (prisma/schema.prisma):
+   - id, name (unique), countryName (optional link to Country.name), points (String "x,y x,y ..."), labelX/labelY (Float?), fill/stroke (String? oklch, auto by index if null), order (Int), cities (String? JSON [{name,x,y,icon}]).
+   - prisma db push выполнен. MapRegion таблица создана в Neon. Данных не добавлено.
+
+2. API (src/app/api/lore/map-regions/):
+   - route.ts: GET (public, orderBy order asc) + POST (admin).
+   - [id]/route.ts: PUT (admin) + DELETE (admin).
+
+3. WorldMap dynamic (src/components/fantasy/world-map.tsx) — делегировано сабагенту:
+   - Удалён хардкод REGIONS/REGION_COLORS. Регионы fetch из /api/lore/map-regions.
+   - points → SVG <polygon points>. cities JSON → parse с try/catch. fill/stroke auto-palette по индексу если null. labelX/Y → centroid если null.
+   - Empty state: "Карта мира пуста" + admin hint "Создайте регионы в Чертоге Божества → Карта мира". Settings gear скрыт когда пусто.
+   - Все настройки сохранены: gear + 5 чекбоксов (cities/labels/compass/legend/waves), hover tooltip, click→select+navigate, detail panel (4 ветки: empty/loading/country-linked/region-only).
+   - types.ts: +MapRegion, +MapCity interfaces.
+
+4. Admin MapRegionsEditor (src/components/sections/admin.tsx):
+   - Новая секция "Карта мира" в sidebar (icon MapPin).
+   - Live preview SVG всех регионов сверху (polygon + label + centroid fallback).
+   - Список регионов с ✏️/🗑️ кнопками.
+   - "Создать регион" → Dialog с формой: name, countryName (select из /api/lore/countries), points (textarea "x,y x,y..."), labelX/Y, order, fill/stroke (oklch, опц.), cities (JSON textarea).
+   - Live preview ОДНОГО региона в форме (polygon + label + city markers).
+   - Валидация: name + points required. Кнопка disabled пока пустые.
+   - CRUD: POST/PUT/DELETE через /api/lore/map-regions.
+
+Верификация:
+- Lint: чист. tsc src/: 0 ошибок.
+- Agent Browser: empty-state "Карта мира пуста" в Зале. Админ-редактор: кнопка "Создать регион", live preview, форма с полями. Создание региона → POST 201 → DB 1 region → отображается на карте Зала.
+- VLM подтвердил empty-state, редактор, регион на карте.
+- Тестовый регион удалён (cleanup) — БД чиста, пользователь создаст свои.
+
+Stage Summary:
+- Карта в Зале теперь полностью создаваемая пользователем через админку (Чертог Божества → Карта мира).
+- Schema: +MapRegion model. API: /api/lore/map-regions CRUD. WorldMap: dynamic from API + empty-state. Admin: MapRegionsEditor with live preview.
+- НИКАКИХ данных в БД не добавлено — только схема и инструменты.
+- 5 файлов изменено: schema.prisma, types.ts, world-map.tsx, admin.tsx + 2 new API routes.
+
+Принцип на будущее:
+- Не добавлять свои страны/богов/легенды/лаб-записи/регионы карты в БД.
+- Только настраивать схему (prisma db push) и создавать инструменты (API + UI) для пользователя.
+- Тестовые данные (созданные для QA) удалять после проверки.

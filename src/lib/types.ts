@@ -212,3 +212,25 @@ export interface LabEntry {
   rarity: string | null;
   order: number;
 }
+
+// ===== World Map regions (admin-created via Чертог Божества) =====
+
+export interface MapRegion {
+  id: string;
+  name: string;
+  countryName: string | null; // optional link to Country.name for click→KB navigation
+  points: string; // "x1,y1 x2,y2 ..." (space-separated x,y pairs) — used as SVG polygon points
+  labelX: number | null;
+  labelY: number | null;
+  fill: string | null; // oklch color; auto-assigned by index if null
+  stroke: string | null;
+  order: number;
+  cities: string | null; // JSON string: [{"name":"x","x":100,"y":200,"icon":"🏰"}]
+}
+
+export interface MapCity {
+  name: string;
+  x: number;
+  y: number;
+  icon: string;
+}
