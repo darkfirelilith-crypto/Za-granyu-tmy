@@ -15,7 +15,6 @@ export type LabKind = "RACE" | "CLASS" | "SUBCLASS" | "SPELL" | "ITEM";
 export type KnowledgeTab =
   | "countries"
   | "personalities"
-  | "beings"
   | "relations"
   | "systems"
   | "pantheon"

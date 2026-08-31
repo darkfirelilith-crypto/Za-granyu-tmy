@@ -35,10 +35,7 @@ export function KnowledgeView() {
               <MapPin className="w-4 h-4 mr-1" /> Страны
             </TabsTrigger>
             <TabsTrigger value="personalities" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold">
-              <Crown className="w-4 h-4 mr-1" /> Личности
-            </TabsTrigger>
-            <TabsTrigger value="beings" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold">
-              <SparkleIcon className="w-4 h-4 mr-1" /> Важные Существа
+              <Crown className="w-4 h-4 mr-1" /> Персонажи
             </TabsTrigger>
             <TabsTrigger value="relations" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold">
               <Link2 className="w-4 h-4 mr-1" /> Отношения
@@ -69,7 +66,6 @@ export function KnowledgeView() {
 
         <TabsContent value="countries" className="mt-6"><CountriesTab search={search} /></TabsContent>
         <TabsContent value="personalities" className="mt-6"><PersonalitiesTab search={search} /></TabsContent>
-        <TabsContent value="beings" className="mt-6"><BeingsTab search={search} /></TabsContent>
         <TabsContent value="relations" className="mt-6"><RelationsTab search={search} /></TabsContent>
         <TabsContent value="systems" className="mt-6"><SystemsTab search={search} /></TabsContent>
         <TabsContent value="pantheon" className="mt-6"><PantheonTab search={search} /></TabsContent>
@@ -531,113 +527,4 @@ function getPersonIcon(p: Personality) {
   if (r.includes("убийц") || r.includes("гильд")) return "🗡️";
   if (r.includes("лич")) return "💀";
   return "🧙";
-}
-
-/* ===== IMPORTANT BEINGS (Важные Существа) ===== */
-function BeingsTab({ search }: { search: string }) {
-  // "Важные Существа" = ImportantBeing entries (dedicated model with rich fields:
-  // loreDescription, characterDescription, whereToMeet, notes).
-  // Previously this tab fetched /api/lore/personalities and filtered by isKeyNpc,
-  // which disconnected it from the admin "Важные Существа" editor (ImportantBeing model).
-  // Now it fetches /api/lore/beings so admin-created beings actually appear to players.
-  const { data, isLoading } = useQuery<any[]>({
-    queryKey: ["beings"],
-    queryFn: () => fetch("/api/lore/beings").then((r) => r.json()).catch(() => []),
-  });
-  const [selected, setSelected] = useState<string | null>(null);
-  if (isLoading) return <LoadingScroll />;
-  const allItems = Array.isArray(data) ? data : [];
-  const items = allItems.filter((b) =>
-    b.name.toLowerCase().includes(search.toLowerCase()) ||
-    (b.title ?? "").toLowerCase().includes(search.toLowerCase()) ||
-    (b.race ?? "").toLowerCase().includes(search.toLowerCase())
-  );
-  const sel = items.find((b) => b.id === selected) ?? items[0];
-
-  return (
-    <div className="grid lg:grid-cols-[280px_1fr] gap-5">
-      {/* List */}
-      <div className="space-y-2 max-h-[70vh] overflow-y-auto fantasy-scroll pr-2">
-        {items.map((b) => (
-          <button
-            key={b.id}
-            onClick={() => setSelected(b.id)}
-            className={`w-full text-left px-3 py-2 rounded border transition-all flex items-center gap-3 ${
-              sel?.id === b.id ? "bg-gold/10 border-gold/40 text-gold" : "bg-background/30 border-gold/10 text-foreground/70 hover:border-gold/30 hover:text-gold"
-            }`}
-          >
-            <div className="w-10 h-10 rounded overflow-hidden bg-parchment-dark/20 shrink-0 flex items-center justify-center">
-              {b.portrait ? <img src={b.portrait} alt={b.name} className="w-full h-full object-cover" /> : <span className="text-lg">🌟</span>}
-            </div>
-            <div className="min-w-0">
-              <p className="font-[family-name:var(--font-cinzel)] text-sm truncate">{b.name}</p>
-              {b.title && <p className="text-xs parchment-muted/80 truncate">{b.title}</p>}
-            </div>
-            <span className={`ml-auto text-xs shrink-0 ${b.status === "alive" ? "text-green-600" : b.status === "deceased" ? "text-red-600" : "text-amber-600"}`}>
-              {b.status === "alive" ? "✓" : b.status === "deceased" ? "✗" : "?"}
-            </span>
-          </button>
-        ))}
-        {items.length === 0 && <p className="parchment-muted text-center italic py-4 text-sm">Важных существ пока нет. Создай их в админке → База Знаний → Важные Существа.</p>}
-      </div>
-
-      {/* Detail */}
-      {sel ? (
-        <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.name}</h3>
-                {sel.title && <Badge variant="outline" className="border-gold/30 text-gold/70">{sel.title}</Badge>}
-                <span className={`text-xs px-2 py-0.5 rounded border font-[family-name:var(--font-cinzel)] uppercase ${
-                  sel.status === "alive" ? "border-green-600/30 text-green-700" :
-                  sel.status === "deceased" ? "border-red-700/30 text-red-700" : "border-amber-700/30 text-amber-700"
-                }`}>
-                  {sel.status === "alive" ? "Жив" : sel.status === "deceased" ? "Погиб" : "Пропал"}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-3 mt-3 text-sm parchment-muted">
-                {sel.race && <span>🧬 {sel.race}</span>}
-                {sel.age && <span>📅 {sel.age}</span>}
-                {sel.gender && <span>⚧ {sel.gender}</span>}
-              </div>
-            </div>
-            {sel.portrait ? <ExpandablePortrait src={sel.portrait} alt={sel.name} size="lg" /> : (
-              <div className="shrink-0"><RuneSeal icon={<span className="text-3xl">🌟</span>} size="lg" /></div>
-            )}
-          </div>
-
-          {/* Appearance */}
-          {sel.appearance && (
-            <div className="mb-4 p-3 bg-parchment-dark/10 rounded-lg">
-              <p className="parchment-heading text-xs uppercase tracking-wider mb-1">Внешность</p>
-              <p className="parchment-muted text-sm whitespace-pre-line">{sel.appearance}</p>
-            </div>
-          )}
-          {/* Lore description */}
-          {sel.loreDescription && (
-            <div className="lore-prose drop-cap text-base leading-relaxed mb-5">{sel.loreDescription}</div>
-          )}
-          {/* Character description */}
-          {sel.characterDescription && (
-            <div className="mb-4 p-3 bg-parchment-dark/10 rounded-lg">
-              <p className="parchment-heading text-xs uppercase tracking-wider mb-1">Характер</p>
-              <p className="parchment-muted text-sm whitespace-pre-line">{sel.characterDescription}</p>
-            </div>
-          )}
-          {/* Info grid */}
-          <div className="flex flex-wrap gap-4 pt-4 border-t border-parchment-dark/30 text-sm">
-            {sel.whereToMeet && <Field label="Где встретить" value={sel.whereToMeet} />}
-            {sel.notes && <Field label="Заметка" value={sel.notes} />}
-          </div>
-        </ParchmentCard>
-      ) : (
-        <ParchmentCard className="empty-portal">
-          <SparkleIcon className="w-10 h-10 text-gold/40 mx-auto mb-2" />
-          <p className="font-[family-name:var(--font-garamond)] italic text-lg">Важных существ пока нет.</p>
-          <p className="text-sm mt-1 opacity-70">Создай их в админке → База Знаний → Важные Существа.</p>
-        </ParchmentCard>
-      )}
-    </div>
-  );
 }

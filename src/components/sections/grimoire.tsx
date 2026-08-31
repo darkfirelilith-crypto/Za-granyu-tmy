@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import type { GrimoireEntry } from "@/lib/types";
+import { PaperEffectSVG } from "@/components/fantasy/paper-effects";
 import { Lock, Unlock, Sparkles, KeyRound, Crown } from "lucide-react";
 
 const CAT_LABEL: Record<string, string> = {
@@ -123,7 +124,6 @@ function GrimoirePage({
   pending: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const paperClass = `paper-${(entry.paperStyle || "PLAIN").toLowerCase()}`;
 
   return (
     <div className="space-y-2">
@@ -237,8 +237,8 @@ function GrimoirePage({
       {/* When unlocked and expanded — show full book page */}
       {entry.unlocked && expanded && (
         <div className="grimoire-page animate-reveal">
-          {/* Paper effect overlay (separate div to avoid ::before conflict with grimoire-page lines) */}
-          <div className={`paper-effect ${paperClass}`} aria-hidden />
+          {/* Paper effect — SVG overlay with organic shapes (ink blots, tears, frost, etc.) */}
+          <PaperEffectSVG style={entry.paperStyle || "PLAIN"} />
           {/* Margin note top */}
           {entry.marginTop && (
             <div className="margin-note mb-4 ml-12">{entry.marginTop}</div>

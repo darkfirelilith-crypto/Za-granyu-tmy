@@ -19,8 +19,7 @@ import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Use
 
 const ENTITIES = {
   countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries", fields: ["name","description","emblem","banner","capital","government","population","culture","climate"] },
-  personalities: { label: "Личности", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","race","age","gender","appearance","description","portrait","affiliation","role","status","isNpc","isKeyNpc","isAdventurer"] },
-  beings: { label: "Важные Существа", icon: Sparkles, api: "/api/lore/beings", fields: ["name","title","race","age","gender","appearance","loreDescription","characterDescription","status","whereToMeet","notes","portrait"] },
+  personalities: { label: "Персонажи", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","race","age","gender","appearance","description","portrait","affiliation","role","status","isNpc","isKeyNpc","isAdventurer"] },
   relations: { label: "Отношения", icon: Link2, api: "/api/lore/relations", fields: ["countryAName","countryBName","relationType","description"] },
   systems: { label: "Мир. Система", icon: Scale, api: "/api/lore/systems", fields: ["title","category","description","icon","image"] },
   gods: { label: "Пантеон", icon: Sun, api: "/api/lore/gods", fields: ["name","title","domain","description","symbol","image","alignment","pantheon"] },
@@ -34,7 +33,7 @@ const SECTIONS = [
   { key: "overview", label: "Обзор", icon: Crown },
   { key: "knowledge", label: "База Знаний", icon: BookOpen, sub: [
     { key: "countries", label: "Страны" },
-    { key: "personalities", label: "Личности" },
+    { key: "personalities", label: "Персонажи" },
     { key: "relations", label: "Отношения" },
     { key: "systems", label: "Мир. Система" },
     { key: "gods", label: "Пантеон" },
@@ -217,7 +216,7 @@ const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"|"che
   image: { type: "image", label: "Изображение (иллюстрация)" },
   status: { type: "select", label: "Статус", options: ["alive","deceased","missing"] },
   isNpc: { type: "checkbox", label: "Это НПС (встречается в группе)" },
-  isKeyNpc: { type: "checkbox", label: "Ключевой НПС (показывается в «Важные Существа»)" },
+  isKeyNpc: { type: "checkbox", label: "Ключевой НПС" },
   isAdventurer: { type: "checkbox", label: "Авантюрист (показывается в «Братья по оружию»)" },
   countryAName: { type: "country-select", label: "Страна A" },
   countryBName: { type: "country-select", label: "Страна B" },
@@ -271,7 +270,6 @@ function EntityEditor({ entityKey }: { entityKey: EntityKey }) {
   const REQUIRED_FIELDS: Record<string, string[]> = {
     countries: ["name", "description"],
     personalities: ["name", "description"],
-    beings: ["name"],
     relations: ["countryAName", "countryBName", "relationType"],
     systems: ["title", "category", "description"],
     gods: ["name", "domain", "description"],
