@@ -1929,3 +1929,120 @@ Stage Summary:
 Stage Summary:
 - 4 файла изменено: создано 2 API-маршрута, правки в profile.tsx (+InventorySection), правки в admin.tsx (+CharacterInventoryDialog, +кнопка в CharactersEditor, +Gem импорт).
 - Флоу: админ в «Чертог Божества → Гильдия → Герои» открывает диалог «Магические предметы» у нужного героя → выбирает запись из Лаборатории Алого → «Выдать». Игрок в «Профиле → Профиль» видит секцию «✦ Магические предметы ✦» с выданными предметами (icon, rarity, description, дата выдачи, заметка).
+
+---
+
+## Task lab-rewrite — Полная переработка Лаборатории Алого (player UI + admin editor)
+
+Контекст: LabEntry уже расширен в schema.prisma (raceParent, spellLevel, school, concentration, ritual, components, castingTime, spellRange, spellClasses, itemType, attunement) и запушен. В types.ts были два объявления `LabKind` (старое на 5 типов + новое на 8) → конфликт TS2300.
+
+Сделано:
+
+### 0. Предварительно
+- `src/lib/types.ts`: удалён дублирующий `export type LabKind = "RACE" | "CLASS" | "SUBCLASS" | "SPELL" | "ITEM"` (строка 13). Остаётся только расширенное объявление на 8 типов. Это устранило `TS2300: Duplicate identifier 'LabKind'`.
+
+### 1. Player UI (`src/components/sections/lab.tsx`) — полный рерайт
+- `KIND_META` расширена до 8 типов: RACE/SUBRACE (Dna 🧬), CLASS (Swords ⚔️), SUBCLASS (Layers 🔱), SPELL (Wand2 ✨), ITEM (Gem 💎), TRAIT (Star ⭐), BACKGROUND (BookOpen 📖).
+- Добавлен `KIND_ORDER: LabKind[]` для предсказуемой сортировки табов.
+- `counts` расширен до всех 8 ключей.
+- Рендер табов/поиска сохранён; вместо `Object.keys(KIND_META)` итерирую `KIND_ORDER`.
+- Введены хелперы:
+  - `DetailBlock({ title, body })` — секция «✦ ...» с верхней границей, pre-line.
+  - `MetaRow({ label, value })` — строка «Label: value» (пропускается если value falsy).
+  - `SpellMetaGrid({ entry })` — карточка с метаданными заклинания (Уровень, Школа, Концентрация, Ритуал, Компоненты, Время накладывания, Дистанция, Классы).
+  - `ItemMetaGrid({ entry })` — карточка с Тип предмета + Настройка.
+- `LabDetail` полностью переписан с типоспецифичным рендером по `entry.kind`:
+  - RACE: image + description + details («✦ Механическая составляющая»).
+  - SUBRACE: raceParent строкой + image + description + details.
+  - CLASS: description.
+  - SUBCLASS: subtitle как «Класс: ...» + description.
+  - SPELL: SpellMetaGrid + description.
+  - ITEM: image + ItemMetaGrid + description.
+  - TRAIT: description.
+  - BACKGROUND: description + details.
+  - Общий header (icon + name + rarity + subtitle + kind-badge) вынесен в переменную `header` — больше не дублируется.
+- `LabGrid` рендерит разные карточки по `e.kind`:
+  - RACE/SUBRACE: icon + name (+ «⊙ raceParent» для подрасы) + image + description (line-clamp-2) + «▼ Открыть подробности».
+  - CLASS/SUBCLASS/TRAIT/BACKGROUND: icon + name (+ subtitle) + description (line-clamp-2).
+  - SPELL: icon + name + spellLevel badge (заговор/N круг) + school badge + description (line-clamp-2).
+  - ITEM: icon + name + RarityBadge + itemType + (image) + description (line-clamp-2).
+
+### 2. Admin Editor (`src/components/sections/admin.tsx`, секция `/* ===== LAB EDITOR */`)
+- Локальный `type LabKind` (8 типов) + `LAB_KIND_LABEL` (с эмодзи и описанием), `LAB_KIND_ORDER`, `SELECT_NONE = "__none"`.
+- Константы опций: `SPELL_LEVELS` (Заговор + 1..9), `SPELL_SCHOOLS` (8 школ), `RARITIES` (COMMON..MYTHIC).
+- `LabEditor`: список теперь сгруппирован по kind — для каждого непустого типа шапка «🜂 Тип (N)» и grid карточек. Карточки показывают type-specific краткую инфу (rarity badge, raceParent, spellLevel+school, itemType). Кнопка «Создать» теперь сразу инициализирует `editing = { kind: "RACE" }`.
+- Введены переиспользуемые примитивы:
+  - `LabField({ label, children })` — Label + произвольный контрол.
+  - `LabInput({ value, onChange, placeholder?, type? })` — стилизованный Input.
+  - `LabTextarea({ value, onChange, rows?, placeholder? })` — стилизованный Textarea.
+  - `LabSelect({ value, onChange, options, placeholder?, allowNone? })` — Select с поддержкой «(не выбрано)» через sentinel `__none` (на save конвертируется в "").
+- `LabFormDialog` переписан:
+  - Селектор «Тип записи» вверху, `disabled` для существующих записей (kind фиксирован).
+  - Switch по `kind` рендерит разные наборы полей:
+    - **RACE**: name, description, details (textarea), image (ImageUpload), icon.
+    - **SUBRACE**: name, raceParent, description, details, image, icon.
+    - **CLASS**: name, description, icon (только 3 поля — простой формат).
+    - **SUBCLASS**: name, subtitle (Класс), description, icon.
+    - **SPELL**: name, spellLevel (select), school (select), concentration (text), ritual (select Да/Нет), components, castingTime, spellRange, spellClasses — двухколоночные grid-блоки + description + icon.
+    - **ITEM**: name, rarity (select), itemType (text), attunement (text), description, image, icon.
+    - **TRAIT**: name, description.
+    - **BACKGROUND**: name, description, details (textarea «Механическая составляющая»).
+  - Общее поле «Порядок (сортировка)» внизу.
+  - `handleSave`: merge current + form, конвертирует `__none` → "" для select-полей (rarity/ritual/school/spellLevel), гарантирует `kind` и `order`.
+- Существующий API `/api/lab` (POST/PUT/DELETE) НЕ трогал — он и так прокидывает все поля через `data: body`.
+
+### Констрейнты
+- `bun run lint` → 0 ошибок (exit 0).
+- `bunx tsc --noEmit` → 0 ошибок в `src/` (есть pre-existing ошибки в `examples/` и `skills/`, не связаны с задачей).
+- Никаких сидов не запускал.
+- Использованы существующие shadcn/ui (Input, Textarea, Select, Label, Dialog, Button, Badge) и `ImageUpload` из `@/components/fantasy/image-upload`, `RarityBadge` из `@/components/fantasy/ui`.
+- `'use client'` директива на месте в обоих файлах.
+
+### Верификация
+- Home page `GET /` → 200 (компиляция lab.tsx и admin.tsx через app-shell — без ошибок).
+- `GET /api/lab` → 500 — это **pre-existing** проблема окружения (нет `DATABASE_URL` с протоколом `postgresql://`), не связана с кодом. Маршрут компилируется и отвечает по правам доступа (раньше возвращал 401 без сессии, сейчас 500 из-за БД — но сам код корректен).
+- Dev-логи: `✓ Compiled in 270ms/307ms/251ms` после правок — без ошибок компиляции.
+
+### Файлы изменены
+- `src/lib/types.ts` — удалён дублирующий `LabKind`.
+- `src/components/sections/lab.tsx` — полный рерайт (KIND_META на 8 типов, типоспецифичные карточки и LabDetail).
+- `src/components/sections/admin.tsx` — полный рерайт секции LAB EDITOR (LAB_KIND_LABEL, LabEditor, примитивы LabField/Input/Textarea/Select, LabFormDialog со switch по kind).
+
+Stage Summary: Админ теперь создаёт записи 8 типов через типоспецифичные формы (общий Select типа вверху, фиксированный для существующих). Игрок видит в Лаборатории Алого 8 табов с типоспецифичными карточками и открывает детали с рендером всех релевантных полей (мета-гриды для SPELL и ITEM, блок «Механическая составляющая» для RACE/SUBRACE/BACKGROUND, raceParent для подрас, subtitle-класс для подклассов).
+
+---
+
+## Task: profile-arsenal-scrolltop (Z.ai Code)
+
+### What was done
+
+Two independent features:
+
+**Feature 1 — Profile "Арсенал" and "Свитки" sections** (`src/components/sections/profile.tsx`):
+- Replaced the single "Магические предметы" `InventorySection` (which rendered every granted item in one mixed list) with TWO type-filtered sections placed in the `profile` tab after the quest journal.
+  - **`ArsenalSection`** — `OrnamentTitle "Арсенал" flourish="⚔️"`. Fetches `/api/characters/${id}/inventory`, filters `labEntry.kind === "ITEM"`. Card grid `sm:grid-cols-2`: icon + name + `RarityBadge` + `itemType` + `description` (line-clamp-2). Empty state: «Арсенал пуст.» Click → `Dialog` with `ArsenalDetail` (header w/ RuneSeal + name + rarity + itemType, optional image, meta grid `Тип предмета`/`Настройка`/`Редкость`, drop-cap description, granted date + admin note).
+  - **`ScrollsSection`** — `OrnamentTitle "Свитки" flourish="📜"`. Same fetch, filters `labEntry.kind === "SPELL"`. Cards: icon + name + `spellLevel` badge + `school` badge + description. Empty state: «Свитков пока нет.» Click → `Dialog` with `ScrollsDetail` (header + 8-row meta grid: Уровень / Школа / Концентрация / Ритуал / Компоненты / Время накладывания / Дистанция / Классы, drop-cap description, granted date + admin note).
+  - Both dialogs follow the LabDetail pattern: sr-only `DialogTitle` + `DialogDescription` + visible content. Shared `MetaRow` helper used.
+- Added `Dialog, DialogContent, DialogTitle, DialogDescription` imports.
+- Extended `/api/characters/[id]/inventory/route.ts` (both GET and POST) `labEntry` select to include `details, itemType, attunement, spellLevel, school, concentration, ritual, components, castingTime, spellRange, spellClasses` — needed by the new detail dialogs.
+
+**Feature 2 — Scroll-to-top button**:
+- New `src/components/fantasy/scroll-to-top.tsx` (`'use client'`). Floating button `fixed bottom-6 left-6 z-30` (bottom-LEFT — DiceRoller keeps bottom-right), appears when `window.scrollY > 300`, smooth-scrolls to top on click. Styled `bg-parchment-dark/70 border-gold/30 text-gold backdrop-blur-sm` with hover scale + brighter border. Uses `ChevronUp` from lucide-react. `useState` + `useEffect` scroll listener with a simple-conditional guard (`setVisible(prev => prev === shouldShow ? prev : shouldShow)`) — no setState-in-effect lint error. Hidden via `opacity-0 pointer-events-none` when not visible.
+- Added `<ScrollToTop />` to `src/components/app-shell.tsx` inside the main app div, after the footer and BEFORE `AuthDialog`/`Omnisearch`/`DiceRoller` (with the matching import).
+
+### Constraints verified
+- `bun run lint` → **0 errors** (exit 0).
+- `bunx tsc --noEmit` → **0 errors in `src/`** (only pre-existing error in `skills/stock-analysis-skill/src/analyzer.ts`, unrelated).
+- No data seeded.
+- `'use client'` on new component + unchanged on profile.tsx.
+- Existing Profile tabs and other sections preserved — only `InventorySection` was replaced.
+- Dev log: `✓ Compiled` clean after edits, `GET /` → 200. Pre-existing `/api/lab` 500 (DATABASE_URL env issue) is unrelated.
+
+### Files changed
+- `src/app/api/characters/[id]/inventory/route.ts` — extended `labEntry` select in GET and POST.
+- `src/components/sections/profile.tsx` — new Dialog import; replaced `<InventorySection>` call with `<ArsenalSection>` + `<ScrollsSection>`; deleted old `InventorySection`; added `ArsenalSection`, `ArsenalDetail`, `ScrollsSection`, `ScrollsDetail`, shared `MetaRow`.
+- `src/components/fantasy/scroll-to-top.tsx` — NEW component.
+- `src/components/app-shell.tsx` — imported + rendered `<ScrollToTop />` after the footer.
+
+### Work record
+- `/home/z/my-project/agent-ctx/profile-arsenal-scrolltop-zai-code.md`
