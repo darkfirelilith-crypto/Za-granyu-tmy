@@ -297,7 +297,8 @@ export function ProfileView() {
               </div>
 
               <div className="flex-1 space-y-4 min-w-0">
-                <div className="flex items-start justify-between gap-3 flex-wrap">
+                {/* Name + edit button on one line; when editing, name input takes full width */}
+                <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
                     {editing ? (
                       <Input
@@ -309,42 +310,42 @@ export function ProfileView() {
                       <h2 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading break-words">{char.name}</h2>
                     )}
                   </div>
-                  <div className="shrink-0 flex flex-wrap gap-2 items-center">
-                    {editing ? (
-                      <>
-                        <Button size="sm" onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="btn-wine-solid h-9 px-3">
-                          <Save className="w-3.5 h-3.5 mr-1" /> Сохранить
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setForm(null); }} className="btn-parchment h-9 px-3">
-                          <X className="w-3.5 h-3.5 mr-1" /> Отмена
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button size="sm" onClick={() => { setForm(char); setEditing(true); }} className="btn-parchment h-9 px-3">
-                          <Edit3 className="w-3.5 h-3.5 mr-1" /> Редактировать
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={exportCharacter} className="btn-parchment h-9 px-3" title="Скачать свиток героя как JSON" aria-label="Экспортировать персонажа">
-                          <Download className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => fileInputRef.current?.click()} className="btn-parchment h-9 px-3" title="Загрузить свиток героя из JSON" aria-label="Импортировать персонажа">
-                          <Upload className="w-3.5 h-3.5" />
-                        </Button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="application/json,.json"
-                          className="hidden"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) importCharacter(f);
-                            e.target.value = "";
-                          }}
-                        />
-                      </>
-                    )}
-                  </div>
+                  {!editing && (
+                    <div className="shrink-0 flex gap-2 items-center">
+                      <Button size="sm" onClick={() => { setForm(char); setEditing(true); }} className="btn-parchment h-9 px-3">
+                        <Edit3 className="w-3.5 h-3.5 mr-1" /> Редактировать
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={exportCharacter} className="btn-parchment h-9 px-3" title="Скачать свиток героя как JSON" aria-label="Экспортировать персонажа">
+                        <Download className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => fileInputRef.current?.click()} className="btn-parchment h-9 px-3" title="Загрузить свиток героя из JSON" aria-label="Импортировать персонажа">
+                        <Upload className="w-3.5 h-3.5" />
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="application/json,.json"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) importCharacter(f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
+                {/* When editing — action buttons on their OWN line, full width, no overlap */}
+                {editing && (
+                  <div className="flex gap-2 items-center pt-1">
+                    <Button size="sm" onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="btn-wine-solid h-9 px-4">
+                      <Save className="w-3.5 h-3.5 mr-1" /> Сохранить
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setForm(null); }} className="btn-parchment h-9 px-4">
+                      <X className="w-3.5 h-3.5 mr-1" /> Отмена
+                    </Button>
+                  </div>
+                )}
 
                 {/* Race / Class / Alignment — full width grid, no overlap */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -508,6 +509,9 @@ export function ProfileView() {
               </div>
             </div>
           )}
+
+          {/* Magic items inventory */}
+          <InventorySection characterId={char.id} />
         </TabsContent>
 
         {/* ===== TAB 2: ХАРАКТЕРИСТИКИ ===== */}
@@ -839,6 +843,61 @@ function RelationForm({ personalities, characters, onSave, onCancel, pending }: 
         <Button size="sm" onClick={() => onSave({ [targetType === "personality" ? "targetPersonalityId" : "targetCharacterId"]: targetId, relationLabel: label, description: description || undefined })} disabled={!targetId || pending} className="btn-wine-solid h-9 px-3"><Save className="w-3.5 h-3.5 mr-1" /> Записать</Button>
         <Button size="sm" variant="ghost" onClick={onCancel} className="btn-parchment h-9 px-3"><X className="w-3.5 h-3.5 mr-1" /> Отмена</Button>
       </div>
+    </div>
+  );
+}
+
+/* ===== Inventory section — магические предметы из Лаборатории Алого ===== */
+function InventorySection({ characterId }: { characterId: string }) {
+  const { data, isLoading } = useQuery<any[]>({
+    queryKey: ["inventory", characterId],
+    queryFn: () => fetch(`/api/characters/${characterId}/inventory`).then((r) => r.json()),
+  });
+  const items = data ?? [];
+
+  return (
+    <div className="space-y-4">
+      <OrnamentTitle size="md" flourish="💎">✦ Магические предметы ✦</OrnamentTitle>
+      {isLoading ? (
+        <ParchmentCard className="text-center parchment-muted italic">Перечитываем опись...</ParchmentCard>
+      ) : items.length === 0 ? (
+        <ParchmentCard className="text-center">
+          <p className="font-[family-name:var(--font-garamond)] italic">У героя пока нет магических предметов.</p>
+        </ParchmentCard>
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {items.map((it: any) => {
+            const lab = it.labEntry ?? {};
+            return (
+              <ParchmentCard key={it.id} hover className="flex items-start gap-3">
+                <RuneSeal
+                  icon={<span className="text-2xl">{lab.icon ?? "💎"}</span>}
+                  size="md"
+                  glow={lab.rarity === "LEGENDARY" || lab.rarity === "MYTHIC"}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{lab.name ?? "Безымянный предмет"}</h4>
+                    {lab.rarity && <RarityBadge rarity={lab.rarity} />}
+                  </div>
+                  {lab.subtitle && (
+                    <p className="parchment-heading text-xs uppercase tracking-wider mt-0.5">{lab.subtitle}</p>
+                  )}
+                  {lab.description && (
+                    <p className="parchment-muted text-sm line-clamp-2 mt-1">{lab.description}</p>
+                  )}
+                  <p className="text-xs parchment-muted/70 mt-1.5 italic">
+                    Даровано: {new Date(it.grantedAt).toLocaleDateString("ru-RU")}
+                  </p>
+                  {it.note && (
+                    <p className="text-xs italic parchment-muted/80 mt-1 border-t border-parchment-dark/20 pt-1">“{it.note}”</p>
+                  )}
+                </div>
+              </ParchmentCard>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

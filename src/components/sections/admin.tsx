@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ImageUpload } from "@/components/fantasy/image-upload";
-import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Users as UsersIcon, Sword, Sparkles, Scale, Sun, BookMarked, Link2, Trophy, Star, FlaskConical, ShieldCheck, UserPlus, KeyRound, Users, FileText, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Users as UsersIcon, Sword, Sparkles, Scale, Sun, BookMarked, Link2, Trophy, Star, FlaskConical, ShieldCheck, UserPlus, KeyRound, Users, FileText, X, Gem } from "lucide-react";
 
 const ENTITIES = {
   countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries", fields: ["name","description","emblem","banner","capital","government","population","culture","climate"] },
@@ -1124,6 +1124,7 @@ function CharactersEditor() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [editing, setEditing] = useState<any>(null);
+  const [itemsChar, setItemsChar] = useState<any>(null);
 
   const update = useMutation({
     mutationFn: async (item:any) => fetch("/api/characters",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:item.id,xp:Number(item.xp),level:Number(item.level),guildRankId:item.guildRankId,isAdventurer:item.isAdventurer !== undefined ? Boolean(item.isAdventurer) : undefined})}).then(r=>r.json()),
@@ -1191,11 +1192,189 @@ function CharactersEditor() {
                 })}
               </div>
             </div>
+
+            {/* Inventory — open the grant/revoke dialog */}
+            <div className="pt-2 border-t border-parchment-dark/20">
+              <Button size="sm" variant="outline" onClick={()=>setItemsChar(c)} className="border-gold/30 text-gold hover:bg-gold/10 btn-rune w-full">
+                <Gem className="w-3.5 h-3.5 mr-1.5" /> Магические предметы
+              </Button>
+            </div>
           </ParchmentCard>
         ))}
         {(data ?? []).length === 0 && <p className="col-span-full text-center parchment-muted italic py-8">Героев пока нет.</p>}
       </div>
+
+      {itemsChar && (
+        <CharacterInventoryDialog
+          key={itemsChar.id}
+          character={itemsChar}
+          onClose={()=>setItemsChar(null)}
+        />
+      )}
     </div>
+  );
+}
+
+/* ===== CHARACTER INVENTORY DIALOG — выдать/забрать предметы ===== */
+function CharacterInventoryDialog({ character, onClose }: { character: any; onClose: () => void }) {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [selectedLabId, setSelectedLabId] = useState<string>("");
+  const [note, setNote] = useState<string>("");
+  const [kindFilter, setKindFilter] = useState<string>("ITEM");
+
+  // Inventory for this character
+  const { data: items, isLoading } = useQuery<any[]>({
+    queryKey: ["inventory", character.id],
+    queryFn: () => fetch(`/api/characters/${character.id}/inventory`).then((r) => r.json()),
+  });
+
+  // All lab entries — used for the grant dropdown
+  const { data: labEntries } = useQuery<any[]>({
+    queryKey: ["lab-for-grant"],
+    queryFn: () => fetch("/api/lab").then((r) => r.json()),
+  });
+
+  const grant = useMutation({
+    mutationFn: async ({ labEntryId, note: noteText }: { labEntryId: string; note?: string }) =>
+      fetch(`/api/characters/${character.id}/inventory`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ labEntryId, note: noteText || undefined }),
+      }).then((r) => {
+        if (!r.ok) throw new Error("Не удалось выдать");
+        return r.json();
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inventory", character.id] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+      setSelectedLabId("");
+      setNote("");
+      toast({ title: "Предмет выдан" });
+    },
+    onError: (e: Error) => toast({ title: "Ошибка", description: e.message, variant: "destructive" }),
+  });
+
+  const revoke = useMutation({
+    mutationFn: async (itemId: string) =>
+      fetch(`/api/characters/${character.id}/inventory/${itemId}`, { method: "DELETE" }).then((r) => {
+        if (!r.ok) throw new Error("Не удалось забрать");
+        return r.json();
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inventory", character.id] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+      toast({ title: "Предмет забран" });
+    },
+    onError: (e: Error) => toast({ title: "Ошибка", description: e.message, variant: "destructive" }),
+  });
+
+  const labOptions = (labEntries ?? []).filter((e) => kindFilter === "ALL" || e.kind === kindFilter);
+  const itemList = items ?? [];
+
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="parchment gold-frame max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading flex items-center gap-2">
+            <Gem className="w-5 h-5 text-gold" />
+            Магические предметы: {character.name}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            Управление инвентарём магических предметов героя
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Current inventory */}
+        <div className="space-y-2">
+          <p className="parchment-heading text-xs uppercase tracking-wider">Текущие предметы ({itemList.length})</p>
+          {isLoading ? (
+            <p className="parchment-muted italic text-sm">Читаем опись...</p>
+          ) : itemList.length === 0 ? (
+            <p className="parchment-muted italic text-sm">У героя пока нет магических предметов.</p>
+          ) : (
+            <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+              {itemList.map((it: any) => {
+                const lab = it.labEntry ?? {};
+                return (
+                  <div key={it.id} className="flex items-center gap-2 p-2 rounded border border-parchment-dark/30 bg-parchment/40">
+                    <span className="text-lg shrink-0">{lab.icon ?? "💎"}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-[family-name:var(--font-cinzel)] parchment-heading text-sm truncate">{lab.name ?? "—"}</span>
+                        {lab.rarity && <RarityBadge rarity={lab.rarity} />}
+                      </div>
+                      {it.note && <p className="text-xs italic parchment-muted/80 truncate">“{it.note}”</p>}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => revoke.mutate(it.id)}
+                      disabled={revoke.isPending}
+                      className="text-destructive hover:bg-destructive/10 h-8 px-2 shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1" /> Забрать
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Grant a new item */}
+        <div className="space-y-2 pt-3 border-t border-parchment-dark/30">
+          <p className="parchment-heading text-xs uppercase tracking-wider">Выдать новый предмет</p>
+          <div>
+            <Label className="parchment-heading text-xs">Тип записи</Label>
+            <Select value={kindFilter} onValueChange={(v) => { setKindFilter(v); setSelectedLabId(""); }}>
+              <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent className="parchment">
+                <SelectItem value="ITEM">💎 Предметы</SelectItem>
+                <SelectItem value="SPELL">✨ Заклинания</SelectItem>
+                <SelectItem value="RACE">🧬 Расы</SelectItem>
+                <SelectItem value="CLASS">⚔️ Классы</SelectItem>
+                <SelectItem value="SUBCLASS">🔱 Подклассы</SelectItem>
+                <SelectItem value="ALL">⛓ Все записи</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="parchment-heading text-xs">Запись из Лаборатории Алого</Label>
+            <Select value={selectedLabId} onValueChange={setSelectedLabId}>
+              <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 mt-1"><SelectValue placeholder="Выбери запись..." /></SelectTrigger>
+              <SelectContent className="parchment max-h-60">
+                {labOptions.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.icon ?? "🜂"} {e.name}{e.subtitle ? ` — ${e.subtitle}` : ""}
+                  </SelectItem>
+                ))}
+                {labOptions.length === 0 && <SelectItem value="__none" disabled>Записей нет</SelectItem>}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="parchment-heading text-xs">Заметка (необязательно)</Label>
+            <Input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Как и за что предмет был дарован..."
+              className="bg-parchment/60 border-parchment-dark/40 mt-1"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="ghost" onClick={onClose} className="parchment-muted">Закрыть</Button>
+            <Button
+              onClick={() => grant.mutate({ labEntryId: selectedLabId, note })}
+              disabled={!selectedLabId || selectedLabId === "__none" || grant.isPending}
+              className="bg-primary text-primary-foreground btn-rune"
+            >
+              <Gem className="w-3.5 h-3.5 mr-1" /> {grant.isPending ? "Выдаём..." : "Выдать"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

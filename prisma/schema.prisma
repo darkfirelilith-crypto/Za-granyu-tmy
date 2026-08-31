@@ -50,6 +50,7 @@ model Character {
   groupMemberships GroupMember[]
   relationsOwned   CharacterRelation[] @relation("RelationOwner")
   relationsAsTarget CharacterRelation[] @relation("RelationTarget")
+  inventory   CharacterItem[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -289,6 +290,7 @@ model LabEntry {
   order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  characterItems CharacterItem[]
 }
 
 // ===== Editable Site Content (история гильдии, девиз, залы, описание зала) =====
@@ -301,6 +303,22 @@ model SiteContent {
   image     String?  // base64 image (optional)
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+}
+
+// ===== Character Inventory — магические предметы из Лаборатории Алого =====
+// Admin grants items to characters. Links Character → LabEntry.
+
+model CharacterItem {
+  id          String   @id @default(cuid())
+  characterId String
+  labEntryId  String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  labEntry    LabEntry  @relation(fields: [labEntryId], references: [id], onDelete: Cascade)
+  grantedAt   DateTime @default(now())
+  grantedBy   String?  // admin userId or "story"
+  note        String?  // optional note about how/why it was granted
+
+  @@unique([characterId, labEntryId])
 }
 
 // ===== Groups (кампания — объединение игроков + встреченные НПС) =====

@@ -380,13 +380,7 @@ function PantheonTab({ search }: { search: string }) {
         ))}
       </div>
       {sel && (
-        <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden relative">
-          {/* Pantheon tier badge top-right */}
-          {sel.pantheon && (
-            <span className={`absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full border font-[family-name:var(--font-cinzel)] uppercase tracking-wider ${pantheonStyle[sel.pantheon] ?? "border-gold/30 text-gold/70"}`}>
-              {sel.pantheon}
-            </span>
-          )}
+        <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -394,6 +388,11 @@ function PantheonTab({ search }: { search: string }) {
                 <Badge variant="outline" className="border-gold/30 text-gold/70 text-xs">
                   {sel.domain}
                 </Badge>
+                {sel.pantheon && (
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border font-[family-name:var(--font-cinzel)] uppercase tracking-wider ${pantheonStyle[sel.pantheon] ?? "border-gold/30 text-gold/70"}`}>
+                    {sel.pantheon}
+                  </span>
+                )}
               </div>
               {sel.title && <p className="parchment-heading text-sm uppercase tracking-wider mb-2">{sel.title}</p>}
               {sel.alignment && (
