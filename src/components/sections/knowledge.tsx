@@ -11,7 +11,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import type { Country, Personality, CountryRelation, WorldSystem, God, Legend } from "@/lib/types";
 import { ExpandablePortrait } from "@/components/fantasy/expandable-portrait";
-import { MapImage } from "@/components/fantasy/map-image";
 import { Search, MapPin, Crown, Link2, Scale, Sun, BookMarked, Globe2, Sparkle as SparkleIcon } from "lucide-react";
 
 export function KnowledgeView() {
@@ -117,10 +116,6 @@ function CountriesTab({ search }: { search: string }) {
       </div>
       {sel && (
         <div className="space-y-4">
-          {/* Mini world map — highlights selected country, click to switch */}
-          <ParchmentCard className="p-3 overflow-hidden">
-            <MapImage />
-          </ParchmentCard>
           <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
           {/* Banner image — full width, proper aspect ratio, no cropping */}
           {sel.banner && (

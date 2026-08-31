@@ -392,24 +392,13 @@
   letter-spacing: 0.03em;
 }
 
-/* ===== DROP CAP for lore text ===== */
+/* ===== DROP CAP — disabled per user request (large first letter hurt readability) ===== */
+/* .drop-cap class kept as no-op so existing JSX doesn't break, but no styling applied. */
 .drop-cap::first-letter {
-  font-family: var(--font-cinzel-decorative);
-  font-size: 3.2rem;
-  line-height: 1;
-  float: left;
-  padding: 0.2rem 0.6rem 0 0;
-  margin-top: 0.3rem;
-  color: oklch(0.40 0.15 30);
-  text-shadow: 0 0 10px oklch(0.40 0.15 30 / 0.2);
-  /* prevent overlap: clear space around, don't exceed 2 lines */
-  max-height: 2.8rem;
-  overflow: hidden;
+  /* no special styling — normal first letter */
 }
-/* When drop-cap is inside a flex/grid container, make sure it has space */
 .drop-cap {
-  overflow: hidden;
-  padding-top: 0.2rem;
+  /* no-op */
 }
 
 /* ===== PROSE for rich text ===== */
@@ -720,85 +709,161 @@
 }
 .paper-effect.paper-plain { background: transparent; }
 
+/* BLOOD — dark red blood splatter with drips from the top edge */
 .paper-effect.paper-blood {
   background:
-    radial-gradient(ellipse 60px 80px at 10% 5%, oklch(0.42 0.22 25 / 0.55), transparent 60%),
-    radial-gradient(ellipse 45px 60px at 90% 8%, oklch(0.40 0.20 25 / 0.45), transparent 60%),
-    radial-gradient(ellipse 35px 55px at 30% 95%, oklch(0.38 0.18 25 / 0.4), transparent 60%),
-    radial-gradient(ellipse 25px 40px at 70% 90%, oklch(0.40 0.20 25 / 0.35), transparent 60%),
-    radial-gradient(ellipse 20px 35px at 50% 50%, oklch(0.42 0.22 25 / 0.18), transparent 60%);
-}
-.paper-effect.paper-blood::after {
-  content: "";
-  position: absolute;
-  top: 0; left: 15%; right: 15%;
-  height: 40%;
-  background: linear-gradient(180deg, oklch(0.42 0.22 25 / 0.12), transparent);
+    /* Drips hanging from the top — vertical teardrop shapes */
+    radial-gradient(ellipse 8px 30px at 8% 0%, oklch(0.35 0.22 25 / 0.7), transparent 65%),
+    radial-gradient(ellipse 6px 22px at 22% 0%, oklch(0.38 0.20 25 / 0.6), transparent 65%),
+    radial-gradient(ellipse 10px 35px at 40% 0%, oklch(0.32 0.24 25 / 0.75), transparent 65%),
+    radial-gradient(ellipse 7px 25px at 58% 0%, oklch(0.36 0.21 25 / 0.65), transparent 65%),
+    radial-gradient(ellipse 9px 28px at 75% 0%, oklch(0.34 0.23 25 / 0.7), transparent 65%),
+    radial-gradient(ellipse 5px 18px at 90% 0%, oklch(0.38 0.20 25 / 0.55), transparent 65%),
+    /* Splatter spots — irregular blobs scattered across the page */
+    radial-gradient(ellipse 20px 16px at 12% 25%, oklch(0.30 0.25 25 / 0.5), transparent 60%),
+    radial-gradient(circle 12px at 35% 45%, oklch(0.32 0.24 25 / 0.45), transparent 60%),
+    radial-gradient(ellipse 16px 12px at 65% 35%, oklch(0.30 0.25 25 / 0.4), transparent 60%),
+    radial-gradient(circle 8px at 85% 55%, oklch(0.34 0.23 25 / 0.5), transparent 60%),
+    radial-gradient(ellipse 14px 10px at 20% 70%, oklch(0.30 0.25 25 / 0.35), transparent 60%),
+    radial-gradient(circle 10px at 55% 80%, oklch(0.32 0.24 25 / 0.4), transparent 60%),
+    /* Small splatter dots — spray pattern */
+    radial-gradient(circle 3px at 28% 30%, oklch(0.35 0.22 25 / 0.4), transparent 70%),
+    radial-gradient(circle 2px at 45% 35%, oklch(0.35 0.22 25 / 0.35), transparent 70%),
+    radial-gradient(circle 4px at 70% 50%, oklch(0.35 0.22 25 / 0.3), transparent 70%),
+    radial-gradient(circle 2px at 50% 65%, oklch(0.35 0.22 25 / 0.3), transparent 70%);
 }
 
+/* TEARS — dried tear stains, blue-grey watermarks running down from edges */
 .paper-effect.paper-tears {
   background:
-    radial-gradient(ellipse 30px 70px at 8% 5%, oklch(0.55 0.08 200 / 0.45), transparent 60%),
-    radial-gradient(ellipse 22px 55px at 92% 10%, oklch(0.55 0.08 200 / 0.4), transparent 60%),
-    radial-gradient(ellipse 18px 45px at 50% 100%, oklch(0.55 0.08 200 / 0.35), transparent 60%),
-    radial-gradient(ellipse 15px 38px at 95% 60%, oklch(0.55 0.08 200 / 0.3), transparent 60%),
-    radial-gradient(ellipse 12px 30px at 5% 70%, oklch(0.55 0.08 200 / 0.25), transparent 60%);
+    /* Tear streaks from the top — long thin water trails */
+    linear-gradient(180deg, oklch(0.55 0.08 210 / 0.3) 0%, transparent 100%) 5% 0% / 10px 60px no-repeat,
+    linear-gradient(180deg, oklch(0.50 0.06 200 / 0.25) 0%, transparent 100%) 25% 0% / 8px 80px no-repeat,
+    linear-gradient(180deg, oklch(0.55 0.08 210 / 0.28) 0%, transparent 100%) 45% 0% / 12px 50px no-repeat,
+    linear-gradient(180deg, oklch(0.50 0.06 200 / 0.3) 0%, transparent 100%) 70% 0% / 9px 70px no-repeat,
+    linear-gradient(180deg, oklch(0.55 0.08 210 / 0.22) 0%, transparent 100%) 88% 0% / 7px 45px no-repeat,
+    /* Tear pools — rounded stains where tears collected */
+    radial-gradient(ellipse 16px 8px at 5% 60%, oklch(0.50 0.06 200 / 0.35), transparent 65%),
+    radial-gradient(ellipse 14px 7px at 25% 80%, oklch(0.50 0.06 200 / 0.3), transparent 65%),
+    radial-gradient(ellipse 18px 9px at 70% 70%, oklch(0.50 0.06 200 / 0.32), transparent 65%),
+    /* Dried droplet spots — small circular stains */
+    radial-gradient(circle 5px at 15% 40%, oklch(0.55 0.08 210 / 0.25), transparent 70%),
+    radial-gradient(circle 4px at 50% 55%, oklch(0.55 0.08 210 / 0.2), transparent 70%),
+    radial-gradient(circle 6px at 80% 45%, oklch(0.55 0.08 210 / 0.22), transparent 70%);
 }
 
+/* FROST — ice crystals and frost patterns, blue-white, on edges */
 .paper-effect.paper-frost {
   background:
-    radial-gradient(ellipse 90px 120px at 0% 0%, oklch(0.80 0.05 220 / 0.35), transparent 60%),
-    radial-gradient(ellipse 70px 100px at 100% 100%, oklch(0.80 0.05 220 / 0.3), transparent 60%),
-    radial-gradient(circle 8px at 20% 30%, oklch(0.85 0.04 220 / 0.5), transparent 70%),
-    radial-gradient(circle 6px at 75% 60%, oklch(0.85 0.04 220 / 0.45), transparent 70%),
-    radial-gradient(circle 7px at 45% 85%, oklch(0.85 0.04 220 / 0.4), transparent 70%);
+    /* Frost on the corners — branching radial patterns */
+    radial-gradient(circle 30px at 0% 0%, oklch(0.85 0.05 220 / 0.4), transparent 70%),
+    radial-gradient(circle 25px at 100% 0%, oklch(0.85 0.05 220 / 0.35), transparent 70%),
+    radial-gradient(circle 35px at 0% 100%, oklch(0.85 0.05 220 / 0.45), transparent 70%),
+    radial-gradient(circle 30px at 100% 100%, oklch(0.85 0.05 220 / 0.4), transparent 70%),
+    /* Ice crystal shapes — 6-point star-ish radial bursts */
+    radial-gradient(circle 8px at 15% 25%, oklch(0.88 0.04 220 / 0.5), transparent 70%),
+    radial-gradient(circle 6px at 40% 15%, oklch(0.88 0.04 220 / 0.45), transparent 70%),
+    radial-gradient(circle 10px at 65% 30%, oklch(0.88 0.04 220 / 0.5), transparent 70%),
+    radial-gradient(circle 7px at 85% 20%, oklch(0.88 0.04 220 / 0.4), transparent 70%),
+    radial-gradient(circle 9px at 30% 60%, oklch(0.88 0.04 220 / 0.45), transparent 70%),
+    radial-gradient(circle 6px at 55% 75%, oklch(0.88 0.04 220 / 0.4), transparent 70%),
+    radial-gradient(circle 8px at 80% 65%, oklch(0.88 0.04 220 / 0.45), transparent 70%),
+    /* Thin frost lines — branching lines from edges */
+    linear-gradient(135deg, transparent 48%, oklch(0.85 0.05 220 / 0.15) 49%, oklch(0.85 0.05 220 / 0.15) 51%, transparent 52%) 0% 0% / 100px 100px no-repeat,
+    linear-gradient(45deg, transparent 48%, oklch(0.85 0.05 220 / 0.12) 49%, oklch(0.85 0.05 220 / 0.12) 51%, transparent 52%) 100% 0% / 80px 80px no-repeat;
 }
 .paper-effect.paper-frost::after {
   content: "";
   position: absolute;
   inset: 0;
-  box-shadow: inset 0 0 60px oklch(0.80 0.05 220 / 0.18);
+  box-shadow: inset 0 0 80px oklch(0.80 0.06 220 / 0.22);
+  border-radius: 4px;
 }
 
+/* INK — dark ink blots and splatters, as from a broken quill */
 .paper-effect.paper-ink {
   background:
-    radial-gradient(ellipse 25px 35px at 15% 20%, oklch(0.25 0.04 45 / 0.5), transparent 60%),
-    radial-gradient(ellipse 20px 30px at 85% 70%, oklch(0.25 0.04 45 / 0.45), transparent 60%),
-    radial-gradient(ellipse 18px 28px at 60% 15%, oklch(0.25 0.04 45 / 0.4), transparent 60%),
-    radial-gradient(ellipse 15px 22px at 30% 85%, oklch(0.25 0.04 45 / 0.35), transparent 60%),
-    radial-gradient(circle 10px at 90% 30%, oklch(0.25 0.04 45 / 0.3), transparent 70%);
+    /* Large ink blots — irregular dark patches */
+    radial-gradient(ellipse 30px 25px at 10% 15%, oklch(0.15 0.02 45 / 0.55), transparent 65%),
+    radial-gradient(ellipse 22px 28px at 80% 25%, oklch(0.15 0.02 45 / 0.5), transparent 65%),
+    radial-gradient(ellipse 35px 20px at 25% 55%, oklch(0.15 0.02 45 / 0.45), transparent 65%),
+    radial-gradient(ellipse 20px 30px at 70% 70%, oklch(0.15 0.02 45 / 0.5), transparent 65%),
+    radial-gradient(ellipse 25px 22px at 50% 85%, oklch(0.15 0.02 45 / 0.4), transparent 65%),
+    /* Ink spray dots — small splatter around blots */
+    radial-gradient(circle 3px at 18% 22%, oklch(0.15 0.02 45 / 0.4), transparent 70%),
+    radial-gradient(circle 2px at 25% 18%, oklch(0.15 0.02 45 / 0.35), transparent 70%),
+    radial-gradient(circle 4px at 5% 30%, oklch(0.15 0.02 45 / 0.3), transparent 70%),
+    radial-gradient(circle 3px at 75% 30%, oklch(0.15 0.02 45 / 0.35), transparent 70%),
+    radial-gradient(circle 2px at 85% 35%, oklch(0.15 0.02 45 / 0.3), transparent 70%),
+    radial-gradient(circle 3px at 88% 20%, oklch(0.15 0.02 45 / 0.35), transparent 70%),
+    radial-gradient(circle 4px at 30% 50%, oklch(0.15 0.02 45 / 0.3), transparent 70%),
+    radial-gradient(circle 2px at 38% 48%, oklch(0.15 0.02 45 / 0.25), transparent 70%),
+    radial-gradient(circle 3px at 65% 75%, oklch(0.15 0.02 45 / 0.3), transparent 70%),
+    radial-gradient(circle 2px at 60% 80%, oklch(0.15 0.02 45 / 0.25), transparent 70%),
+    /* Thin ink drips — lines from top */
+    linear-gradient(180deg, oklch(0.15 0.02 45 / 0.3) 0%, transparent 100%) 15% 0% / 2px 40px no-repeat,
+    linear-gradient(180deg, oklch(0.15 0.02 45 / 0.25) 0%, transparent 100%) 60% 0% / 3px 55px no-repeat;
 }
 
+/* BURNED — charred edges, dark brown/black scorched corners with ash */
 .paper-effect.paper-burned {
   background:
-    radial-gradient(ellipse 70px 50px at 0% 50%, oklch(0.25 0.05 40 / 0.5), transparent 60%),
-    radial-gradient(ellipse 60px 45px at 100% 60%, oklch(0.25 0.05 40 / 0.45), transparent 60%),
-    radial-gradient(ellipse 50px 40px at 50% 0%, oklch(0.25 0.05 40 / 0.35), transparent 60%),
-    radial-gradient(ellipse 40px 35px at 50% 100%, oklch(0.25 0.05 40 / 0.3), transparent 60%);
-}
-.paper-effect.paper-burned::after {
-  content: "";
-  position: absolute;
-  top: 0; left: 0;
-  width: 60px; height: 60px;
-  background: radial-gradient(circle, oklch(0.15 0.02 40 / 0.7), transparent 70%);
-  clip-path: polygon(0 0, 100% 0, 70% 100%, 0 60%);
+    /* Burned corners — dark charred areas with irregular edges */
+    radial-gradient(ellipse 60px 50px at 0% 0%, oklch(0.12 0.03 35 / 0.7), transparent 70%),
+    radial-gradient(ellipse 50px 45px at 100% 0%, oklch(0.12 0.03 35 / 0.65), transparent 70%),
+    radial-gradient(ellipse 70px 55px at 0% 100%, oklch(0.10 0.02 35 / 0.75), transparent 70%),
+    radial-gradient(ellipse 55px 50px at 100% 100%, oklch(0.12 0.03 35 / 0.7), transparent 70%),
+    /* Scorched brown ring around char — transition zone */
+    radial-gradient(ellipse 80px 70px at 0% 0%, oklch(0.25 0.06 35 / 0.4), oklch(0.12 0.03 35 / 0.5) 40%, transparent 75%),
+    radial-gradient(ellipse 75px 65px at 100% 100%, oklch(0.25 0.06 35 / 0.35), oklch(0.12 0.03 35 / 0.45) 40%, transparent 75%),
+    /* Burn marks — dark streaks extending inward from edges */
+    linear-gradient(135deg, oklch(0.15 0.02 35 / 0.5) 0%, transparent 30%) 0% 0% / 40px 40px no-repeat,
+    linear-gradient(225deg, oklch(0.15 0.02 35 / 0.45) 0%, transparent 30%) 100% 0% / 35px 35px no-repeat,
+    linear-gradient(45deg, oklch(0.12 0.02 35 / 0.5) 0%, transparent 35%) 0% 100% / 45px 45px no-repeat,
+    linear-gradient(315deg, oklch(0.15 0.02 35 / 0.45) 0%, transparent 35%) 100% 100% / 40px 40px no-repeat,
+    /* Ash spots — small dark flecks */
+    radial-gradient(circle 3px at 20% 15%, oklch(0.10 0.01 35 / 0.5), transparent 70%),
+    radial-gradient(circle 2px at 35% 10%, oklch(0.10 0.01 35 / 0.4), transparent 70%),
+    radial-gradient(circle 4px at 75% 20%, oklch(0.10 0.01 35 / 0.45), transparent 70%),
+    radial-gradient(circle 3px at 15% 80%, oklch(0.10 0.01 35 / 0.4), transparent 70%),
+    radial-gradient(circle 2px at 50% 90%, oklch(0.10 0.01 35 / 0.35), transparent 70%),
+    radial-gradient(circle 3px at 85% 75%, oklch(0.10 0.01 35 / 0.4), transparent 70%);
 }
 
+/* GOLD — golden illumination, ornate gilded border and gold leaf accents */
 .paper-effect.paper-gold {
   background:
-    radial-gradient(ellipse 100px 130px at 50% 0%, oklch(0.75 0.15 85 / 0.35), transparent 55%),
-    radial-gradient(circle 10px at 20% 30%, oklch(0.82 0.15 88 / 0.6), transparent 70%),
-    radial-gradient(circle 8px at 70% 60%, oklch(0.82 0.15 88 / 0.55), transparent 70%),
-    radial-gradient(circle 9px at 40% 80%, oklch(0.82 0.15 88 / 0.5), transparent 70%),
-    radial-gradient(circle 6px at 85% 25%, oklch(0.82 0.15 88 / 0.45), transparent 70%),
-    radial-gradient(circle 7px at 15% 75%, oklch(0.82 0.15 88 / 0.4), transparent 70%);
+    /* Gilded border frame — gold band around the edges */
+    linear-gradient(0deg, oklch(0.75 0.15 85 / 0.3) 0%, transparent 8%) top / 100% 100%,
+    linear-gradient(180deg, oklch(0.75 0.15 85 / 0.3) 0%, transparent 8%) bottom / 100% 100%,
+    linear-gradient(90deg, oklch(0.75 0.15 85 / 0.3) 0%, transparent 5%) left / 100% 100%,
+    linear-gradient(270deg, oklch(0.75 0.15 85 / 0.3) 0%, transparent 5%) right / 100% 100%,
+    /* Gold leaf accents — small gold flecks scattered like illumination */
+    radial-gradient(circle 12px at 50% 5%, oklch(0.80 0.15 88 / 0.5), transparent 70%),
+    radial-gradient(circle 10px at 50% 95%, oklch(0.80 0.15 88 / 0.45), transparent 70%),
+    /* Corner gilded ornaments — larger gold spots at corners */
+    radial-gradient(circle 16px at 5% 5%, oklch(0.82 0.15 88 / 0.55), transparent 65%),
+    radial-gradient(circle 14px at 95% 5%, oklch(0.82 0.15 88 / 0.5), transparent 65%),
+    radial-gradient(circle 18px at 5% 95%, oklch(0.82 0.15 88 / 0.6), transparent 65%),
+    radial-gradient(circle 15px at 95% 95%, oklch(0.82 0.15 88 / 0.55), transparent 65%),
+    /* Gold sparkle dots — small shimmering flecks */
+    radial-gradient(circle 4px at 15% 20%, oklch(0.85 0.15 90 / 0.45), transparent 70%),
+    radial-gradient(circle 3px at 30% 15%, oklch(0.85 0.15 90 / 0.4), transparent 70%),
+    radial-gradient(circle 5px at 70% 25%, oklch(0.85 0.15 90 / 0.45), transparent 70%),
+    radial-gradient(circle 4px at 85% 30%, oklch(0.85 0.15 90 / 0.4), transparent 70%),
+    radial-gradient(circle 3px at 20% 40%, oklch(0.85 0.15 90 / 0.35), transparent 70%),
+    radial-gradient(circle 5px at 50% 50%, oklch(0.85 0.15 90 / 0.4), transparent 70%),
+    radial-gradient(circle 4px at 80% 55%, oklch(0.85 0.15 90 / 0.35), transparent 70%),
+    radial-gradient(circle 3px at 25% 65%, oklch(0.85 0.15 90 / 0.35), transparent 70%),
+    radial-gradient(circle 5px at 60% 70%, oklch(0.85 0.15 90 / 0.4), transparent 70%),
+    radial-gradient(circle 4px at 40% 80%, oklch(0.85 0.15 90 / 0.35), transparent 70%);
 }
 .paper-effect.paper-gold::after {
   content: "";
   position: absolute;
   inset: 0;
-  box-shadow: inset 0 0 60px oklch(0.75 0.15 85 / 0.2);
+  box-shadow: inset 0 0 40px oklch(0.75 0.15 85 / 0.15);
+  border-radius: 4px;
 }
 
 .margin-note {
