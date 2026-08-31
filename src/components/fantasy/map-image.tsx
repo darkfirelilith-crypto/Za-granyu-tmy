@@ -9,7 +9,8 @@ import { ZoomIn, ZoomOut, Maximize, Move } from "lucide-react";
  * World map image viewer with zoom/pan.
  * The image is loaded from SiteContent (key: "world_map_image") — admin uploads
  * a JPG/PNG via Чертог Божества → Контент страниц → Карта мира.
- * Supports: mouse-wheel zoom, drag-to-pan, zoom in/out/reset buttons.
+ * Supports: mouse-wheel zoom (no page scroll), drag-to-pan, zoom in/out/reset buttons.
+ * Image is rendered at native resolution — zoom uses CSS transform (GPU), no quality loss.
  */
 
 export function MapImage({ className }: { className?: string } = {}) {
@@ -26,8 +27,15 @@ export function MapImage({ className }: { className?: string } = {}) {
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
+  // Keep latest zoom/pan in refs so the native wheel listener (added once)
+  // can read current values without being re-registered on every state change.
+  const zoomRef = useRef(zoom);
+  const panRef = useRef(pan);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { panRef.current = pan; }, [pan]);
+
   const MIN_ZOOM = 1;
-  const MAX_ZOOM = 6;
+  const MAX_ZOOM = 8;
   const clampZoom = (z: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z));
 
   const resetView = useCallback(() => {
@@ -35,25 +43,32 @@ export function MapImage({ className }: { className?: string } = {}) {
     setPan({ x: 0, y: 0 });
   }, []);
 
-  // Wheel zoom (toward cursor)
-  const onWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.2 : 0.2;
-    const newZoom = clampZoom(zoom + delta * zoom);
-    if (newZoom === zoom) return;
-    // Zoom toward cursor: adjust pan so the point under cursor stays fixed
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (rect) {
+  // Native wheel listener with { passive: false } so preventDefault actually
+  // stops the page from scrolling while zooming the map.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      const curZoom = zoomRef.current;
+      const curPan = panRef.current;
+      const delta = e.deltaY > 0 ? -0.15 : 0.15;
+      const newZoom = clampZoom(curZoom + delta * curZoom);
+      if (newZoom === curZoom) return;
+      // Zoom toward cursor
+      const rect = el.getBoundingClientRect();
       const cx = e.clientX - rect.left;
       const cy = e.clientY - rect.top;
-      const ratio = newZoom / zoom;
+      const ratio = newZoom / curZoom;
       setPan({
-        x: cx - (cx - pan.x) * ratio,
-        y: cy - (cy - pan.y) * ratio,
+        x: cx - (cx - curPan.x) * ratio,
+        y: cy - (cy - curPan.y) * ratio,
       });
-    }
-    setZoom(newZoom);
-  }, [zoom, pan]);
+      setZoom(newZoom);
+    };
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  }, []);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     if (zoom <= 1) return;
@@ -118,7 +133,6 @@ export function MapImage({ className }: { className?: string } = {}) {
     <ParchmentCard className={`p-2 md:p-3 ${className ?? ""}`}>
       <div
         ref={containerRef}
-        onWheel={onWheel}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
@@ -133,20 +147,27 @@ export function MapImage({ className }: { className?: string } = {}) {
           touchAction: "none",
         }}
       >
+        {/* Image rendered at NATIVE resolution.
+            max-width/max-height: 100% ensures it fits the container at zoom=1.
+            No width/height 100% / objectFit — those force the browser to downscale
+            the source, losing quality. With max-* only, the browser keeps the
+            full-resolution bitmap and the GPU scales it via transform (lossless). */}
         <img
           src={imageSrc}
           alt="Карта мира"
           draggable={false}
-          className="absolute top-1/2 left-1/2 max-w-none origin-center"
+          className="absolute top-1/2 left-1/2"
           style={{
+            maxWidth: "100%",
+            maxHeight: "100%",
+            width: "auto",
+            height: "auto",
             transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             transformOrigin: "center",
             transition: isDragging ? "none" : "transform 0.15s ease-out",
-            maxWidth: "100%",
-            maxHeight: "100%",
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
+            // image-rendering: high-quality for upscaling
+            imageRendering: "auto",
+            willChange: "transform",
           }}
         />
 
