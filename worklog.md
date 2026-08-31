@@ -1882,3 +1882,50 @@ Stage Summary:
 - 6 файлов изменено: schema.prisma (−MapRegion), types.ts (−MapRegion/City), hall.tsx, knowledge.tsx, admin.tsx, .env + map-image.tsx (new) + API routes deleted.
 - Пользователь загрузит свой jpg через Чертог Божества → Контент страниц → Карта мира → Изображение карты.
 - Никаких данных в БД не добавлено.
+
+---
+
+## Task: character-inventory — Инвентарь персонажа (магические предметы из Лаборатории Алого)
+
+Контекст: админ выдаёт игрокам магические предметы из Лаборатории Алого; игроки видят свой инвентарь в Профиле. Prisma-модель `CharacterItem` уже была в schema и накачена в БД.
+
+Сделано:
+
+1. API: создан `src/app/api/characters/[id]/inventory/route.ts`
+   - **GET** (любой аутентифицированный): возвращает `CharacterItem[]` персонажа с `labEntry` (id, name, icon, kind, rarity, subtitle, description, image). Проверяет, что персонаж принадлежит запрашивающему ИЛИ запрашивающий — админ. Сортировка `grantedAt desc`.
+   - **POST** (только админ): тело `{ labEntryId, note? }`. Валидирует FK (character + labEntry). `upsert` по уникальному `characterId_labEntryId` (повторная выдача обновляет note + grantedBy). Возвращает созданный/обновлённый item с labEntry, статус 201.
+
+2. API: создан `src/app/api/characters/[id]/inventory/[itemId]/route.ts`
+   - **DELETE** (только админ): удаляет `CharacterItem` по `itemId`. Дополнительно проверяет, что item принадлежит персонажу из URL (`characterId`), иначе 404 — защита от удаления чужих записей.
+
+3. Profile UI (`src/components/sections/profile.tsx`):
+   - В таб «Профиль» (после «Журнала заданий», перед `</TabsContent>`) добавлен `<InventorySection characterId={char.id} />`.
+   - Новый компонент `InventorySection`: OrnamentTitle «✦ Магические предметы ✦» (flourish 💎), `useQuery` с ключом `["inventory", char.id]`, fetch `/api/characters/${id}/inventory`.
+   - Empty-state: ParchmentCard «У героя пока нет магических предметов.»
+   - Loading-state: «Перечитываем опись...».
+   - Grid `sm:grid-cols-2 gap-3`: для каждого предмета ParchmentCard с RuneSeal (icon из labEntry.icon, glow для LEGENDARY/MYTHIC), name, RarityBadge, subtitle, description (line-clamp-2), `grantedAt` (toLocaleDateString ru-RU), note (italic text-xs).
+   - Решил отдельный fetch (не через getCurrentCharacter include), чтобы не трогать существующий /api/auth/me и связанные типы — менее рискованно.
+
+4. Admin UI (`src/components/sections/admin.tsx`):
+   - В `CharactersEditor` добавлено state `itemsChar`, после секции достижений — кнопка «Магические предметы» (иконка Gem) с gold-bordered стилем, открывает `CharacterInventoryDialog`.
+   - Новый компонент `CharacterInventoryDialog`:
+     - `useQuery(["inventory", char.id])` — текущий инвентарь персонажа.
+     - `useQuery(["lab-for-grant"])` — все LabEntry для выдачи.
+     - `useMutation` для grant (POST) и revoke (DELETE), инвалидация `["inventory"]` + `["me"]` на успехе, toast-уведомления.
+     - Список текущих предметов (icon + name + RarityBadge + note) с кнопкой «Забрать» (Trash2).
+     - Секция «Выдать новый предмет»: Select для фильтра по типу (ITEM по умолчанию, SPELL/RACE/CLASS/SUBCLASS/ALL), Select для выбора LabEntry (отфильтрованный список), Input для опциональной заметки, кнопка «Выдать».
+     - `Select value="__none" disabled` если нет записей.
+     - Dialog controlled (`open` + `onOpenChange`), `key={itemsChar.id}` чтобы при переключении персонажей state сбрасывался.
+   - В импорты добавлен `Gem` из lucide-react.
+
+5. Никаких сидов, никаких изменений в schema (модель уже была).
+
+Верификация:
+- `bun run lint` — 0 ошибок.
+- `bunx tsc --noEmit` — 0 ошибок в src/ (ошибки только в examples/ и skills/, не связанные с задачей).
+- Dev server: `GET /api/characters/test-id/inventory` → 401 (нет сессии) ✓; `DELETE .../inventory/test-item` → 403 (не админ) ✓ — оба маршрута компилируются и отвечают по правам доступа.
+- Существующие импорты (Dialog, Select, ParchmentCard, RuneSeal, RarityBadge, useToast, useMutation, useQuery, useQueryClient) переиспользованы — новых зависимостей нет.
+
+Stage Summary:
+- 4 файла изменено: создано 2 API-маршрута, правки в profile.tsx (+InventorySection), правки в admin.tsx (+CharacterInventoryDialog, +кнопка в CharactersEditor, +Gem импорт).
+- Флоу: админ в «Чертог Божества → Гильдия → Герои» открывает диалог «Магические предметы» у нужного героя → выбирает запись из Лаборатории Алого → «Выдать». Игрок в «Профиле → Профиль» видит секцию «✦ Магические предметы ✦» с выданными предметами (icon, rarity, description, дата выдачи, заметка).
