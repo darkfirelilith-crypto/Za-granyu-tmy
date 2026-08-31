@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { OrnamentTitle } from "@/components/fantasy/ornament-title";
 import { ParchmentCard } from "@/components/fantasy/ui";
-import { WorldMap } from "@/components/fantasy/world-map";
+import { MapImage } from "@/components/fantasy/map-image";
 import { useQuery as useRQ } from "@tanstack/react-query";
 import type { View } from "@/lib/types";
 import { useEffect, useRef, useState } from "react";
@@ -55,7 +55,7 @@ export function HallView({ onNavigate }: { onNavigate: (v: View) => void }) {
       {/* Interactive world map */}
       <section className="space-y-4">
         <OrnamentTitle size="md" flourish="🗺️" className="mb-2">Карта мира</OrnamentTitle>
-        <WorldMap onNavigateToCountry={() => onNavigate("knowledge")} />
+        <MapImage />
       </section>
 
       {/* Auto-scrolling carousel of DB element cards */}

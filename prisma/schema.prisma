@@ -303,26 +303,6 @@ model SiteContent {
   createdAt DateTime @default(now())
 }
 
-// ===== World Map regions (Карта мира в Зале) — admin-created =====
-// Each region is a polygon defined by points "x1,y1 x2,y2 ...".
-// Optional countryName links to a Country for click→KB navigation.
-// cities is a JSON string: [{name, x, y, icon}].
-
-model MapRegion {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  countryName String?  // optional link to Country.name
-  points      String   // "x1,y1 x2,y2 x3,y3 ..."
-  labelX      Float?
-  labelY      Float?
-  fill        String?  // oklch color; auto-assigned by index if null
-  stroke      String?
-  order       Int      @default(0)
-  cities      String?  // JSON: [{name, x, y, icon}]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
 // ===== Groups (кампания — объединение игроков + встреченные НПС) =====
 
 model Group {

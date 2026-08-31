@@ -1834,3 +1834,51 @@ Stage Summary:
 - Не добавлять свои страны/богов/легенды/лаб-записи/регионы карты в БД.
 - Только настраивать схему (prisma db push) и создавать инструменты (API + UI) для пользователя.
 - Тестовые данные (созданные для QA) удалять после проверки.
+
+---
+Task ID: user-map-image
+Agent: Z.ai Code (main)
+Task: Заменить интерактивную SVG-карту на загружаемое изображение с zoom/pan. Пользователь вставит свой jpg (2048×1536) через админку.
+
+Work Log:
+- Прочитал worklog. HEAD = 22c570e. Пользователь: не смогу сделать свою карту, выпилите SVG-карту, сделайте просто изображение с zoom/pan.
+
+Сделано:
+
+1. Удалено:
+   - schema: model MapRegion удалён. prisma db push (таблица удалена).
+   - API: /api/lore/map-regions (route.ts + [id]/route.ts) удалены.
+   - Компоненты: world-map.tsx, mini-world-map.tsx удалены.
+   - types.ts: MapRegion, MapCity interfaces удалены.
+   - admin.tsx: секция "Карта мира" в sidebar + MapRegionsEditor + MapRegionForm удалены.
+
+2. Создан MapImage компонент (src/components/fantasy/map-image.tsx):
+   - Загружает изображение из SiteContent (key: "world_map_image") через /api/content.
+   - Empty state: "Карта мира не загружена" + admin hint.
+   - Zoom: колесо мыши (zoom toward cursor), кнопки +/−/reset, pinch-zoom на touch.
+   - Pan: drag-to-pan (grab cursor при zoom > 1), touch drag.
+   - Zoom limits: 1x–6x, zoom indicator (%), drag hint.
+   - Aspect ratio 4:3, objectFit contain, smooth transitions.
+   - ParchmentCard wrapper, parchment-dark background.
+
+3. Hall (hall.tsx): WorldMap → MapImage.
+4. Knowledge CountriesTab (knowledge.tsx): MiniWorldMap → MapImage.
+
+5. Admin ContentEditor: добавлен ключ "world_map_image" (секция "Карта мира"):
+   - isImageOnly условие: показывает только ImageUpload (без title/body).
+   - Подсказка: "Загрузи изображение карты (JPG/PNG, до ~5MB). Рекомендуемый размер: 2048×1536".
+   - aspect-[4/3] для превью.
+
+6. .env восстановлен (был перезаписан на DATABASE_URL=file: — стабильный env с Neon postgres restored).
+
+Верификация:
+- Lint: чист. tsc src/: 0 ошибок.
+- Agent Browser: Hall empty-state "Карта мира не загружена", admin "Карта мира — изображение" с полем загрузки, после загрузки тестового jpg — карта отображается в Зале с zoom-кнопками, в Базе Знаний → Страны над детальной карточкой.
+- VLM: "изображение карты мира показано, кнопки zoom присутствуют", "показано изображение карты в Базе Знаний".
+- Тестовое изображение удалено (пользователь загрузит своё).
+
+Stage Summary:
+- SVG-карта полностью выпилена. Заменена на загружаемое изображение с zoom/pan.
+- 6 файлов изменено: schema.prisma (−MapRegion), types.ts (−MapRegion/City), hall.tsx, knowledge.tsx, admin.tsx, .env + map-image.tsx (new) + API routes deleted.
+- Пользователь загрузит свой jpg через Чертог Божества → Контент страниц → Карта мира → Изображение карты.
+- Никаких данных в БД не добавлено.
