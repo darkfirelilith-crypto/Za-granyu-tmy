@@ -279,15 +279,29 @@ model GrimoireEntry {
 
 model LabEntry {
   id          String   @id @default(cuid())
-  kind        String   // RACE | CLASS | SUBCLASS | SPELL | ITEM
+  kind        String   // RACE | SUBRACE | CLASS | SUBCLASS | SPELL | ITEM | TRAIT | BACKGROUND
   name        String   @unique
-  subtitle    String?  // e.g. "Подкласс Паладина", "Заклинание 3 круга"
-  description String   // main text
-  details     String?  // structured extra info (traits, stats, components, etc.)
-  icon        String?  // emoji
-  image       String?  // base64 image (illustration / symbol)
-  rarity      String?  // for items/spells: COMMON..MYTHIC or spell level
+  subtitle    String?
+  description String
+  details     String?
+  icon        String?
+  image       String?
+  rarity      String?
   order       Int      @default(0)
+  // Race fields
+  raceParent  String?  // for SUBRACE: parent race name
+  // Spell fields
+  spellLevel  String?  // "1".."9" or "Заговор"
+  school      String?  // "Ограждение"|"Вызов"|"Прорицание"|"Очарование"|"Преобразование"|"Иллюзия"|"Некромантия"|"Порча"
+  concentration String? // text: "Нет" | "Да, потому что ..."
+  ritual      String?  // "Да" | "Нет"
+  components  String?  // "В, С, М (перышко)" etc
+  castingTime String?  // "1 действие" etc
+  spellRange  String?  // "На себя" / "18 м" etc
+  spellClasses String? // "Жрец, Друид" etc
+  // Item fields
+  itemType    String?  // "Доспех"|"Оружие"|"Посох"|"Кольцо"|"Снадобье"etc
+  attunement  String?  // text: "Нет" | "Да, ..." etc
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   characterItems CharacterItem[]

@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Award, Sword, BookOpen, Edit3, Save, X, Trophy, Flag, Ban, Plus, Trash2, Pencil, Users, Link2, Heart, Download, Upload } from "lucide-react";
 
@@ -510,8 +511,11 @@ export function ProfileView() {
             </div>
           )}
 
-          {/* Magic items inventory */}
-          <InventorySection characterId={char.id} />
+          {/* Arsenal — magic items granted to this character */}
+          <ArsenalSection characterId={char.id} />
+
+          {/* Scrolls — spells granted to this character */}
+          <ScrollsSection characterId={char.id} />
         </TabsContent>
 
         {/* ===== TAB 2: ХАРАКТЕРИСТИКИ ===== */}
@@ -847,57 +851,246 @@ function RelationForm({ personalities, characters, onSave, onCancel, pending }: 
   );
 }
 
-/* ===== Inventory section — магические предметы из Лаборатории Алого ===== */
-function InventorySection({ characterId }: { characterId: string }) {
+/* ===== Arsenal section — magic items (labEntry.kind === "ITEM") ===== */
+function ArsenalSection({ characterId }: { characterId: string }) {
   const { data, isLoading } = useQuery<any[]>({
     queryKey: ["inventory", characterId],
     queryFn: () => fetch(`/api/characters/${characterId}/inventory`).then((r) => r.json()),
   });
-  const items = data ?? [];
+  const [selected, setSelected] = useState<any | null>(null);
+
+  const items = (data ?? []).filter((it) => it?.labEntry?.kind === "ITEM");
 
   return (
     <div className="space-y-4">
-      <OrnamentTitle size="md" flourish="💎">✦ Магические предметы ✦</OrnamentTitle>
+      <OrnamentTitle size="md" flourish="⚔️">Арсенал</OrnamentTitle>
       {isLoading ? (
         <ParchmentCard className="text-center parchment-muted italic">Перечитываем опись...</ParchmentCard>
       ) : items.length === 0 ? (
         <ParchmentCard className="text-center">
-          <p className="font-[family-name:var(--font-garamond)] italic">У героя пока нет магических предметов.</p>
+          <p className="font-[family-name:var(--font-garamond)] italic">Арсенал пуст.</p>
         </ParchmentCard>
       ) : (
         <div className="grid sm:grid-cols-2 gap-3">
           {items.map((it: any) => {
             const lab = it.labEntry ?? {};
             return (
-              <ParchmentCard key={it.id} hover className="flex items-start gap-3">
-                <RuneSeal
-                  icon={<span className="text-2xl">{lab.icon ?? "💎"}</span>}
-                  size="md"
-                  glow={lab.rarity === "LEGENDARY" || lab.rarity === "MYTHIC"}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{lab.name ?? "Безымянный предмет"}</h4>
-                    {lab.rarity && <RarityBadge rarity={lab.rarity} />}
+              <ParchmentCard key={it.id} hover className="animate-fade-rise">
+                <button
+                  onClick={() => setSelected(it)}
+                  className="flex items-start gap-3 text-left w-full"
+                  aria-label={`Открыть описание предмета: ${lab.name ?? "Безымянный предмет"}`}
+                >
+                  <RuneSeal
+                    icon={<span className="text-2xl">{lab.icon ?? "⚔️"}</span>}
+                    size="md"
+                    glow={lab.rarity === "LEGENDARY" || lab.rarity === "MYTHIC"}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{lab.name ?? "Безымянный предмет"}</h4>
+                      {lab.rarity && <RarityBadge rarity={lab.rarity} />}
+                    </div>
+                    {lab.itemType && (
+                      <p className="parchment-heading text-xs uppercase tracking-wider mt-0.5 text-wine/70">{lab.itemType}</p>
+                    )}
+                    {lab.description && (
+                      <p className="parchment-muted text-sm line-clamp-2 mt-1">{lab.description}</p>
+                    )}
+                    <p className="text-xs text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
                   </div>
-                  {lab.subtitle && (
-                    <p className="parchment-heading text-xs uppercase tracking-wider mt-0.5">{lab.subtitle}</p>
-                  )}
-                  {lab.description && (
-                    <p className="parchment-muted text-sm line-clamp-2 mt-1">{lab.description}</p>
-                  )}
-                  <p className="text-xs parchment-muted/70 mt-1.5 italic">
-                    Даровано: {new Date(it.grantedAt).toLocaleDateString("ru-RU")}
-                  </p>
-                  {it.note && (
-                    <p className="text-xs italic parchment-muted/80 mt-1 border-t border-parchment-dark/20 pt-1">“{it.note}”</p>
-                  )}
-                </div>
+                </button>
               </ParchmentCard>
             );
           })}
         </div>
       )}
+
+      {/* Detail dialog — follows the same pattern as LabDetail in lab.tsx */}
+      <Dialog open={!!selected} onOpenChange={(v) => !v && setSelected(null)}>
+        <DialogContent className="parchment gold-frame max-w-2xl max-h-[92vh] overflow-y-auto">
+          {selected && <ArsenalDetail entry={selected} />}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ArsenalDetail({ entry }: { entry: any }) {
+  const lab = entry.labEntry ?? {};
+  return (
+    <div className="space-y-4">
+      <DialogTitle className="sr-only">{lab.name ?? "Безымянный предмет"}</DialogTitle>
+      <DialogDescription className="sr-only">Детальный просмотр магического предмета из арсенала героя.</DialogDescription>
+
+      <div className="flex items-start gap-3">
+        <RuneSeal
+          icon={<span className="text-3xl">{lab.icon ?? "⚔️"}</span>}
+          size="lg"
+          glow={lab.rarity === "LEGENDARY" || lab.rarity === "MYTHIC"}
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{lab.name ?? "Безымянный предмет"}</h2>
+            {lab.rarity && <RarityBadge rarity={lab.rarity} />}
+          </div>
+          {lab.itemType && (
+            <p className="parchment-heading text-xs uppercase tracking-wider mt-1 text-wine/70">{lab.itemType}</p>
+          )}
+        </div>
+      </div>
+
+      {lab.image && (
+        <div className="w-full h-56 md:h-72 overflow-hidden rounded-lg gold-frame">
+          <img src={lab.image} alt={lab.name ?? "предмет"} className="w-full h-full object-cover object-top" />
+        </div>
+      )}
+
+      <div className="parchment rounded-lg p-4 border border-gold/20 space-y-1.5">
+        <MetaRow label="Тип предмета" value={lab.itemType} />
+        <MetaRow label="Настройка" value={lab.attunement} />
+        <MetaRow label="Редкость" value={lab.rarity} />
+      </div>
+
+      {lab.description && (
+        <div className="lore-prose drop-cap text-base leading-relaxed">{lab.description}</div>
+      )}
+
+      {entry.grantedAt && (
+        <p className="text-xs parchment-muted/70 italic">
+          Даровано: {new Date(entry.grantedAt).toLocaleDateString("ru-RU")}
+        </p>
+      )}
+      {entry.note && (
+        <p className="text-xs italic parchment-muted/80 border-t border-parchment-dark/20 pt-2">“{entry.note}”</p>
+      )}
+    </div>
+  );
+}
+
+/* ===== Scrolls section — spells (labEntry.kind === "SPELL") ===== */
+function ScrollsSection({ characterId }: { characterId: string }) {
+  const { data, isLoading } = useQuery<any[]>({
+    queryKey: ["inventory", characterId],
+    queryFn: () => fetch(`/api/characters/${characterId}/inventory`).then((r) => r.json()),
+  });
+  const [selected, setSelected] = useState<any | null>(null);
+
+  const items = (data ?? []).filter((it) => it?.labEntry?.kind === "SPELL");
+
+  return (
+    <div className="space-y-4">
+      <OrnamentTitle size="md" flourish="📜">Свитки</OrnamentTitle>
+      {isLoading ? (
+        <ParchmentCard className="text-center parchment-muted italic">Собираем свитки...</ParchmentCard>
+      ) : items.length === 0 ? (
+        <ParchmentCard className="text-center">
+          <p className="font-[family-name:var(--font-garamond)] italic">Свитков пока нет.</p>
+        </ParchmentCard>
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {items.map((it: any) => {
+            const lab = it.labEntry ?? {};
+            return (
+              <ParchmentCard key={it.id} hover className="animate-fade-rise">
+                <button
+                  onClick={() => setSelected(it)}
+                  className="flex items-start gap-3 text-left w-full"
+                  aria-label={`Открыть описание заклинания: ${lab.name ?? "Безымянный свиток"}`}
+                >
+                  <RuneSeal icon={<span className="text-2xl">{lab.icon ?? "📜"}</span>} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{lab.name ?? "Безымянный свиток"}</h4>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                      {lab.spellLevel && (
+                        <Badge variant="outline" className="border-gold/30 text-gold/80 text-[10px]">
+                          {lab.spellLevel === "Заговор" ? "Заговор" : `${lab.spellLevel} круг`}
+                        </Badge>
+                      )}
+                      {lab.school && (
+                        <Badge variant="outline" className="border-wine/30 text-wine/80 text-[10px]">{lab.school}</Badge>
+                      )}
+                    </div>
+                    {lab.description && (
+                      <p className="parchment-muted text-sm line-clamp-2 mt-1">{lab.description}</p>
+                    )}
+                    <p className="text-xs text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
+                  </div>
+                </button>
+              </ParchmentCard>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Detail dialog — follows the same pattern as LabDetail in lab.tsx */}
+      <Dialog open={!!selected} onOpenChange={(v) => !v && setSelected(null)}>
+        <DialogContent className="parchment gold-frame max-w-2xl max-h-[92vh] overflow-y-auto">
+          {selected && <ScrollsDetail entry={selected} />}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ScrollsDetail({ entry }: { entry: any }) {
+  const lab = entry.labEntry ?? {};
+  return (
+    <div className="space-y-4">
+      <DialogTitle className="sr-only">{lab.name ?? "Безымянный свиток"}</DialogTitle>
+      <DialogDescription className="sr-only">Детальный просмотр заклинания из свитков героя.</DialogDescription>
+
+      <div className="flex items-start gap-3">
+        <RuneSeal icon={<span className="text-3xl">{lab.icon ?? "📜"}</span>} size="lg" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{lab.name ?? "Безымянный свиток"}</h2>
+            {lab.spellLevel && (
+              <Badge variant="outline" className="border-gold/30 text-gold/80 text-[10px]">
+                {lab.spellLevel === "Заговор" ? "Заговор" : `${lab.spellLevel} круг`}
+              </Badge>
+            )}
+            {lab.school && (
+              <Badge variant="outline" className="border-wine/30 text-wine/80 text-[10px]">{lab.school}</Badge>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="parchment rounded-lg p-4 border border-gold/20 space-y-1.5">
+        <MetaRow label="Уровень" value={lab.spellLevel} />
+        <MetaRow label="Школа" value={lab.school} />
+        <MetaRow label="Концентрация" value={lab.concentration} />
+        <MetaRow label="Ритуал" value={lab.ritual} />
+        <MetaRow label="Компоненты" value={lab.components} />
+        <MetaRow label="Время накладывания" value={lab.castingTime} />
+        <MetaRow label="Дистанция" value={lab.spellRange} />
+        <MetaRow label="Классы" value={lab.spellClasses} />
+      </div>
+
+      {lab.description && (
+        <div className="lore-prose drop-cap text-base leading-relaxed">{lab.description}</div>
+      )}
+
+      {entry.grantedAt && (
+        <p className="text-xs parchment-muted/70 italic">
+          Даровано: {new Date(entry.grantedAt).toLocaleDateString("ru-RU")}
+        </p>
+      )}
+      {entry.note && (
+        <p className="text-xs italic parchment-muted/80 border-t border-parchment-dark/20 pt-2">“{entry.note}”</p>
+      )}
+    </div>
+  );
+}
+
+/* ===== Shared meta row used by Arsenal and Scrolls detail dialogs ===== */
+function MetaRow({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-baseline gap-2 text-sm">
+      <span className="parchment-heading min-w-[140px] shrink-0">{label}:</span>
+      <span className="parchment-muted">{value}</span>
     </div>
   );
 }

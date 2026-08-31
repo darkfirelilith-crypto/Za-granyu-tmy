@@ -10,15 +10,20 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { LabEntry, LabKind } from "@/lib/types";
-import { Search, Dna, Swords, Layers, Wand2, Gem, FlaskConical } from "lucide-react";
+import { Search, Dna, Swords, Layers, Wand2, Gem, Star, BookOpen, FlaskConical } from "lucide-react";
 
 const KIND_META: Record<LabKind, { label: string; icon: React.ElementType; emoji: string }> = {
   RACE: { label: "Расы", icon: Dna, emoji: "🧬" },
+  SUBRACE: { label: "Подрасы", icon: Dna, emoji: "🧬" },
   CLASS: { label: "Классы", icon: Swords, emoji: "⚔️" },
   SUBCLASS: { label: "Подклассы", icon: Layers, emoji: "🔱" },
   SPELL: { label: "Заклинания", icon: Wand2, emoji: "✨" },
   ITEM: { label: "Магические предметы", icon: Gem, emoji: "💎" },
+  TRAIT: { label: "Черты", icon: Star, emoji: "⭐" },
+  BACKGROUND: { label: "Предыстории", icon: BookOpen, emoji: "📖" },
 };
+
+const KIND_ORDER: LabKind[] = ["RACE", "SUBRACE", "CLASS", "SUBCLASS", "SPELL", "ITEM", "TRAIT", "BACKGROUND"];
 
 export function LabView() {
   const [tab, setTab] = useState<LabKind>("RACE");
@@ -45,10 +50,13 @@ export function LabView() {
 
   const counts: Record<LabKind, number> = {
     RACE: all.filter((e) => e.kind === "RACE").length,
+    SUBRACE: all.filter((e) => e.kind === "SUBRACE").length,
     CLASS: all.filter((e) => e.kind === "CLASS").length,
     SUBCLASS: all.filter((e) => e.kind === "SUBCLASS").length,
     SPELL: all.filter((e) => e.kind === "SPELL").length,
     ITEM: all.filter((e) => e.kind === "ITEM").length,
+    TRAIT: all.filter((e) => e.kind === "TRAIT").length,
+    BACKGROUND: all.filter((e) => e.kind === "BACKGROUND").length,
   };
 
   return (
@@ -61,14 +69,14 @@ export function LabView() {
           Лаборатория Алого
         </OrnamentTitle>
         <p className="text-foreground/70 font-[family-name:var(--font-garamond)] italic max-w-2xl mx-auto">
-          {intro?.body || "Здесь Божество записывает свои авторские механики — кастомные расы, классы, заклинания и магические предметы."}
+          {intro?.body || "Здесь Божество записывает свои авторские механики — кастомные расы, подрасы, классы, подклассы, заклинания, черты, предыстории и магические предметы."}
         </p>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as LabKind)} className="w-full">
         <div className="flex justify-center overflow-x-auto pb-2">
           <TabsList className="bg-background/40 border border-gold/20 flex flex-wrap h-auto">
-            {(Object.keys(KIND_META) as LabKind[]).map((k) => {
+            {KIND_ORDER.map((k) => {
               const M = KIND_META[k];
               const Icon = M.icon;
               return (
@@ -103,14 +111,18 @@ export function LabView() {
             </p>
           </div>
         ) : (
-          (Object.keys(KIND_META) as LabKind[]).map((k) => (
+          KIND_ORDER.map((k) => (
             <TabsContent key={k} value={k} className="mt-6">
-              <LabGrid items={all.filter((e) => e.kind === k).filter((e) =>
-                !search ||
-                e.name.toLowerCase().includes(search.toLowerCase()) ||
-                (e.subtitle ?? "").toLowerCase().includes(search.toLowerCase()) ||
-                e.description.toLowerCase().includes(search.toLowerCase())
-              ).sort((a, b) => a.order - b.order)} kind={k} onSelect={(e) => setSelected(e)} />
+              <LabGrid
+                items={all.filter((e) => e.kind === k).filter((e) =>
+                  !search ||
+                  e.name.toLowerCase().includes(search.toLowerCase()) ||
+                  (e.subtitle ?? "").toLowerCase().includes(search.toLowerCase()) ||
+                  e.description.toLowerCase().includes(search.toLowerCase())
+                ).sort((a, b) => a.order - b.order)}
+                kind={k}
+                onSelect={(e) => setSelected(e)}
+              />
             </TabsContent>
           ))
         )}
@@ -126,44 +138,173 @@ export function LabView() {
   );
 }
 
-/* ===== Detail dialog content ===== */
+/* ===== Detail dialog content — type-specific rendering ===== */
 function LabDetail({ entry }: { entry: LabEntry }) {
   const M = KIND_META[entry.kind as LabKind];
+  const kindBadge = (
+    <Badge variant="outline" className="border-wine/30 text-wine/70 text-[10px]">{M.label}</Badge>
+  );
+  const header = (
+    <div className="flex items-start gap-3">
+      <RuneSeal
+        icon={<span className="text-3xl">{entry.icon ?? M.emoji}</span>}
+        size="lg"
+        glow={!!entry.rarity && (entry.rarity === "LEGENDARY" || entry.rarity === "MYTHIC")}
+      />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{entry.name}</h2>
+          {entry.rarity && <RarityBadge rarity={entry.rarity} />}
+        </div>
+        {entry.subtitle && <p className="parchment-heading text-xs uppercase tracking-wider mt-1">{entry.subtitle}</p>}
+        <div className="mt-1 flex items-center gap-2 flex-wrap">{kindBadge}</div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       <DialogTitle className="sr-only">{entry.name}</DialogTitle>
       <DialogDescription className="sr-only">Детальный просмотр записи Лаборатории Алого.</DialogDescription>
-      {/* Header: icon + name + rarity */}
-      <div className="flex items-start gap-3">
-        <RuneSeal icon={<span className="text-3xl">{entry.icon ?? M.emoji}</span>} size="lg" glow={!!entry.rarity && (entry.rarity === "LEGENDARY" || entry.rarity === "MYTHIC")} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{entry.name}</h2>
-            {entry.rarity && <RarityBadge rarity={entry.rarity} />}
-          </div>
-          {entry.subtitle && <p className="parchment-heading text-xs uppercase tracking-wider mt-1">{entry.subtitle}</p>}
-          <Badge variant="outline" className="mt-1 border-wine/30 text-wine/70 text-[10px]">{M.label}</Badge>
-        </div>
-      </div>
-      {/* Image */}
-      {entry.image && (
-        <div className="w-full h-56 md:h-72 overflow-hidden rounded-lg gold-frame">
-          <img src={entry.image} alt={entry.name} className="w-full h-full object-cover object-top" />
-        </div>
+      {header}
+
+      {/* === RACE === */}
+      {entry.kind === "RACE" && (
+        <>
+          {entry.image && (
+            <div className="w-full h-56 md:h-72 overflow-hidden rounded-lg gold-frame">
+              <img src={entry.image} alt={entry.name} className="w-full h-full object-cover object-top" />
+            </div>
+          )}
+          <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+          {entry.details && (
+            <DetailBlock title="✦ Механическая составляющая" body={entry.details} />
+          )}
+        </>
       )}
-      {/* Description */}
-      <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
-      {/* Details (structured) */}
-      {entry.details && (
-        <div className="pt-4 border-t border-parchment-dark/20">
-          <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading mb-2">✦ Подробности</p>
-          <p className="parchment-muted text-sm whitespace-pre-line leading-relaxed">{entry.details}</p>
-        </div>
+
+      {/* === SUBRACE === */}
+      {entry.kind === "SUBRACE" && (
+        <>
+          {entry.raceParent && (
+            <p className="text-sm parchment-muted">
+              <span className="parchment-heading">Раса-прародитель: </span>
+              <span className="italic">{entry.raceParent}</span>
+            </p>
+          )}
+          {entry.image && (
+            <div className="w-full h-56 md:h-72 overflow-hidden rounded-lg gold-frame">
+              <img src={entry.image} alt={entry.name} className="w-full h-full object-cover object-top" />
+            </div>
+          )}
+          <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+          {entry.details && (
+            <DetailBlock title="✦ Механическая составляющая" body={entry.details} />
+          )}
+        </>
+      )}
+
+      {/* === CLASS === */}
+      {entry.kind === "CLASS" && (
+        <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+      )}
+
+      {/* === SUBCLASS === */}
+      {entry.kind === "SUBCLASS" && (
+        <>
+          {entry.subtitle && (
+            <p className="text-sm parchment-muted">
+              <span className="parchment-heading">Класс: </span>
+              <span className="italic">{entry.subtitle}</span>
+            </p>
+          )}
+          <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+        </>
+      )}
+
+      {/* === SPELL === */}
+      {entry.kind === "SPELL" && (
+        <>
+          <SpellMetaGrid entry={entry} />
+          <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+        </>
+      )}
+
+      {/* === ITEM === */}
+      {entry.kind === "ITEM" && (
+        <>
+          {entry.image && (
+            <div className="w-full h-56 md:h-72 overflow-hidden rounded-lg gold-frame">
+              <img src={entry.image} alt={entry.name} className="w-full h-full object-cover object-top" />
+            </div>
+          )}
+          <ItemMetaGrid entry={entry} />
+          <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+        </>
+      )}
+
+      {/* === TRAIT === */}
+      {entry.kind === "TRAIT" && (
+        <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+      )}
+
+      {/* === BACKGROUND === */}
+      {entry.kind === "BACKGROUND" && (
+        <>
+          <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+          {entry.details && (
+            <DetailBlock title="✦ Механическая составляющая" body={entry.details} />
+          )}
+        </>
       )}
     </div>
   );
 }
 
+function DetailBlock({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="pt-4 border-t border-parchment-dark/20">
+      <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading mb-2">{title}</p>
+      <p className="parchment-muted text-sm whitespace-pre-line leading-relaxed">{body}</p>
+    </div>
+  );
+}
+
+function MetaRow({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-baseline gap-2 text-sm">
+      <span className="parchment-heading min-w-[110px] shrink-0">{label}:</span>
+      <span className="parchment-muted">{value}</span>
+    </div>
+  );
+}
+
+function SpellMetaGrid({ entry }: { entry: LabEntry }) {
+  return (
+    <div className="parchment rounded-lg p-4 border border-gold/20 space-y-1.5">
+      <MetaRow label="Уровень" value={entry.spellLevel} />
+      <MetaRow label="Школа" value={entry.school} />
+      <MetaRow label="Концентрация" value={entry.concentration} />
+      <MetaRow label="Ритуал" value={entry.ritual} />
+      <MetaRow label="Компоненты" value={entry.components} />
+      <MetaRow label="Время накладывания" value={entry.castingTime} />
+      <MetaRow label="Дистанция" value={entry.spellRange} />
+      <MetaRow label="Классы" value={entry.spellClasses} />
+    </div>
+  );
+}
+
+function ItemMetaGrid({ entry }: { entry: LabEntry }) {
+  return (
+    <div className="parchment rounded-lg p-4 border border-gold/20 space-y-1.5">
+      <MetaRow label="Тип предмета" value={entry.itemType} />
+      <MetaRow label="Настройка" value={entry.attunement} />
+    </div>
+  );
+}
+
+/* ===== Grid of cards — type-specific card content ===== */
 function LabGrid({ items, kind, onSelect }: { items: LabEntry[]; kind: LabKind; onSelect: (e: LabEntry) => void }) {
   const M = KIND_META[kind];
   if (items.length === 0) {
@@ -180,30 +321,119 @@ function LabGrid({ items, kind, onSelect }: { items: LabEntry[]; kind: LabKind; 
   return (
     <div className="grid md:grid-cols-2 gap-4">
       {items.map((e, idx) => (
-        <ParchmentCard key={e.id} hover className="space-y-3 animate-fade-rise cursor-pointer" >
+        <ParchmentCard key={e.id} hover className="animate-fade-rise cursor-pointer">
           <button
             onClick={() => onSelect(e)}
             style={{ animationDelay: `${idx * 60}ms` }}
             className="space-y-3 text-left w-full"
             aria-label={`Открыть запись: ${e.name}`}
           >
-            <div className="flex items-start gap-3">
-              <RuneSeal icon={<span className="text-2xl">{e.icon ?? M.emoji}</span>} size="md" glow={!!e.rarity && (e.rarity === "LEGENDARY" || e.rarity === "MYTHIC")} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">{e.name}</h3>
-                  {e.rarity && <RarityBadge rarity={e.rarity} />}
+            {/* === RACE / SUBRACE === */}
+            {(e.kind === "RACE" || e.kind === "SUBRACE") && (
+              <>
+                <div className="flex items-start gap-3">
+                  <RuneSeal
+                    icon={<span className="text-2xl">{e.icon ?? M.emoji}</span>}
+                    size="md"
+                    glow={!!e.rarity && (e.rarity === "LEGENDARY" || e.rarity === "MYTHIC")}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">{e.name}</h3>
+                    {e.kind === "SUBRACE" && e.raceParent && (
+                      <p className="parchment-heading text-xs uppercase tracking-wider mt-0.5 text-wine/70">
+                        ⊙ {e.raceParent}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                {e.subtitle && <p className="parchment-heading text-xs uppercase tracking-wider mt-0.5">{e.subtitle}</p>}
-              </div>
-            </div>
-            {e.image && (
-              <div className="h-40 rounded-lg overflow-hidden gold-frame">
-                <img src={e.image} alt={e.name} className="w-full h-full object-cover object-top" />
-              </div>
+                {e.image && (
+                  <div className="h-40 rounded-lg overflow-hidden gold-frame">
+                    <img src={e.image} alt={e.name} className="w-full h-full object-cover object-top" />
+                  </div>
+                )}
+                <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{e.description}</p>
+                <p className="text-xs text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
+              </>
             )}
-            <p className="parchment-muted text-sm leading-relaxed line-clamp-3">{e.description}</p>
-            <p className="text-xs text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
+
+            {/* === CLASS / SUBCLASS / TRAIT / BACKGROUND === */}
+            {(e.kind === "CLASS" || e.kind === "SUBCLASS" || e.kind === "TRAIT" || e.kind === "BACKGROUND") && (
+              <>
+                <div className="flex items-start gap-3">
+                  <RuneSeal
+                    icon={<span className="text-2xl">{e.icon ?? M.emoji}</span>}
+                    size="md"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">{e.name}</h3>
+                    {e.subtitle && (
+                      <p className="parchment-heading text-xs uppercase tracking-wider mt-0.5 text-wine/70">
+                        {e.subtitle}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{e.description}</p>
+                <p className="text-xs text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
+              </>
+            )}
+
+            {/* === SPELL === */}
+            {e.kind === "SPELL" && (
+              <>
+                <div className="flex items-start gap-3">
+                  <RuneSeal icon={<span className="text-2xl">{e.icon ?? M.emoji}</span>} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">{e.name}</h3>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                      {e.spellLevel && (
+                        <Badge variant="outline" className="border-gold/30 text-gold/80 text-[10px]">
+                          {e.spellLevel === "Заговор" ? "Заговор" : `${e.spellLevel} круг`}
+                        </Badge>
+                      )}
+                      {e.school && (
+                        <Badge variant="outline" className="border-wine/30 text-wine/80 text-[10px]">
+                          {e.school}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{e.description}</p>
+                <p className="text-xs text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
+              </>
+            )}
+
+            {/* === ITEM === */}
+            {e.kind === "ITEM" && (
+              <>
+                <div className="flex items-start gap-3">
+                  <RuneSeal
+                    icon={<span className="text-2xl">{e.icon ?? M.emoji}</span>}
+                    size="md"
+                    glow={!!e.rarity && (e.rarity === "LEGENDARY" || e.rarity === "MYTHIC")}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">{e.name}</h3>
+                      {e.rarity && <RarityBadge rarity={e.rarity} />}
+                    </div>
+                    {e.itemType && (
+                      <p className="parchment-heading text-xs uppercase tracking-wider mt-0.5 text-wine/70">
+                        {e.itemType}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {e.image && (
+                  <div className="h-40 rounded-lg overflow-hidden gold-frame">
+                    <img src={e.image} alt={e.name} className="w-full h-full object-cover object-top" />
+                  </div>
+                )}
+                <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{e.description}</p>
+                <p className="text-xs text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
+              </>
+            )}
           </button>
         </ParchmentCard>
       ))}

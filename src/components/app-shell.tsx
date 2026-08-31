@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PageTransition } from "@/components/fantasy/page-transition";
 import { Omnisearch } from "@/components/omnisearch";
 import { DiceRoller } from "@/components/fantasy/dice-roller";
+import { ScrollToTop } from "@/components/fantasy/scroll-to-top";
 
 interface MeResponse {
   user: { id: string; name: string; email: string; role: string } | null;
@@ -289,6 +290,7 @@ export function AppShell() {
         </footer>
       </div>
 
+      <ScrollToTop />
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
       <Omnisearch open={searchOpen} onOpenChange={setSearchOpen} onNavigate={setView} />
       <DiceRoller />

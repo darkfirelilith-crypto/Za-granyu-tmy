@@ -1378,10 +1378,27 @@ function CharacterInventoryDialog({ character, onClose }: { character: any; onCl
   );
 }
 
-/* ===== LAB EDITOR (Лаборатория Алого) ===== */
-const LAB_KIND_LABEL: Record<string, string> = {
-  RACE: "Раса", CLASS: "Класс", SUBCLASS: "Подкласс", SPELL: "Заклинание", ITEM: "Предмет",
+/* ===== LAB EDITOR (Лаборатория Алого) — типоспецифичные формы ===== */
+type LabKind = "RACE" | "SUBRACE" | "CLASS" | "SUBCLASS" | "SPELL" | "ITEM" | "TRAIT" | "BACKGROUND";
+
+const LAB_KIND_LABEL: Record<LabKind, string> = {
+  RACE: "🧬 Раса",
+  SUBRACE: "🧬 Подраса",
+  CLASS: "⚔️ Класс",
+  SUBCLASS: "🔱 Подкласс (архетип)",
+  SPELL: "✨ Заклинание",
+  ITEM: "💎 Магический предмет",
+  TRAIT: "⭐ Черта",
+  BACKGROUND: "📖 Предыстория",
 };
+
+const LAB_KIND_ORDER: LabKind[] = ["RACE", "SUBRACE", "CLASS", "SUBCLASS", "SPELL", "ITEM", "TRAIT", "BACKGROUND"];
+
+const SELECT_NONE = "__none";
+
+const SPELL_LEVELS = ["Заговор", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const SPELL_SCHOOLS = ["Ограждение", "Вызов", "Прорицание", "Очарование", "Преобразование", "Иллюзия", "Некромантия", "Порча"];
+const RARITIES = ["COMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC"];
 
 function LabEditor() {
   const { data } = useQuery<any[]>({ queryKey: ["lab"], queryFn: () => fetch("/api/lab").then((r) => r.json()) });
@@ -1400,36 +1417,91 @@ function LabEditor() {
   });
   const del = useMutation({ mutationFn: (id: string) => fetch(`/api/lab/${id}`, { method: "DELETE" }).then((r) => r.json()), onSuccess: () => { qc.invalidateQueries({ queryKey: ["lab"] }); toast({ title: "Свиток стёрт" }); } });
 
-  const items = (data ?? []).sort((a, b) => (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : a.order - b.order));
+  const all = (data ?? []) as any[];
+  const byKind = (k: LabKind) => all.filter((e) => e.kind === k).sort((a, b) => a.order - b.order);
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="font-[family-name:var(--font-cinzel)] text-lg text-gold">Лаборатория Алого</h3>
-        <Button onClick={() => { setEditing({}); setOpen(true); }} className="btn-rune bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-1" /> Создать</Button>
+        <Button onClick={() => { setEditing({ kind: "RACE" }); setOpen(true); }} className="btn-rune bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-1" /> Создать</Button>
       </div>
-      <div className="grid md:grid-cols-2 gap-3">
-        {items.map((e) => (
-          <ParchmentCard key={e.id} className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline" className="border-wine/30 text-wine text-[10px]">{LAB_KIND_LABEL[e.kind] ?? e.kind}</Badge>
-                <span className="text-lg">{e.icon ?? "🜂"}</span>
-                <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading truncate">{e.name}</h4>
-              </div>
-              {e.subtitle && <p className="parchment-heading text-xs uppercase tracking-wider">{e.subtitle}</p>}
-              <p className="parchment-muted text-sm line-clamp-2 mt-1">{e.description}</p>
+
+      {all.length === 0 && <p className="text-center parchment-muted italic py-8">Свиток Алого пока пуст. Создай первую запись.</p>}
+
+      {LAB_KIND_ORDER.map((k) => {
+        const items = byKind(k);
+        if (items.length === 0) return null;
+        return (
+          <div key={k} className="space-y-2">
+            <div className="flex items-center gap-2 pt-2">
+              <h4 className="font-[family-name:var(--font-cinzel)] text-sm text-gold/90 tracking-wide">{LAB_KIND_LABEL[k]}</h4>
+              <Badge variant="outline" className="border-gold/30 text-gold/70 text-[10px]">{items.length}</Badge>
             </div>
-            <div className="flex gap-1 shrink-0">
-              <Button size="icon" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }} className="text-wine"><Pencil className="w-4 h-4" /></Button>
-              <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Стёреть запись «${e.name}»?`)) del.mutate(e.id); }} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
+            <div className="grid md:grid-cols-2 gap-3">
+              {items.map((e) => (
+                <ParchmentCard key={e.id} className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-lg">{e.icon ?? "🜂"}</span>
+                      <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading truncate">{e.name}</h4>
+                      {e.rarity && <RarityBadge rarity={e.rarity} />}
+                    </div>
+                    {e.subtitle && <p className="parchment-heading text-xs uppercase tracking-wider">{e.subtitle}</p>}
+                    {e.kind === "SUBRACE" && e.raceParent && <p className="text-xs parchment-muted">⊙ {e.raceParent}</p>}
+                    {e.kind === "SPELL" && (e.spellLevel || e.school) && (
+                      <p className="text-xs parchment-muted">
+                        {[e.spellLevel && (e.spellLevel === "Заговор" ? "Заговор" : `${e.spellLevel} круг`), e.school].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
+                    {e.kind === "ITEM" && e.itemType && <p className="text-xs parchment-muted">{e.itemType}</p>}
+                    <p className="parchment-muted text-sm line-clamp-2 mt-1">{e.description}</p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button size="icon" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }} className="text-wine"><Pencil className="w-4 h-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Стёреть запись «${e.name}»?`)) del.mutate(e.id); }} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                  </div>
+                </ParchmentCard>
+              ))}
             </div>
-          </ParchmentCard>
-        ))}
-        {items.length === 0 && <p className="col-span-full text-center parchment-muted italic py-8">Свиток Алого пока пуст. Создай первую запись.</p>}
-      </div>
+          </div>
+        );
+      })}
+
       <LabFormDialog key={editing?.id ?? "new"} open={open} onOpenChange={setOpen} item={editing} onSave={(it) => save.mutate(it)} pending={save.isPending} />
     </div>
+  );
+}
+
+/* ---- Reusable field primitives for the Lab form ---- */
+function LabField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <Label className="parchment-heading text-sm">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function LabInput({ value, onChange, placeholder, type }: { value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
+  return <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="bg-parchment/60 border-parchment-dark/40" />;
+}
+
+function LabTextarea({ value, onChange, rows = 3, placeholder }: { value: string; onChange: (v: string) => void; rows?: number; placeholder?: string }) {
+  return <Textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} className="bg-parchment/60 border-parchment-dark/40" />;
+}
+
+function LabSelect({ value, onChange, options, placeholder, allowNone }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[] | string[]; placeholder?: string; allowNone?: boolean }) {
+  const opts = options.map((o) => (typeof o === "string" ? { value: o, label: o } : o));
+  const val = value || (allowNone ? SELECT_NONE : opts[0]?.value ?? "");
+  return (
+    <Select value={val} onValueChange={(v) => onChange(v === SELECT_NONE ? "" : v)}>
+      <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue placeholder={placeholder} /></SelectTrigger>
+      <SelectContent className="parchment">
+        {allowNone && <SelectItem value={SELECT_NONE}>{placeholder ?? "(не выбрано)"}</SelectItem>}
+        {opts.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -1442,51 +1514,153 @@ function LabFormDialog({ open, onOpenChange, item, onSave, pending }: { open: bo
   }, [item, open]);
   const getVal = (f: string) => (form[f] !== undefined ? form[f] : current[f] ?? "");
   const setVal = (f: string, v: any) => setForm({ ...form, [f]: v });
+
+  const kind: LabKind = (getVal("kind") || "RACE") as LabKind;
+  const isExisting = !!item?.id;
+
+  const handleSave = () => {
+    const clean = { ...current, ...form };
+    // Convert SELECT_NONE back to empty string for select-based optional fields.
+    for (const k of ["rarity", "ritual", "school", "spellLevel"]) {
+      if (clean[k] === SELECT_NONE) clean[k] = "";
+    }
+    // Ensure kind is set for new entries.
+    if (!clean.kind) clean.kind = "RACE";
+    if (!clean.order && clean.order !== 0) clean.order = 0;
+    onSave(clean);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="parchment gold-frame max-w-4xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{item?.id ? "Редактировать" : "Создать"} запись Лаборатории</DialogTitle>
+          <DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">{isExisting ? "Редактировать" : "Создать"} запись Лаборатории</DialogTitle>
           <DialogDescription className="sr-only">Форма редактирования записи Лаборатории Алого</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div>
-            <Label className="parchment-heading text-sm">Тип</Label>
-            <Select value={getVal("kind") || "RACE"} onValueChange={(v) => setVal("kind", v)}>
+          {/* Kind selector — fixed for existing entries */}
+          <LabField label="Тип записи">
+            <Select value={kind} onValueChange={(v) => setVal("kind", v)} disabled={isExisting}>
               <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue /></SelectTrigger>
               <SelectContent className="parchment">
-                <SelectItem value="RACE">🧬 Раса</SelectItem>
-                <SelectItem value="CLASS">⚔️ Класс</SelectItem>
-                <SelectItem value="SUBCLASS">🔱 Подкласс</SelectItem>
-                <SelectItem value="SPELL">✨ Заклинание</SelectItem>
-                <SelectItem value="ITEM">💎 Магический предмет</SelectItem>
+                {LAB_KIND_ORDER.map((k) => <SelectItem key={k} value={k}>{LAB_KIND_LABEL[k]}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-          <div><Label className="parchment-heading text-sm">Название</Label><Input value={getVal("name")} onChange={(e) => setVal("name", e.target.value)} className="bg-parchment/60 border-parchment-dark/40" /></div>
-          <div><Label className="parchment-heading text-sm">Подзаголовок (напр. «Подкласс Паладина», «Заклинание 3 круга»)</Label><Input value={getVal("subtitle") || ""} onChange={(e) => setVal("subtitle", e.target.value)} className="bg-parchment/60 border-parchment-dark/40" /></div>
-          <div><Label className="parchment-heading text-sm">Иконка (эмодзи)</Label><Input value={getVal("icon") || ""} onChange={(e) => setVal("icon", e.target.value)} placeholder="🜂" className="bg-parchment/60 border-parchment-dark/40" /></div>
-          <ImageUpload label="Иллюстрация (изображение)" value={getVal("image") || null} onChange={(v) => setVal("image", v)} aspect="aspect-video" />
-          <div>
-            <Label className="parchment-heading text-sm">Редкость / уровень (для предметов и заклинаний)</Label>
-            <Select value={getVal("rarity") || ""} onValueChange={(v) => setVal("rarity", v)}>
-              <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue placeholder="(необязательно)" /></SelectTrigger>
-              <SelectContent className="parchment">
-                <SelectItem value="COMMON">Common</SelectItem>
-                <SelectItem value="RARE">Rare</SelectItem>
-                <SelectItem value="EPIC">Epic</SelectItem>
-                <SelectItem value="LEGENDARY">Legendary</SelectItem>
-                <SelectItem value="MYTHIC">Mythic</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div><Label className="parchment-heading text-sm">Описание</Label><Textarea value={getVal("description")} onChange={(e) => setVal("description", e.target.value)} rows={3} className="bg-parchment/60 border-parchment-dark/40" /></div>
-          <div><Label className="parchment-heading text-sm">Подробности (черты, параметры, компоненты — каждое с новой строки)</Label><Textarea value={getVal("details") || ""} onChange={(e) => setVal("details", e.target.value)} rows={5} className="bg-parchment/60 border-parchment-dark/40" /></div>
-          <div><Label className="parchment-heading text-sm">Порядок</Label><Input type="number" value={getVal("order") || 0} onChange={(e) => setVal("order", Number(e.target.value))} className="bg-parchment/60 border-parchment-dark/40" /></div>
+          </LabField>
+
+          {/* ===== RACE ===== */}
+          {kind === "RACE" && (
+            <>
+              <LabField label="Название"><LabInput value={getVal("name")} onChange={(v) => setVal("name", v)} /></LabField>
+              <LabField label="Описание"><LabTextarea value={getVal("description")} onChange={(v) => setVal("description", v)} rows={3} /></LabField>
+              <LabField label="Механическая составляющая (details)"><LabTextarea value={getVal("details") || ""} onChange={(v) => setVal("details", v)} rows={5} placeholder="Особенности расы, черты, бонусы — каждое с новой строки" /></LabField>
+              <ImageUpload label="Иллюстрация (изображение)" value={getVal("image") || null} onChange={(v) => setVal("image", v)} aspect="aspect-video" />
+              <LabField label="Иконка (эмодзи)"><LabInput value={getVal("icon") || ""} onChange={(v) => setVal("icon", v)} placeholder="🧬" /></LabField>
+            </>
+          )}
+
+          {/* ===== SUBRACE ===== */}
+          {kind === "SUBRACE" && (
+            <>
+              <LabField label="Название"><LabInput value={getVal("name")} onChange={(v) => setVal("name", v)} /></LabField>
+              <LabField label="Раса-прародитель"><LabInput value={getVal("raceParent") || ""} onChange={(v) => setVal("raceParent", v)} placeholder="напр. Эльф" /></LabField>
+              <LabField label="Описание"><LabTextarea value={getVal("description")} onChange={(v) => setVal("description", v)} rows={3} /></LabField>
+              <LabField label="Механическая составляющая (details)"><LabTextarea value={getVal("details") || ""} onChange={(v) => setVal("details", v)} rows={5} placeholder="Особенности подрасы, черты, бонусы — каждое с новой строки" /></LabField>
+              <ImageUpload label="Иллюстрация (изображение)" value={getVal("image") || null} onChange={(v) => setVal("image", v)} aspect="aspect-video" />
+              <LabField label="Иконка (эмодзи)"><LabInput value={getVal("icon") || ""} onChange={(v) => setVal("icon", v)} placeholder="🧬" /></LabField>
+            </>
+          )}
+
+          {/* ===== CLASS ===== */}
+          {kind === "CLASS" && (
+            <>
+              <LabField label="Название"><LabInput value={getVal("name")} onChange={(v) => setVal("name", v)} /></LabField>
+              <LabField label="Описание"><LabTextarea value={getVal("description")} onChange={(v) => setVal("description", v)} rows={6} /></LabField>
+              <LabField label="Иконка (эмодзи)"><LabInput value={getVal("icon") || ""} onChange={(v) => setVal("icon", v)} placeholder="⚔️" /></LabField>
+            </>
+          )}
+
+          {/* ===== SUBCLASS ===== */}
+          {kind === "SUBCLASS" && (
+            <>
+              <LabField label="Название"><LabInput value={getVal("name")} onChange={(v) => setVal("name", v)} /></LabField>
+              <LabField label="Класс (subtitle)"><LabInput value={getVal("subtitle") || ""} onChange={(v) => setVal("subtitle", v)} placeholder="напр. Паладин" /></LabField>
+              <LabField label="Описание"><LabTextarea value={getVal("description")} onChange={(v) => setVal("description", v)} rows={6} /></LabField>
+              <LabField label="Иконка (эмодзи)"><LabInput value={getVal("icon") || ""} onChange={(v) => setVal("icon", v)} placeholder="🔱" /></LabField>
+            </>
+          )}
+
+          {/* ===== SPELL ===== */}
+          {kind === "SPELL" && (
+            <>
+              <LabField label="Название"><LabInput value={getVal("name")} onChange={(v) => setVal("name", v)} /></LabField>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <LabField label="Уровень (spellLevel)">
+                  <LabSelect value={getVal("spellLevel") || ""} onChange={(v) => setVal("spellLevel", v)} options={SPELL_LEVELS} allowNone placeholder="(не выбрано)" />
+                </LabField>
+                <LabField label="Школа (school)">
+                  <LabSelect value={getVal("school") || ""} onChange={(v) => setVal("school", v)} options={SPELL_SCHOOLS} allowNone placeholder="(не выбрано)" />
+                </LabField>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <LabField label="Концентрация"><LabInput value={getVal("concentration") || ""} onChange={(v) => setVal("concentration", v)} placeholder="напр. Да, до 1 минуты" /></LabField>
+                <LabField label="Ритуал">
+                  <LabSelect value={getVal("ritual") || ""} onChange={(v) => setVal("ritual", v)} options={["Да", "Нет"]} allowNone placeholder="(не выбрано)" />
+                </LabField>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <LabField label="Компоненты"><LabInput value={getVal("components") || ""} onChange={(v) => setVal("components", v)} placeholder="напр. В, С, М (перышко)" /></LabField>
+                <LabField label="Время накладывания"><LabInput value={getVal("castingTime") || ""} onChange={(v) => setVal("castingTime", v)} placeholder="напр. 1 действие" /></LabField>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <LabField label="Дистанция"><LabInput value={getVal("spellRange") || ""} onChange={(v) => setVal("spellRange", v)} placeholder="напр. 18 м" /></LabField>
+                <LabField label="Классы"><LabInput value={getVal("spellClasses") || ""} onChange={(v) => setVal("spellClasses", v)} placeholder="напр. Жрец, Друид" /></LabField>
+              </div>
+              <LabField label="Описание"><LabTextarea value={getVal("description")} onChange={(v) => setVal("description", v)} rows={5} /></LabField>
+              <LabField label="Иконка (эмодзи)"><LabInput value={getVal("icon") || ""} onChange={(v) => setVal("icon", v)} placeholder="✨" /></LabField>
+            </>
+          )}
+
+          {/* ===== ITEM ===== */}
+          {kind === "ITEM" && (
+            <>
+              <LabField label="Название"><LabInput value={getVal("name")} onChange={(v) => setVal("name", v)} /></LabField>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <LabField label="Редкость">
+                  <LabSelect value={getVal("rarity") || ""} onChange={(v) => setVal("rarity", v)} options={RARITIES} allowNone placeholder="(не выбрано)" />
+                </LabField>
+                <LabField label="Тип предмета (itemType)"><LabInput value={getVal("itemType") || ""} onChange={(v) => setVal("itemType", v)} placeholder="напр. Доспех, Кольцо" /></LabField>
+              </div>
+              <LabField label="Настройка (attunement)"><LabInput value={getVal("attunement") || ""} onChange={(v) => setVal("attunement", v)} placeholder="напр. Да, требует владения магией" /></LabField>
+              <LabField label="Описание"><LabTextarea value={getVal("description")} onChange={(v) => setVal("description", v)} rows={5} /></LabField>
+              <ImageUpload label="Иллюстрация (изображение)" value={getVal("image") || null} onChange={(v) => setVal("image", v)} aspect="aspect-video" />
+              <LabField label="Иконка (эмодзи)"><LabInput value={getVal("icon") || ""} onChange={(v) => setVal("icon", v)} placeholder="💎" /></LabField>
+            </>
+          )}
+
+          {/* ===== TRAIT ===== */}
+          {kind === "TRAIT" && (
+            <>
+              <LabField label="Название"><LabInput value={getVal("name")} onChange={(v) => setVal("name", v)} /></LabField>
+              <LabField label="Описание"><LabTextarea value={getVal("description")} onChange={(v) => setVal("description", v)} rows={6} /></LabField>
+            </>
+          )}
+
+          {/* ===== BACKGROUND ===== */}
+          {kind === "BACKGROUND" && (
+            <>
+              <LabField label="Название"><LabInput value={getVal("name")} onChange={(v) => setVal("name", v)} /></LabField>
+              <LabField label="Описание"><LabTextarea value={getVal("description")} onChange={(v) => setVal("description", v)} rows={4} /></LabField>
+              <LabField label="Механическая составляющая (details)"><LabTextarea value={getVal("details") || ""} onChange={(v) => setVal("details", v)} rows={5} placeholder="Навыки, снаряжение, черты — каждое с новой строки" /></LabField>
+            </>
+          )}
+
+          {/* Common: order */}
+          <LabField label="Порядок (сортировка)"><LabInput type="number" value={getVal("order") || 0} onChange={(v) => setVal("order", Number(v))} /></LabField>
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)} className="parchment-muted">Отмена</Button>
-          <Button onClick={() => onSave({ ...current, ...form })} disabled={pending} className="bg-primary text-primary-foreground btn-rune">{pending ? "Пишем..." : "Сохранить"}</Button>
+          <Button onClick={handleSave} disabled={pending} className="bg-primary text-primary-foreground btn-rune">{pending ? "Пишем..." : "Сохранить"}</Button>
         </div>
       </DialogContent>
     </Dialog>

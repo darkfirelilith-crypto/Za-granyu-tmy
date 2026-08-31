@@ -10,8 +10,6 @@ export type View =
   | "admin"
   | "login";
 
-export type LabKind = "RACE" | "CLASS" | "SUBCLASS" | "SPELL" | "ITEM";
-
 export type KnowledgeTab =
   | "countries"
   | "personalities"
@@ -199,9 +197,11 @@ export interface GrimoireEntry {
   visibleGroupId?: string | null;
 }
 
+export type LabKind = "RACE" | "SUBRACE" | "CLASS" | "SUBCLASS" | "SPELL" | "ITEM" | "TRAIT" | "BACKGROUND";
+
 export interface LabEntry {
   id: string;
-  kind: string; // RACE | CLASS | SUBCLASS | SPELL | ITEM
+  kind: string;
   name: string;
   subtitle: string | null;
   description: string;
@@ -210,5 +210,16 @@ export interface LabEntry {
   image?: string | null;
   rarity: string | null;
   order: number;
+  raceParent?: string | null;
+  spellLevel?: string | null;
+  school?: string | null;
+  concentration?: string | null;
+  ritual?: string | null;
+  components?: string | null;
+  castingTime?: string | null;
+  spellRange?: string | null;
+  spellClasses?: string | null;
+  itemType?: string | null;
+  attunement?: string | null;
 }
 
