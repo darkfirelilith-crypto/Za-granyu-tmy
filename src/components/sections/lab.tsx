@@ -74,16 +74,16 @@ export function LabView() {
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as LabKind)} className="w-full">
-        <div className="flex justify-center overflow-x-auto pb-2">
-          <TabsList className="bg-background/40 border border-gold/20 flex flex-wrap h-auto">
+        <div className="flex justify-center overflow-x-auto pb-2 fantasy-scroll">
+          <TabsList className="bg-background/40 border border-gold/20 flex flex-nowrap h-auto gap-0.5">
             {KIND_ORDER.map((k) => {
               const M = KIND_META[k];
               const Icon = M.icon;
               return (
-                <TabsTrigger key={k} value={k} className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold gap-1.5">
-                  <Icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{M.label}</span>
-                  <Badge variant="outline" className="ml-1 text-[10px] px-1.5 py-0 border-gold/30 text-gold/60">
+                <TabsTrigger key={k} value={k} className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold gap-1 shrink-0 px-2.5 py-1.5">
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span className="hidden md:inline whitespace-nowrap">{M.label}</span>
+                  <Badge variant="outline" className="ml-0.5 text-[10px] px-1 py-0 border-gold/30 text-gold/60">
                     {counts[k]}
                   </Badge>
                 </TabsTrigger>
@@ -139,7 +139,7 @@ export function LabView() {
 }
 
 /* ===== Detail dialog content — type-specific rendering ===== */
-function LabDetail({ entry }: { entry: LabEntry }) {
+export function LabDetail({ entry }: { entry: LabEntry }) {
   const M = KIND_META[entry.kind as LabKind];
   const kindBadge = (
     <Badge variant="outline" className="border-wine/30 text-wine/70 text-[10px]">{M.label}</Badge>
