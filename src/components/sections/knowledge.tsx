@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import type { Country, Personality, CountryRelation, WorldSystem, God, Legend } from "@/lib/types";
 import { ExpandablePortrait } from "@/components/fantasy/expandable-portrait";
+import { FormattedText } from "@/components/fantasy/formatted-text";
 import { Search, MapPin, Crown, Link2, Scale, Sun, BookMarked, Globe2, Sparkle as SparkleIcon } from "lucide-react";
 
 export function KnowledgeView() {
@@ -129,7 +130,7 @@ function CountriesTab({ search }: { search: string }) {
             </div>
           </div>
           {/* Description */}
-          <div className="lore-prose drop-cap text-base leading-relaxed mb-5">{sel.description}</div>
+          <FormattedText className="lore-prose text-base leading-relaxed mb-5">{sel.description}</FormattedText>
           {/* Info grid */}
           <div className="grid sm:grid-cols-3 gap-4 pt-4 border-t border-parchment-dark/30">
             {sel.government && <Field label="Правление" value={sel.government} />}
@@ -215,7 +216,7 @@ function PersonalitiesTab({ search }: { search: string }) {
             </div>
           )}
           {/* Description */}
-          <div className="lore-prose drop-cap text-base leading-relaxed mb-5">{sel.description}</div>
+          <FormattedText className="lore-prose text-base leading-relaxed mb-5">{sel.description}</FormattedText>
           {/* Info grid */}
           <div className="flex flex-wrap gap-4 pt-4 border-t border-parchment-dark/30 text-sm">
             {sel.affiliation && <Field label="Принадлежность" value={sel.affiliation} />}
@@ -270,7 +271,7 @@ function RelationsTab({ search }: { search: string }) {
             <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.countryBName}</h3>
           </div>
           {sel.description ? (
-            <div className="lore-prose drop-cap text-base leading-relaxed whitespace-pre-line">{sel.description}</div>
+            <FormattedText className="lore-prose text-base leading-relaxed">{sel.description}</FormattedText>
           ) : (
             <p className="parchment-muted italic text-center">Описание связи не записано.</p>
           )}
@@ -334,7 +335,7 @@ function SystemsTab({ search }: { search: string }) {
               </div>
             </div>
           </div>
-          <div className="lore-prose drop-cap text-base leading-relaxed whitespace-pre-line">{sel.description}</div>
+          <FormattedText className="lore-prose text-base leading-relaxed">{sel.description}</FormattedText>
         </ParchmentCard>
       )}
     </div>
@@ -418,7 +419,7 @@ function PantheonTab({ search }: { search: string }) {
               </div>
             )}
           </div>
-          <div className="lore-prose drop-cap text-base leading-relaxed whitespace-pre-line">{sel.description}</div>
+          <FormattedText className="lore-prose text-base leading-relaxed">{sel.description}</FormattedText>
         </ParchmentCard>
       )}
     </div>
@@ -471,7 +472,7 @@ function LegendsTab({ search }: { search: string }) {
               {sel.era && <p className="parchment-muted text-sm italic mt-0.5">{sel.era}</p>}
             </div>
           </div>
-          <div className="lore-prose drop-cap text-base leading-relaxed whitespace-pre-line">{sel.content}</div>
+          <FormattedText className="lore-prose text-base leading-relaxed">{sel.content}</FormattedText>
         </ParchmentCard>
       )}
     </div>

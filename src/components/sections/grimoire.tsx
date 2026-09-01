@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import type { GrimoireEntry } from "@/lib/types";
 import { Lock, Unlock, Sparkles, KeyRound, Crown } from "lucide-react";
+import { FormattedText } from "@/components/fantasy/formatted-text";
 
 const CAT_LABEL: Record<string, string> = {
   SECRETS: "Тайны",
@@ -253,13 +254,11 @@ function GrimoirePage({
           {/* DIARY type: large body + postscript */}
           {entry.entryType === "DIARY" && (
             <div className="space-y-4">
-              <div className="lore-prose drop-cap whitespace-pre-line text-base leading-relaxed">
-                {entry.realContent}
-              </div>
+              <FormattedText className="lore-prose text-base leading-relaxed">{entry.realContent}</FormattedText>
               {entry.postscript && (
                 <div className="mt-6 pt-4 border-t border-parchment-dark/20">
                   <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading mb-1">P.S.</p>
-                  <p className="parchment-muted italic whitespace-pre-line">{entry.postscript}</p>
+                  <FormattedText className="parchment-muted italic">{entry.postscript}</FormattedText>
                 </div>
               )}
             </div>
@@ -271,7 +270,7 @@ function GrimoirePage({
               {entry.spellReflection && (
                 <div>
                   <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading mb-1">Размышления автора</p>
-                  <p className="lore-prose whitespace-pre-line">{entry.spellReflection}</p>
+                  <FormattedText className="lore-prose">{entry.spellReflection}</FormattedText>
                 </div>
               )}
               {entry.spellFormula && (
@@ -283,7 +282,7 @@ function GrimoirePage({
               {entry.spellNotes && (
                 <div>
                   <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading mb-1">Заметки</p>
-                  <p className="parchment-muted text-sm whitespace-pre-line">{entry.spellNotes}</p>
+                  <FormattedText className="parchment-muted text-sm">{entry.spellNotes}</FormattedText>
                 </div>
               )}
             </div>
@@ -291,16 +290,12 @@ function GrimoirePage({
 
           {/* NOTE type: simple text */}
           {entry.entryType === "NOTE" && (
-            <div className="lore-prose whitespace-pre-line text-base leading-relaxed">
-              {entry.realContent}
-            </div>
+            <FormattedText className="lore-prose text-base leading-relaxed">{entry.realContent}</FormattedText>
           )}
 
           {/* Fallback for entries with no entryType set (old entries) */}
           {!entry.entryType && entry.realContent && (
-            <div className="lore-prose drop-cap whitespace-pre-line text-base leading-relaxed">
-              {entry.realContent}
-            </div>
+            <FormattedText className="lore-prose text-base leading-relaxed">{entry.realContent}</FormattedText>
           )}
 
           {/* Margin note bottom */}

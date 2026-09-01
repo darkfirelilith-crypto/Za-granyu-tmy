@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import type { GuildRank, Quest, Character } from "@/lib/types";
 import { Shield, Trophy, MapPin, Sword, Crown, Star, Award, Users } from "lucide-react";
+import { FormattedText } from "@/components/fantasy/formatted-text";
 
 const DIFF_REWARD: Record<string, string> = {
   TRIVIAL: "20", EASY: "50", MEDIUM: "120", HARD: "250", DEADLY: "500",
@@ -321,7 +322,7 @@ function QuestsTab() {
               <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">{q.title}</h3>
               <DifficultyBadge difficulty={q.difficulty} />
             </div>
-            <p className="parchment-muted text-sm">{q.description}</p>
+            <FormattedText className="parchment-muted text-sm">{q.description}</FormattedText>
             <div className="flex flex-wrap gap-3 text-xs parchment-muted">
               {q.location && (
                 <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-wine" /> {q.location}</span>

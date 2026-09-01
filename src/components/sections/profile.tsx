@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { useToast } from "@/hooks/use-toast";
 import { Award, Sword, BookOpen, Edit3, Save, X, Trophy, Flag, Ban, Plus, Trash2, Pencil, Users, Link2, Heart, Download, Upload, Gem } from "lucide-react";
 import { LabDetail } from "@/components/sections/lab";
+import { FormattedText } from "@/components/fantasy/formatted-text";
 
 export function ProfileView() {
   const { data, isLoading } = useQuery<any>({
@@ -578,7 +579,7 @@ function SectionField({ label, editing, value, onChange, display, placeholder, r
       {editing ? (
         <Textarea value={value ?? ""} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} className="bg-parchment/60 border-parchment-dark/40 mt-1" />
       ) : display ? (
-        <p className={`parchment-text mt-1 whitespace-pre-line ${dropCap ? "lore-prose drop-cap" : ""}`}>{display}</p>
+        <FormattedText className={`parchment-text mt-1 ${dropCap ? "lore-prose drop-cap" : ""}`}>{display}</FormattedText>
       ) : (
         <p className="parchment-muted italic mt-1 text-sm">Не записано...</p>
       )}

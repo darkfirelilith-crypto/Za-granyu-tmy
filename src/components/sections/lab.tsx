@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { LabEntry, LabKind } from "@/lib/types";
+import { FormattedText } from "@/components/fantasy/formatted-text";
 import { Search, Dna, Swords, Layers, Wand2, Gem, Star, BookOpen, FlaskConical } from "lucide-react";
 
 const KIND_META: Record<LabKind, { label: string; icon: React.ElementType; emoji: string }> = {
@@ -176,7 +177,7 @@ export function LabDetail({ entry }: { entry: LabEntry }) {
               <img src={entry.image} alt={entry.name} className="w-full h-full object-cover object-top" />
             </div>
           )}
-          <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+          <FormattedText className="lore-prose text-base leading-relaxed">{entry.description}</FormattedText>
           {entry.details && (
             <DetailBlock title="✦ Механическая составляющая" body={entry.details} />
           )}
@@ -197,7 +198,7 @@ export function LabDetail({ entry }: { entry: LabEntry }) {
               <img src={entry.image} alt={entry.name} className="w-full h-full object-cover object-top" />
             </div>
           )}
-          <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+          <FormattedText className="lore-prose text-base leading-relaxed">{entry.description}</FormattedText>
           {entry.details && (
             <DetailBlock title="✦ Механическая составляющая" body={entry.details} />
           )}
@@ -206,7 +207,7 @@ export function LabDetail({ entry }: { entry: LabEntry }) {
 
       {/* === CLASS === */}
       {entry.kind === "CLASS" && (
-        <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+        <FormattedText className="lore-prose text-base leading-relaxed">{entry.description}</FormattedText>
       )}
 
       {/* === SUBCLASS === */}
@@ -218,7 +219,7 @@ export function LabDetail({ entry }: { entry: LabEntry }) {
               <span className="italic">{entry.subtitle}</span>
             </p>
           )}
-          <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+          <FormattedText className="lore-prose text-base leading-relaxed">{entry.description}</FormattedText>
         </>
       )}
 
@@ -226,7 +227,7 @@ export function LabDetail({ entry }: { entry: LabEntry }) {
       {entry.kind === "SPELL" && (
         <>
           <SpellMetaGrid entry={entry} />
-          <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+          <FormattedText className="lore-prose text-base leading-relaxed">{entry.description}</FormattedText>
         </>
       )}
 
@@ -239,19 +240,19 @@ export function LabDetail({ entry }: { entry: LabEntry }) {
             </div>
           )}
           <ItemMetaGrid entry={entry} />
-          <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+          <FormattedText className="lore-prose text-base leading-relaxed">{entry.description}</FormattedText>
         </>
       )}
 
       {/* === TRAIT === */}
       {entry.kind === "TRAIT" && (
-        <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+        <FormattedText className="lore-prose text-base leading-relaxed">{entry.description}</FormattedText>
       )}
 
       {/* === BACKGROUND === */}
       {entry.kind === "BACKGROUND" && (
         <>
-          <div className="lore-prose drop-cap text-base leading-relaxed">{entry.description}</div>
+          <FormattedText className="lore-prose text-base leading-relaxed">{entry.description}</FormattedText>
           {entry.details && (
             <DetailBlock title="✦ Механическая составляющая" body={entry.details} />
           )}
@@ -265,7 +266,7 @@ function DetailBlock({ title, body }: { title: string; body: string }) {
   return (
     <div className="pt-4 border-t border-parchment-dark/20">
       <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading mb-2">{title}</p>
-      <p className="parchment-muted text-sm whitespace-pre-line leading-relaxed">{body}</p>
+      <FormattedText className="parchment-muted text-sm leading-relaxed">{body}</FormattedText>
     </div>
   );
 }
