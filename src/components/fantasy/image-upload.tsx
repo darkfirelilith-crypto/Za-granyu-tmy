@@ -14,7 +14,7 @@ export function ImageUpload({
   onChange,
   label,
   className,
-  maxDim = 800,
+  maxDim = 2400,
   aspect = "aspect-square",
   rounded = "rounded-lg",
 }: {
@@ -35,9 +35,9 @@ export function ImageUpload({
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith("image/")) return;
-    // Reject very large files (>12MB) to avoid crashing the tab on mobile / OOM
-    if (file.size > 12 * 1024 * 1024) {
-      alert("Файл слишком большой (максимум 12 МБ).");
+    // Reject very large files (>20MB) to avoid crashing the tab on mobile / OOM
+    if (file.size > 20 * 1024 * 1024) {
+      alert("Файл слишком большой (максимум 20 МБ).");
       return;
     }
     setBusy(true);
@@ -109,7 +109,7 @@ export function ImageUpload({
             {value ? "Заменить" : "Загрузить"}
           </label>
           <p className="parchment-muted text-xs italic">
-            JPG/PNG, будет сжато до {maxDim}px. Хранится в свитке.
+            JPG/PNG, до {maxDim}px. Хранится в свитке.
           </p>
         </div>
       </div>
@@ -138,8 +138,8 @@ function resizeImage(file: File, maxDim: number): Promise<string> {
         const ctx = canvas.getContext("2d");
         if (!ctx) return reject(new Error("no canvas ctx"));
         ctx.drawImage(img, 0, 0, width, height);
-        // JPEG quality 0.82 keeps file size modest for DB storage
-        resolve(canvas.toDataURL("image/jpeg", 0.82));
+        // JPEG quality 0.92 — high quality for readable text on maps
+        resolve(canvas.toDataURL("image/jpeg", 0.92));
       };
       img.onerror = reject;
       img.src = reader.result as string;
