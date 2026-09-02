@@ -142,26 +142,25 @@ export function MapImage({ className }: { className?: string } = {}) {
         onTouchEnd={onTouchEnd}
         className="relative w-full overflow-hidden rounded-lg bg-parchment-dark/20 select-none"
         style={{
-          aspectRatio: "4 / 3",
+          height: "70vh",
           cursor: zoom > 1 ? (isDragging ? "grabbing" : "grab") : "default",
           touchAction: "none",
         }}
       >
-        {/* Image rendered at NATIVE resolution.
-            max-width/max-height: 100% ensures it fits the container at zoom=1.
-            No width/height 100% / objectFit — those force the browser to downscale
-            the source, losing quality. With max-* only, the browser keeps the
-            full-resolution bitmap and the GPU scales it via transform (lossless). */}
+        {/* Image rendered at NATIVE resolution — never downscaled by CSS.
+            At zoom=1 the image shows at its full pixel size inside a scrollable
+            container. The browser keeps the full-resolution bitmap at all times.
+            Zoom uses CSS transform: scale() (GPU-accelerated, lossless). */}
         <img
           src={imageSrc}
           alt="Карта мира"
           draggable={false}
           className="absolute top-1/2 left-1/2"
           style={{
-            maxWidth: "100%",
-            maxHeight: "100%",
             width: "auto",
             height: "auto",
+            maxWidth: "none",
+            maxHeight: "none",
             transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             transformOrigin: "center",
             transition: isDragging ? "none" : "transform 0.15s ease-out",
