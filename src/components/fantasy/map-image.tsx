@@ -7,10 +7,11 @@ import { ZoomIn, ZoomOut, Maximize, Move } from "lucide-react";
 
 /**
  * World map image viewer with zoom/pan.
- * The image is loaded from SiteContent (key: "world_map_image") — admin uploads
- * a JPG/PNG via Чертог Божества → Контент страниц → Карта мира.
- * Supports: mouse-wheel zoom (no page scroll), drag-to-pan, zoom in/out/reset buttons.
- * Image is rendered at native resolution — zoom uses CSS transform (GPU), no quality loss.
+ * The image is loaded from SiteContent (key: "world_map_image").
+ *
+ * KEY: zoom changes the ACTUAL width/height of the <img> element (in pixels),
+ * NOT a CSS transform. This forces the browser to re-render from the source
+ * image at every zoom level — no bilinear upscaling blur.
  */
 
 export function MapImage({ className }: { className?: string } = {}) {
@@ -22,29 +23,55 @@ export function MapImage({ className }: { className?: string } = {}) {
   const imageSrc = mapContent?.image || null;
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
-  // Keep latest zoom/pan in refs so the native wheel listener (added once)
-  // can read current values without being re-registered on every state change.
   const zoomRef = useRef(zoom);
   const panRef = useRef(pan);
+  const imgSizeRef = useRef(imgSize);
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { panRef.current = pan; }, [pan]);
+  useEffect(() => { imgSizeRef.current = imgSize; }, [imgSize]);
 
-  const MIN_ZOOM = 1;
-  const MAX_ZOOM = 8;
+  const MIN_ZOOM = 0.1;
+  const MAX_ZOOM = 4;
   const clampZoom = (z: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z));
 
+  // When image loads, capture native dimensions and set zoom so it fits container width
+  const onImgLoad = useCallback(() => {
+    const img = imgRef.current;
+    if (!img) return;
+    const nw = img.naturalWidth;
+    const nh = img.naturalHeight;
+    setImgSize({ w: nw, h: nh });
+    // Fit to container width at zoom=1 (image shows at native size, user pans to see all)
+    // If image is wider than container, start at zoom that fits width
+    const container = containerRef.current;
+    if (container && nw > 0) {
+      const cw = container.clientWidth;
+      const fitZoom = cw / nw;
+      setZoom(fitZoom);
+      setPan({ x: 0, y: 0 });
+    }
+  }, []);
+
   const resetView = useCallback(() => {
-    setZoom(1);
+    const img = imgRef.current;
+    const container = containerRef.current;
+    if (img && container && img.naturalWidth > 0) {
+      const fitZoom = container.clientWidth / img.naturalWidth;
+      setZoom(fitZoom);
+    } else {
+      setZoom(1);
+    }
     setPan({ x: 0, y: 0 });
   }, []);
 
-  // Native wheel listener with { passive: false } so preventDefault actually
-  // stops the page from scrolling while zooming the map.
+  // Native wheel listener — preventDefault stops page scroll
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -52,7 +79,7 @@ export function MapImage({ className }: { className?: string } = {}) {
       e.preventDefault();
       const curZoom = zoomRef.current;
       const curPan = panRef.current;
-      const delta = e.deltaY > 0 ? -0.15 : 0.15;
+      const delta = e.deltaY > 0 ? -0.12 : 0.12;
       const newZoom = clampZoom(curZoom + delta * curZoom);
       if (newZoom === curZoom) return;
       // Zoom toward cursor
@@ -70,11 +97,11 @@ export function MapImage({ className }: { className?: string } = {}) {
     return () => el.removeEventListener("wheel", handler);
   }, []);
 
+  // Drag to pan — always enabled (even at fit-zoom, since image may be larger)
   const onMouseDown = useCallback((e: React.MouseEvent) => {
-    if (zoom <= 1) return;
     setIsDragging(true);
     dragStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
-  }, [zoom, pan]);
+  }, [pan]);
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDragging) return;
@@ -86,7 +113,7 @@ export function MapImage({ className }: { className?: string } = {}) {
 
   const onMouseUp = useCallback(() => setIsDragging(false), []);
 
-  // Touch support (pinch-zoom + drag)
+  // Touch support
   const touchState = useRef<{ dist: number; x: number; y: number; panX: number; panY: number } | null>(null);
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 1) {
@@ -129,6 +156,11 @@ export function MapImage({ className }: { className?: string } = {}) {
     );
   }
 
+  // Calculate actual pixel size: native dimensions × zoom
+  // This is the KEY change — we set width/height in px, not transform: scale()
+  const renderW = imgSize ? Math.round(imgSize.w * zoom) : undefined;
+  const renderH = imgSize ? Math.round(imgSize.h * zoom) : undefined;
+
   return (
     <ParchmentCard className={`p-2 md:p-3 ${className ?? ""}`}>
       <div
@@ -143,37 +175,37 @@ export function MapImage({ className }: { className?: string } = {}) {
         className="relative w-full overflow-hidden rounded-lg bg-parchment-dark/20 select-none"
         style={{
           height: "70vh",
-          cursor: zoom > 1 ? (isDragging ? "grabbing" : "grab") : "default",
+          cursor: isDragging ? "grabbing" : "grab",
           touchAction: "none",
         }}
       >
-        {/* Image rendered at NATIVE resolution — never downscaled by CSS.
-            At zoom=1 the image shows at its full pixel size inside a scrollable
-            container. The browser keeps the full-resolution bitmap at all times.
-            Zoom uses CSS transform: scale() (GPU-accelerated, lossless). */}
+        {/*
+          Image with ACTUAL pixel dimensions (width/height in px, not transform: scale).
+          The browser renders from the source image at every zoom level —
+          no bilinear upscaling, text stays sharp.
+          Pan via translate (doesn't affect rendering quality).
+        */}
         <img
+          ref={imgRef}
           src={imageSrc}
           alt="Карта мира"
           draggable={false}
+          onLoad={onImgLoad}
           className="absolute top-1/2 left-1/2"
           style={{
-            width: "auto",
-            height: "auto",
+            width: renderW ? `${renderW}px` : "auto",
+            height: renderH ? `${renderH}px` : "auto",
             maxWidth: "none",
             maxHeight: "none",
-            transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transformOrigin: "center",
-            transition: isDragging ? "none" : "transform 0.15s ease-out",
-            // image-rendering: high-quality for upscaling
-            imageRendering: "auto",
-            willChange: "transform",
+            transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px)`,
+            transition: isDragging ? "none" : "width 0.15s ease-out, height 0.15s ease-out, transform 0.15s ease-out",
           }}
         />
 
         {/* Zoom controls — bottom right */}
         <div className="absolute bottom-3 right-3 flex flex-col gap-1.5 z-10">
           <button
-            onClick={() => setZoom(z => clampZoom(z + 0.5))}
+            onClick={() => setZoom(z => clampZoom(z * 1.3))}
             className="w-9 h-9 rounded-md bg-parchment-dark/70 border border-gold/30 text-gold hover:bg-gold/10 hover:border-gold/60 transition-all flex items-center justify-center backdrop-blur-sm"
             aria-label="Приблизить"
             title="Приблизить"
@@ -181,7 +213,7 @@ export function MapImage({ className }: { className?: string } = {}) {
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
-            onClick={() => setZoom(z => clampZoom(z - 0.5))}
+            onClick={() => setZoom(z => clampZoom(z / 1.3))}
             className="w-9 h-9 rounded-md bg-parchment-dark/70 border border-gold/30 text-gold hover:bg-gold/10 hover:border-gold/60 transition-all flex items-center justify-center backdrop-blur-sm"
             aria-label="Отдалить"
             title="Отдалить"
@@ -199,16 +231,16 @@ export function MapImage({ className }: { className?: string } = {}) {
         </div>
 
         {/* Zoom level indicator — top left */}
-        {zoom > 1 && (
+        {imgSize && (
           <div className="absolute top-3 left-3 px-2 py-1 rounded-md bg-parchment-dark/70 border border-gold/30 text-gold/80 text-xs font-[family-name:var(--font-cinzel)] backdrop-blur-sm">
             {Math.round(zoom * 100)}%
           </div>
         )}
 
-        {/* Drag hint — shows once at zoom > 1 */}
-        {zoom > 1 && !isDragging && (
+        {/* Drag hint */}
+        {!isDragging && (
           <div className="absolute top-3 right-3 px-2 py-1 rounded-md bg-parchment-dark/70 border border-gold/20 text-foreground/50 text-[10px] italic backdrop-blur-sm pointer-events-none">
-            Тяни, чтобы двигать
+            Тяни, чтобы двигать · колесо — зум
           </div>
         )}
       </div>
