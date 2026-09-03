@@ -23,12 +23,12 @@ export function HallView({ onNavigate }: { onNavigate: (v: View) => void }) {
         fetch("/api/lab").then((r) => r.json()).catch(() => []),
       ]);
       const cards: HallCard[] = [];
-      (Array.isArray(countries) ? countries : []).forEach((c: any) => cards.push({ id: c.id, name: c.name, image: c.banner || null, emoji: c.emblem || "🗺️", kind: "country" as const }));
-      (Array.isArray(personalities) ? personalities : []).forEach((p: any) => cards.push({ id: p.id, name: p.name, image: p.portrait || null, emoji: "👤", kind: "personality" as const }));
-      (Array.isArray(gods) ? gods : []).forEach((g: any) => cards.push({ id: g.id, name: g.name, image: null, emoji: g.symbol || "✨", kind: "god" as const }));
-      (Array.isArray(legends) ? legends : []).forEach((l: any) => cards.push({ id: l.id, name: l.title, image: null, emoji: l.icon || "📖", kind: "legend" as const }));
-      (Array.isArray(grimoire) ? grimoire : []).forEach((g: any) => cards.push({ id: g.id, name: g.unlocked ? g.title : (g.encodedTitle || "◈ Глава ◈"), image: null, emoji: g.unlocked ? "📖" : "🔒", kind: "grimoire" as const }));
-      (Array.isArray(lab) ? lab : []).forEach((l: any) => cards.push({ id: l.id, name: l.name, image: l.image || null, emoji: l.icon || "🜂", kind: "lab" as const }));
+      (Array.isArray(countries) ? countries : []).forEach((c: any) => cards.push({ id: c.id, name: c.name, image: c.banner || null, emoji: c.emblem || "🗺️", kind: "country" as const, category: "Страна" }));
+      (Array.isArray(personalities) ? personalities : []).forEach((p: any) => cards.push({ id: p.id, name: p.name, image: p.portrait || null, emoji: "👤", kind: "personality" as const, category: "Персонаж" }));
+      (Array.isArray(gods) ? gods : []).forEach((g: any) => cards.push({ id: g.id, name: g.name, image: g.image || null, emoji: g.symbol || "✨", kind: "god" as const, category: "Божество" }));
+      (Array.isArray(legends) ? legends : []).forEach((l: any) => cards.push({ id: l.id, name: l.title, image: l.image || null, emoji: l.icon || "📖", kind: "legend" as const, category: "Легенда" }));
+      (Array.isArray(grimoire) ? grimoire : []).forEach((g: any) => cards.push({ id: g.id, name: g.unlocked ? g.title : (g.encodedTitle || "◈ Глава ◈"), image: null, emoji: g.unlocked ? "📖" : "🔒", kind: "grimoire" as const, category: "Гримуар" }));
+      (Array.isArray(lab) ? lab : []).forEach((l: any) => cards.push({ id: l.id, name: l.name, image: l.image || null, emoji: l.icon || "🜂", kind: "lab" as const, category: "Лаборатория" }));
       return cards;
     },
   });
@@ -79,6 +79,7 @@ interface HallCard {
   image: string | null;
   emoji: string;
   kind: "country" | "personality" | "god" | "legend" | "grimoire" | "lab";
+  category: string;
 }
 
 function NavBtn({ icon: Icon, label, onClick }: { icon: any; label: string; onClick: () => void }) {
@@ -159,12 +160,16 @@ function Carousel({ cards, onNavigate }: { cards: HallCard[]; onNavigate: (v: Vi
             onClick={() => onNavigate(navTarget[c.kind])}
             className="shrink-0 w-64 text-left group"
           >
-            <div className="h-44 w-64 rounded-lg overflow-hidden gold-frame bg-parchment-dark/20 flex items-center justify-center transition-all group-hover:gold-frame-hover">
+            <div className="h-44 w-64 rounded-lg overflow-hidden gold-frame bg-parchment-dark/20 flex items-center justify-center transition-all group-hover:gold-frame-hover relative">
               {c.image ? (
                 <img src={c.image} alt={c.name} className="w-full h-full object-cover object-top" />
               ) : (
                 <span className="text-6xl">{c.emoji}</span>
               )}
+              {/* Category badge — top left, always visible */}
+              <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-background/70 border border-gold/30 text-gold/80 text-[10px] font-[family-name:var(--font-cinzel)] uppercase tracking-wider backdrop-blur-sm">
+                {c.category}
+              </span>
             </div>
             <div className="mt-2 text-center">
               <p className="font-[family-name:var(--font-cinzel)] text-sm text-gold truncate">{c.name}</p>
