@@ -8,6 +8,7 @@ import { useQuery as useRQ } from "@tanstack/react-query";
 import type { View } from "@/lib/types";
 import { useEffect, useRef, useState } from "react";
 import { BookOpen, Sword, Sparkles, FlaskConical, ChevronLeft, ChevronRight } from "lucide-react";
+import { useAppStore } from "@/store/app-store";
 
 export function HallView({ onNavigate }: { onNavigate: (v: View) => void }) {
   // Gather all DB elements with image + name
@@ -130,9 +131,22 @@ function Carousel({ cards, onNavigate }: { cards: HallCard[]; onNavigate: (v: Vi
     if (el) el.scrollBy({ left: dir * 320, behavior: "smooth" });
   };
 
+  const setKnowledgeTab = useAppStore((s) => s.setKnowledgeTab);
+
+  // Map card kind → target view + knowledge tab (if applicable)
   const navTarget: Record<HallCard["kind"], View> = {
     country: "knowledge", personality: "knowledge", god: "knowledge", legend: "knowledge",
     grimoire: "grimoire", lab: "lab",
+  };
+  const kindToKnowledgeTab: Record<string, string> = {
+    country: "countries", personality: "personalities", god: "pantheon", legend: "legends",
+  };
+
+  const handleCardClick = (kind: HallCard["kind"]) => {
+    if (kindToKnowledgeTab[kind]) {
+      setKnowledgeTab(kindToKnowledgeTab[kind] as any);
+    }
+    onNavigate(navTarget[kind]);
   };
 
   return (
@@ -157,7 +171,7 @@ function Carousel({ cards, onNavigate }: { cards: HallCard[]; onNavigate: (v: Vi
         {cards.map((c) => (
           <button
             key={`${c.kind}-${c.id}`}
-            onClick={() => onNavigate(navTarget[c.kind])}
+            onClick={() => handleCardClick(c.kind)}
             className="shrink-0 w-64 text-left group"
           >
             <div className="h-44 w-64 rounded-lg overflow-hidden gold-frame bg-parchment-dark/20 flex items-center justify-center transition-all group-hover:gold-frame-hover relative">
