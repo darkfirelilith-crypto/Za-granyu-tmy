@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import type { Country, Personality, CountryRelation, WorldSystem, God, Legend } from "@/lib/types";
 import { ExpandablePortrait } from "@/components/fantasy/expandable-portrait";
+import { ExpandableImage } from "@/components/fantasy/expandable-image";
 import { FormattedText } from "@/components/fantasy/formatted-text";
 import { Search, MapPin, Crown, Link2, Scale, Sun, BookMarked, Globe2, Sparkle as SparkleIcon } from "lucide-react";
 
@@ -116,9 +117,7 @@ function CountriesTab({ search }: { search: string }) {
           <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
           {/* Banner image — full width, proper aspect ratio, no cropping */}
           {sel.banner && (
-            <div className="w-full h-48 md:h-64 overflow-hidden mb-4 rounded-lg gold-frame">
-              <img src={sel.banner} alt={sel.name} className="w-full h-full object-cover" />
-            </div>
+            <ExpandableImage src={sel.banner} alt={sel.name} className="mb-4" />
           )}
           {/* Header — emblem + name + capital */}
           <div className="flex items-start gap-4 mb-5">
@@ -320,9 +319,7 @@ function SystemsTab({ search }: { search: string }) {
       {sel && (
         <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
           {sel.image && (
-            <div className="w-full h-48 md:h-64 overflow-hidden mb-4 rounded-lg gold-frame">
-              <img src={sel.image} alt={sel.title} className="w-full h-full object-cover object-top" />
-            </div>
+            <ExpandableImage src={sel.image} alt={sel.title} className="mb-4" />
           )}
           <div className="flex items-start gap-4 mb-4">
             {!sel.image && <RuneSeal icon={<span className="text-3xl">{sel.icon ?? "📜"}</span>} size="md" />}
@@ -461,9 +458,7 @@ function LegendsTab({ search }: { search: string }) {
       {sel && (
         <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
           {sel.image && (
-            <div className="w-full h-48 md:h-64 overflow-hidden mb-4 rounded-lg gold-frame">
-              <img src={sel.image} alt={sel.title} className="w-full h-full object-cover object-top" />
-            </div>
+            <ExpandableImage src={sel.image} alt={sel.title} className="mb-4" />
           )}
           <div className="flex items-start gap-4 mb-4">
             {!sel.image && <RuneSeal icon={<span className="text-3xl">{sel.icon ?? "📖"}</span>} size="md" />}

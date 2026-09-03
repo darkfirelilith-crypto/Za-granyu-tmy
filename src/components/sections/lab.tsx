@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { LabEntry, LabKind } from "@/lib/types";
 import { FormattedText } from "@/components/fantasy/formatted-text";
+import { ExpandableImage } from "@/components/fantasy/expandable-image";
 import { Search, Dna, Swords, Layers, Wand2, Gem, Star, BookOpen, FlaskConical } from "lucide-react";
 
 const KIND_META: Record<LabKind, { label: string; icon: React.ElementType; emoji: string }> = {
@@ -173,9 +174,7 @@ export function LabDetail({ entry }: { entry: LabEntry }) {
       {entry.kind === "RACE" && (
         <>
           {entry.image && (
-            <div className="w-full h-56 md:h-72 overflow-hidden rounded-lg gold-frame">
-              <img src={entry.image} alt={entry.name} className="w-full h-full object-cover object-top" />
-            </div>
+            <ExpandableImage src={entry.image} alt={entry.name} height="h-56 md:h-72" />
           )}
           <FormattedText className="lore-prose text-base leading-relaxed">{entry.description}</FormattedText>
           {entry.details && (
@@ -194,9 +193,7 @@ export function LabDetail({ entry }: { entry: LabEntry }) {
             </p>
           )}
           {entry.image && (
-            <div className="w-full h-56 md:h-72 overflow-hidden rounded-lg gold-frame">
-              <img src={entry.image} alt={entry.name} className="w-full h-full object-cover object-top" />
-            </div>
+            <ExpandableImage src={entry.image} alt={entry.name} height="h-56 md:h-72" />
           )}
           <FormattedText className="lore-prose text-base leading-relaxed">{entry.description}</FormattedText>
           {entry.details && (
@@ -235,9 +232,7 @@ export function LabDetail({ entry }: { entry: LabEntry }) {
       {entry.kind === "ITEM" && (
         <>
           {entry.image && (
-            <div className="w-full h-56 md:h-72 overflow-hidden rounded-lg gold-frame">
-              <img src={entry.image} alt={entry.name} className="w-full h-full object-cover object-top" />
-            </div>
+            <ExpandableImage src={entry.image} alt={entry.name} height="h-56 md:h-72" />
           )}
           <ItemMetaGrid entry={entry} />
           <FormattedText className="lore-prose text-base leading-relaxed">{entry.description}</FormattedText>
