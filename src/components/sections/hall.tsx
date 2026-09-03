@@ -6,7 +6,7 @@ import { ParchmentCard } from "@/components/fantasy/ui";
 import { MapImage } from "@/components/fantasy/map-image";
 import { useQuery as useRQ } from "@tanstack/react-query";
 import { FormattedText } from "@/components/fantasy/formatted-text";
-import { ExpandablePortrait } from "@/components/fantasy/expandable-portrait";
+import { ExpandableImage } from "@/components/fantasy/expandable-image";
 import type { View } from "@/lib/types";
 import { useEffect, useRef, useState } from "react";
 import { BookOpen, Sword, Sparkles, FlaskConical, ChevronLeft, ChevronRight, X } from "lucide-react";
@@ -180,11 +180,9 @@ function CardDetail({ card }: { card: HallCard }) {
       <DialogTitle className="sr-only">{card.name}</DialogTitle>
       <DialogDescription className="sr-only">Просмотр записи из свитков мира.</DialogDescription>
 
-      {/* Image — expandable */}
+      {/* Image — full width, expandable on click */}
       {card.image && (
-        <div className="w-full max-h-80 overflow-hidden rounded-lg gold-frame flex items-center justify-center bg-parchment-dark/10">
-          <ExpandablePortrait src={card.image} alt={card.name} size="lg" />
-        </div>
+        <ExpandableImage src={card.image} alt={card.name} height="h-56 md:h-72" />
       )}
 
       {/* Header */}
