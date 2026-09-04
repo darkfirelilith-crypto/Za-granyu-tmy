@@ -206,27 +206,27 @@ export function MapImage({ className }: { className?: string } = {}) {
         <div className="absolute bottom-3 right-3 flex flex-col gap-1.5 z-10">
           <button
             onClick={() => setZoom(z => clampZoom(z * 1.3))}
-            className="w-9 h-9 rounded-md bg-parchment-dark/70 border border-gold/30 text-gold hover:bg-gold/10 hover:border-gold/60 transition-all flex items-center justify-center backdrop-blur-sm"
+            className="w-11 h-11 rounded-md bg-parchment-dark/70 border border-gold/30 text-gold hover:bg-gold/10 hover:border-gold/60 transition-all flex items-center justify-center backdrop-blur-sm"
             aria-label="Приблизить"
             title="Приблизить"
           >
-            <ZoomIn className="w-4 h-4" />
+            <ZoomIn className="w-5 h-5" />
           </button>
           <button
             onClick={() => setZoom(z => clampZoom(z / 1.3))}
-            className="w-9 h-9 rounded-md bg-parchment-dark/70 border border-gold/30 text-gold hover:bg-gold/10 hover:border-gold/60 transition-all flex items-center justify-center backdrop-blur-sm"
+            className="w-11 h-11 rounded-md bg-parchment-dark/70 border border-gold/30 text-gold hover:bg-gold/10 hover:border-gold/60 transition-all flex items-center justify-center backdrop-blur-sm"
             aria-label="Отдалить"
             title="Отдалить"
           >
-            <ZoomOut className="w-4 h-4" />
+            <ZoomOut className="w-5 h-5" />
           </button>
           <button
             onClick={resetView}
-            className="w-9 h-9 rounded-md bg-parchment-dark/70 border border-gold/30 text-gold hover:bg-gold/10 hover:border-gold/60 transition-all flex items-center justify-center backdrop-blur-sm"
+            className="w-11 h-11 rounded-md bg-parchment-dark/70 border border-gold/30 text-gold hover:bg-gold/10 hover:border-gold/60 transition-all flex items-center justify-center backdrop-blur-sm"
             aria-label="Сбросить вид"
             title="Сбросить вид"
           >
-            <Maximize className="w-4 h-4" />
+            <Maximize className="w-5 h-5" />
           </button>
         </div>
 

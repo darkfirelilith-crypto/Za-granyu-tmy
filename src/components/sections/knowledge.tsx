@@ -176,7 +176,7 @@ function PersonalitiesTab({ search }: { search: string }) {
             }`}
           >
             <span className="font-[family-name:var(--font-cinzel)] text-sm">{p.name}</span>
-            {p.title && <p className="text-xs parchment-muted/80">{p.title}</p>}
+            {p.title && <p className="text-sm parchment-muted/80">{p.title}</p>}
           </button>
         ))}
       </div>
@@ -188,7 +188,7 @@ function PersonalitiesTab({ search }: { search: string }) {
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.name}</h3>
                 <StatusBadge status={sel.status} />
-                {sel.isNpc && <Badge variant="outline" className="border-wine/30 text-wine text-xs">🎭 НПС</Badge>}
+                {sel.isNpc && <Badge variant="outline" className="border-wine/30 text-wine text-sm">🎭 НПС</Badge>}
               </div>
               {sel.title && <p className="parchment-heading text-sm mb-2">{sel.title}</p>}
               {/* Race / age / gender info */}
@@ -210,7 +210,7 @@ function PersonalitiesTab({ search }: { search: string }) {
           {/* Appearance (if exists) */}
           {sel.appearance && (
             <div className="mb-4 p-3 bg-parchment-dark/10 rounded-lg">
-              <p className="parchment-heading text-xs uppercase tracking-wider mb-1">Внешность</p>
+              <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Внешность</p>
               <p className="parchment-muted text-sm whitespace-pre-line">{sel.appearance}</p>
             </div>
           )}
@@ -258,7 +258,7 @@ function RelationsTab({ search }: { search: string }) {
             }`}
           >
             <p className="font-[family-name:var(--font-cinzel)] text-sm truncate">{r.countryAName}</p>
-            <p className="text-xs parchment-muted/80 truncate">↔ {r.countryBName}</p>
+            <p className="text-sm parchment-muted/80 truncate">↔ {r.countryBName}</p>
           </button>
         ))}
       </div>
@@ -312,7 +312,7 @@ function SystemsTab({ search }: { search: string }) {
           >
             <span className="mr-2">{s.icon ?? "📜"}</span>
             <span className="font-[family-name:var(--font-cinzel)] text-sm">{s.title}</span>
-            <p className="text-xs parchment-muted/80">{catLabel[s.category] ?? s.category}</p>
+            <p className="text-sm parchment-muted/80">{catLabel[s.category] ?? s.category}</p>
           </button>
         ))}
       </div>
@@ -326,7 +326,7 @@ function SystemsTab({ search }: { search: string }) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.title}</h3>
-                <Badge variant="outline" className="border-gold/30 text-gold/70 text-xs">
+                <Badge variant="outline" className="border-gold/30 text-gold/70 text-sm">
                   {catLabel[sel.category] ?? sel.category}
                 </Badge>
               </div>
@@ -373,7 +373,7 @@ function PantheonTab({ search }: { search: string }) {
           >
             <span className="mr-2">{g.symbol ?? "✨"}</span>
             <span className="font-[family-name:var(--font-cinzel)] text-sm">{g.name}</span>
-            <p className="text-xs parchment-muted/80 truncate">{g.domain}{g.pantheon ? ` · ${g.pantheon}` : ""}</p>
+            <p className="text-sm parchment-muted/80 truncate">{g.domain}{g.pantheon ? ` · ${g.pantheon}` : ""}</p>
           </button>
         ))}
       </div>
@@ -383,18 +383,18 @@ function PantheonTab({ search }: { search: string }) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.name}</h3>
-                <Badge variant="outline" className="border-gold/30 text-gold/70 text-xs">
+                <Badge variant="outline" className="border-gold/30 text-gold/70 text-sm">
                   {sel.domain}
                 </Badge>
                 {sel.pantheon && (
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full border font-[family-name:var(--font-cinzel)] uppercase tracking-wider ${pantheonStyle[sel.pantheon] ?? "border-gold/30 text-gold/70"}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border font-[family-name:var(--font-cinzel)] uppercase tracking-wider ${pantheonStyle[sel.pantheon] ?? "border-gold/30 text-gold/70"}`}>
                     {sel.pantheon}
                   </span>
                 )}
               </div>
               {sel.title && <p className="parchment-heading text-sm uppercase tracking-wider mb-2">{sel.title}</p>}
               {sel.alignment && (
-                <span className={`inline-flex items-center gap-1 text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider px-2 py-1 rounded ${
+                <span className={`inline-flex items-center gap-1 text-sm font-[family-name:var(--font-cinzel)] uppercase tracking-wider px-2 py-1 rounded ${
                   sel.alignment === "good" ? "text-green-700 bg-green-100/40 border border-green-600/30" :
                   sel.alignment === "evil" ? "text-red-800 bg-red-100/40 border border-red-700/30" :
                   "text-zinc-600 bg-zinc-200/40 border border-zinc-500/30"
@@ -451,7 +451,7 @@ function LegendsTab({ search }: { search: string }) {
           >
             <span className="mr-2">{l.icon ?? "📖"}</span>
             <span className="font-[family-name:var(--font-cinzel)] text-sm">{l.title}</span>
-            {l.era && <p className="text-xs parchment-muted/80 italic truncate">{l.era}</p>}
+            {l.era && <p className="text-sm parchment-muted/80 italic truncate">{l.era}</p>}
           </button>
         ))}
       </div>
@@ -478,7 +478,7 @@ function LegendsTab({ search }: { search: string }) {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="parchment-heading text-xs uppercase tracking-wider">{label}</p>
+      <p className="parchment-heading text-sm uppercase tracking-wider">{label}</p>
       <p className="parchment-text text-sm">{value}</p>
     </div>
   );
@@ -491,7 +491,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   const m = map[status] ?? { label: status, cls: "" };
   return (
-    <span className={`text-xs px-2 py-0.5 rounded border font-[family-name:var(--font-cinzel)] uppercase ${m.cls}`}>
+    <span className={`text-sm px-2 py-0.5 rounded border font-[family-name:var(--font-cinzel)] uppercase ${m.cls}`}>
       {m.label}
     </span>
   );

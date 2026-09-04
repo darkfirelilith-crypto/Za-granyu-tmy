@@ -109,7 +109,7 @@ function RanksTab() {
             <div className="flex-1">
               <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">{r.name}</h3>
               {r.description && <p className="parchment-muted text-sm">{r.description}</p>}
-              <p className="text-xs parchment-muted/80 mt-1">Минимальный опыт: {r.minXp} XP</p>
+              <p className="text-sm parchment-muted/80 mt-1">Минимальный опыт: {r.minXp} XP</p>
             </div>
             <div className="hidden sm:flex items-center gap-1 text-gold">
               {Array.from({ length: r.level }).map((_, idx) => (
@@ -184,19 +184,19 @@ function MembersTab() {
                 <RuneSeal icon={<span className="text-xl">{c.guildRank?.icon ?? "🛡️"}</span>} size="sm" />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-[family-name:var(--font-cinzel)] text-base parchment-heading truncate">{c.name}</h3>
-                  <p className="text-xs parchment-muted truncate">
+                  <p className="text-sm parchment-muted truncate">
                     {c.race ?? "—"} · {c.charClass ?? "—"} · Ур. {c.level}
                   </p>
                 </div>
               </div>
               <div className="space-y-1">
-                <div className="flex justify-between text-xs parchment-muted">
+                <div className="flex justify-between text-sm parchment-muted">
                   <span>{c.guildRank?.name ?? "Без ранга"}</span>
                   <span>{c.xp ?? 0} XP</span>
                 </div>
                 <Progress value={progressFor(c.xp ?? 0, c.guildRankId ?? null)} className="h-1.5 bg-parchment-dark/30" />
               </div>
-              <div className="flex items-center justify-between pt-2 border-t border-parchment-dark/20 text-xs">
+              <div className="flex items-center justify-between pt-2 border-t border-parchment-dark/20 text-sm">
                 <span className="flex items-center gap-1 parchment-muted">
                   <Award className="w-3.5 h-3.5 text-gold" />
                   {c.achievements?.length ?? 0} достижений
@@ -207,7 +207,7 @@ function MembersTab() {
                 </span>
               </div>
               {c.user?.role === "ADMIN" && (
-                <Badge variant="outline" className="border-gold/40 text-gold text-[10px]">✦ Божество</Badge>
+                <Badge variant="outline" className="border-gold/40 text-gold text-xs">✦ Божество</Badge>
               )}
             </ParchmentCard>
           ))}
@@ -238,23 +238,23 @@ function MembersTab() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-[family-name:var(--font-cinzel)] text-base parchment-heading truncate">{p.name}</h3>
-                      <p className="text-xs parchment-muted truncate">
+                      <p className="text-sm parchment-muted truncate">
                         {p.race ?? "—"} · {p.role ?? p.title ?? "—"}
                       </p>
                     </div>
-                    <Badge variant="outline" className="border-wine/30 text-wine text-[10px] shrink-0">🎭 НПС</Badge>
+                    <Badge variant="outline" className="border-wine/30 text-wine text-xs shrink-0">🎭 НПС</Badge>
                   </div>
                   {p.description && (
-                    <p className="text-xs parchment-muted line-clamp-2">{p.description}</p>
+                    <p className="text-sm parchment-muted line-clamp-2">{p.description}</p>
                   )}
-                  <div className="flex items-center gap-2 pt-2 border-t border-parchment-dark/20 text-xs">
+                  <div className="flex items-center gap-2 pt-2 border-t border-parchment-dark/20 text-sm">
                     {p.affiliation && <span className="parchment-muted">🏛️ {p.affiliation}</span>}
                     {p.status && (
                       <span className={`parchment-muted ${p.status === "alive" ? "text-green-700" : p.status === "deceased" ? "text-red-700" : "text-amber-700"}`}>
                         {p.status === "alive" ? "✓ Жив" : p.status === "deceased" ? "✗ Погиб" : "? Пропал"}
                       </span>
                     )}
-                    <span className="ml-auto text-gold/60 text-xs">📖 Открыть →</span>
+                    <span className="ml-auto text-gold/60 text-sm">📖 Открыть →</span>
                   </div>
                 </div>
               </ParchmentCard>
@@ -323,7 +323,7 @@ function QuestsTab() {
               <DifficultyBadge difficulty={q.difficulty} />
             </div>
             <FormattedText className="parchment-muted text-sm">{q.description}</FormattedText>
-            <div className="flex flex-wrap gap-3 text-xs parchment-muted">
+            <div className="flex flex-wrap gap-3 text-sm parchment-muted">
               {q.location && (
                 <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-wine" /> {q.location}</span>
               )}
@@ -332,7 +332,7 @@ function QuestsTab() {
             </div>
             {q.reward && (
               <div className="pt-2 border-t border-parchment-dark/20">
-                <p className="text-xs parchment-heading uppercase tracking-wider">Награда</p>
+                <p className="text-sm parchment-heading uppercase tracking-wider">Награда</p>
                 <p className="parchment-muted text-sm">{q.reward}</p>
               </div>
             )}
@@ -358,7 +358,7 @@ function QuestsTab() {
               </div>
             )}
             {!session?.user && (
-              <p className="text-xs parchment-muted italic text-center pt-2">
+              <p className="text-sm parchment-muted italic text-center pt-2">
                 Войдите как авантюрист, чтобы принять задание
               </p>
             )}
@@ -383,7 +383,7 @@ function QuestStatusBadge({ status }: { status: string }) {
   };
   const m = map[status] ?? { label: status, cls: "" };
   return (
-    <span className={`text-xs px-2 py-0.5 rounded border font-[family-name:var(--font-cinzel)] uppercase ${m.cls}`}>
+    <span className={`text-sm px-2 py-0.5 rounded border font-[family-name:var(--font-cinzel)] uppercase ${m.cls}`}>
       {m.label}
     </span>
   );

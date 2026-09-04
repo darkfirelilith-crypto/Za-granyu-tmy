@@ -155,26 +155,26 @@ function GrimoirePage({
                   </h3>
                 )}
                 <div className="flex items-center gap-2 flex-wrap mt-1">
-                  <Badge variant="outline" className={`text-xs ${entry.unlocked ? "border-gold/30 text-gold/70" : "border-foreground/20 text-foreground/40"}`}>
+                  <Badge variant="outline" className={`text-sm ${entry.unlocked ? "border-gold/30 text-gold/70" : "border-foreground/20 text-foreground/40"}`}>
                     {entry.unlocked ? (CAT_LABEL[entry.category] ?? entry.category) : "Запечатано"}
                   </Badge>
                   {entry.unlocked && (
-                    <Badge variant="outline" className="text-xs border-wine/30 text-wine/70">
+                    <Badge variant="outline" className="text-sm border-wine/30 text-wine/70">
                       {ENTRY_TYPE_LABEL[entry.entryType || "NOTE"] ?? "📝 Заметка"}
                     </Badge>
                   )}
                   {entry.unlocked && entry.autoUnlocked && (
-                    <Badge variant="outline" className="text-xs border-magic-glow/40 text-magic-glow/80">
+                    <Badge variant="outline" className="text-sm border-magic-glow/40 text-magic-glow/80">
                       ✦ Снято судьбой
                     </Badge>
                   )}
                   {!entry.unlocked && entry.conditionType && (
-                    <Badge variant="outline" className="text-xs border-amber-600/40 text-amber-600/80">
+                    <Badge variant="outline" className="text-sm border-amber-600/40 text-amber-600/80">
                       ⚗ Условие есть
                     </Badge>
                   )}
                   {isAdmin && entry.visibleGroupId && (
-                    <Badge variant="outline" className="text-xs border-purple-600/40 text-purple-600/80">
+                    <Badge variant="outline" className="text-sm border-purple-600/40 text-purple-600/80">
                       👥 Только группа
                     </Badge>
                   )}
@@ -216,7 +216,7 @@ function GrimoirePage({
                   </p>
                 </div>
               )}
-              <p className="text-center text-foreground/60 text-xs italic pt-2">
+              <p className="text-center text-foreground/60 text-sm italic pt-2">
                 ✦ Глава запечатана. Исполни условия, чтобы снять печать. ✦
               </p>
             </div>
@@ -228,7 +228,7 @@ function GrimoirePage({
               <p className="parchment-muted text-sm italic line-clamp-2">
                 {entry.realContent || entry.spellReflection || "Нажми, чтобы раскрыть главу..."}
               </p>
-              <p className="text-xs text-gold/60 mt-1">▼ Кликни, чтобы раскрыть</p>
+              <p className="text-sm text-gold/60 mt-1">▼ Кликни, чтобы раскрыть</p>
             </div>
           )}
         </div>
@@ -307,7 +307,7 @@ function GrimoirePage({
           <div className="text-center mt-6">
             <button
               onClick={() => setExpanded(false)}
-              className="btn-parchment text-xs px-3 py-1.5"
+              className="btn-parchment text-sm px-3 py-1.5"
             >
               ▲ Свернуть главу
             </button>

@@ -68,7 +68,7 @@ export function AdminView() {
         <p className="text-foreground/70 font-[family-name:var(--font-garamond)] italic max-w-2xl mx-auto">
           Здесь ты властвуешь над миром за гранью тьмы. Выбери раздел слева — затем подраздел — и твори.
         </p>
-        <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-md border border-gold/30 bg-gold/5 text-gold/80 text-xs font-[family-name:var(--font-cinzel)] tracking-wide animate-fade-rise">
+        <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-md border border-gold/30 bg-gold/5 text-gold/80 text-sm font-[family-name:var(--font-cinzel)] tracking-wide animate-fade-rise">
           ✦ Всё, что видишь в этом мире, ты можешь изменить — добавляй, редактируй и удаляй записи.
         </div>
       </div>
@@ -528,7 +528,7 @@ function VisibilitySelector({ label, value, onChange }: { label: string; value: 
           <option key={g.id} value={g.id}>{g.name}</option>
         ))}
       </select>
-      <p className="parchment-muted text-xs italic">Если выбрать группу — запись увидят только члены этой группы. Иначе — все.</p>
+      <p className="parchment-muted text-sm italic">Если выбрать группу — запись увидят только члены этой группы. Иначе — все.</p>
     </div>
   );
 }
@@ -612,7 +612,7 @@ function QuestsEditor() {
             </div>
             <p className="parchment-muted text-sm line-clamp-2">{q.description}</p>
             <div className="flex justify-between items-center pt-2">
-              <span className="text-xs parchment-muted">{q.status}</span>
+              <span className="text-sm parchment-muted">{q.status}</span>
               <div className="flex gap-1">
                 <Button size="icon" variant="ghost" onClick={()=>{setEditing(q);setOpen(true);}} className="text-wine"><Pencil className="w-4 h-4"/></Button>
                 <Button size="icon" variant="ghost" onClick={()=>{ if (confirm(`Удалить задание «${q.title}»?`)) del.mutate(q.id); }} className="text-destructive"><Trash2 className="w-4 h-4"/></Button>
@@ -716,7 +716,7 @@ function GrimoireEditor() {
                 <p className="font-[family-name:var(--font-cinzel)] parchment-heading truncate">
                   {g.unlocked ? g.title : (g.encodedTitle || "◈ Запечатанная глава ◈")}
                 </p>
-                <p className="parchment-muted text-xs">{g.category} · {g.unlocked?"открыто":"запечатано"}</p>
+                <p className="parchment-muted text-sm">{g.category} · {g.unlocked?"открыто":"запечатано"}</p>
               </div>
             </div>
             <div className="flex gap-1 shrink-0">
@@ -820,7 +820,7 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
               </div>
             </div>
             {sealed && (
-              <p className="parchment-muted text-xs italic bg-amber-700/5 px-3 py-2 rounded">
+              <p className="parchment-muted text-sm italic bg-amber-700/5 px-3 py-2 rounded">
                 🔒 Когда глава запечатана, игроки видят только рандомные иероглифы вместо текста. Название тоже скрыто. Шифр генерируется автоматически — ничего вводить не нужно.
               </p>
             )}
@@ -845,7 +845,7 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
                   )}
                   <div className="text-3xl mb-1">{t.emoji}</div>
                   <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading">{t.label}</p>
-                  <p className="parchment-muted text-xs italic">{t.desc}</p>
+                  <p className="parchment-muted text-sm italic">{t.desc}</p>
                 </button>
               ))}
             </div>
@@ -866,7 +866,7 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
                   }`}
                 >
                   <div className="text-2xl mb-0.5">{ps.emoji}</div>
-                  <p className="text-[10px] font-[family-name:var(--font-cinzel)] parchment-heading leading-tight">{ps.label}</p>
+                  <p className="text-xs font-[family-name:var(--font-cinzel)] parchment-heading leading-tight">{ps.label}</p>
                 </button>
               ))}
             </div>
@@ -968,7 +968,7 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
               </Select>
               <Input value={getVal("conditionValue")??""} onChange={e=>setVal("conditionValue",e.target.value)} placeholder="значение (ID/число)" className="bg-parchment/60 border-parchment-dark/40 h-10" disabled={!getVal("conditionType")||getVal("conditionType")==="MANUAL"}/>
             </div>
-            <p className="parchment-muted text-xs italic">При исполнении условия печать снимется автоматически для героев, видящих главу.</p>
+            <p className="parchment-muted text-sm italic">При исполнении условия печать снимется автоматически для героев, видящих главу.</p>
           </div>
         </div>
 
@@ -1104,7 +1104,7 @@ function AchFormDialog({ open,onOpenChange,item,onSave,pending }:{open:boolean;o
               </Select>
               <Input value={getVal("conditionValue") || ""} onChange={(e) => setVal("conditionValue", e.target.value)} placeholder="значение (ID/число)" className="bg-parchment/60 border-parchment-dark/40" disabled={!getVal("conditionType") || getVal("conditionType") === "MANUAL"} />
             </div>
-            <p className="parchment-muted text-xs mt-1 italic">Достижение вручится само, когда условие исполнится.</p>
+            <p className="parchment-muted text-sm mt-1 italic">Достижение вручится само, когда условие исполнится.</p>
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
@@ -1147,16 +1147,16 @@ function CharactersEditor() {
               <RuneSeal icon={<span className="text-xl">{c.guildRank?.icon ?? "🛡️"}</span>} size="sm"/>
               <div className="flex-1">
                 <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{c.name}</h4>
-                <p className="parchment-muted text-xs">{c.race ?? "—"} · {c.charClass ?? "—"} · Ур.{c.level} · {c.xp} XP · {c.guildRank?.name ?? "Без ранга"}</p>
+                <p className="parchment-muted text-sm">{c.race ?? "—"} · {c.charClass ?? "—"} · Ур.{c.level} · {c.xp} XP · {c.guildRank?.name ?? "Без ранга"}</p>
               </div>
             </div>
             {editing?.id === c.id ? (
               <div className="space-y-2 pt-2 border-t border-parchment-dark/20">
                 <div className="grid grid-cols-2 gap-2">
-                  <div><Label className="parchment-heading text-xs">Опыт</Label><Input type="number" value={editing.xp} onChange={e=>setEditing({...editing,xp:e.target.value})} className="bg-parchment/60 border-parchment-dark/40"/></div>
-                  <div><Label className="parchment-heading text-xs">Уровень</Label><Input type="number" value={editing.level} onChange={e=>setEditing({...editing,level:e.target.value})} className="bg-parchment/60 border-parchment-dark/40"/></div>
+                  <div><Label className="parchment-heading text-sm">Опыт</Label><Input type="number" value={editing.xp} onChange={e=>setEditing({...editing,xp:e.target.value})} className="bg-parchment/60 border-parchment-dark/40"/></div>
+                  <div><Label className="parchment-heading text-sm">Уровень</Label><Input type="number" value={editing.level} onChange={e=>setEditing({...editing,level:e.target.value})} className="bg-parchment/60 border-parchment-dark/40"/></div>
                 </div>
-                <div><Label className="parchment-heading text-xs">Ранг</Label>
+                <div><Label className="parchment-heading text-sm">Ранг</Label>
                   <Select value={editing.guildRankId ?? ""} onValueChange={v=>setEditing({...editing,guildRankId:v})}>
                     <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue placeholder="Ранг..."/></SelectTrigger>
                     <SelectContent className="parchment">{(ranks ?? []).map(r=><SelectItem key={r.id} value={r.id}>{r.icon} {r.name}</SelectItem>)}</SelectContent>
@@ -1165,7 +1165,7 @@ function CharactersEditor() {
                 {/* Is Adventurer toggle */}
                 <label className="flex items-center gap-2 cursor-pointer pt-1">
                   <input type="checkbox" checked={editing.isAdventurer !== false} onChange={e=>setEditing({...editing,isAdventurer:e.target.checked})} className="w-5 h-5 rounded accent-wine" />
-                  <Label className="parchment-heading text-xs">Авантюрист (показывается в «Братья по оружию»)</Label>
+                  <Label className="parchment-heading text-sm">Авантюрист (показывается в «Братья по оружию»)</Label>
                 </label>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={()=>update.mutate(editing)} disabled={update.isPending} className="bg-primary text-primary-foreground btn-rune">Сохранить</Button>
@@ -1178,7 +1178,7 @@ function CharactersEditor() {
 
             {/* Achievements */}
             <div className="pt-2 border-t border-parchment-dark/20">
-              <p className="parchment-heading text-xs uppercase tracking-wider mb-1.5">Достижения ({c.achievements?.length ?? 0})</p>
+              <p className="parchment-heading text-sm uppercase tracking-wider mb-1.5">Достижения ({c.achievements?.length ?? 0})</p>
               <div className="flex flex-wrap gap-1.5">
                 {(achs ?? []).map((a)=>{
                   const has = c.achievements?.some((ca:any)=>ca.achievementId===a.id);
@@ -1287,7 +1287,7 @@ function CharacterInventoryDialog({ character, onClose }: { character: any; onCl
 
         {/* Current inventory */}
         <div className="space-y-2">
-          <p className="parchment-heading text-xs uppercase tracking-wider">Текущие предметы ({itemList.length})</p>
+          <p className="parchment-heading text-sm uppercase tracking-wider">Текущие предметы ({itemList.length})</p>
           {isLoading ? (
             <p className="parchment-muted italic text-sm">Читаем опись...</p>
           ) : itemList.length === 0 ? (
@@ -1304,7 +1304,7 @@ function CharacterInventoryDialog({ character, onClose }: { character: any; onCl
                         <span className="font-[family-name:var(--font-cinzel)] parchment-heading text-sm truncate">{lab.name ?? "—"}</span>
                         {lab.rarity && <RarityBadge rarity={lab.rarity} />}
                       </div>
-                      {it.note && <p className="text-xs italic parchment-muted/80 truncate">“{it.note}”</p>}
+                      {it.note && <p className="text-sm italic parchment-muted/80 truncate">“{it.note}”</p>}
                     </div>
                     <Button
                       size="sm"
@@ -1324,9 +1324,9 @@ function CharacterInventoryDialog({ character, onClose }: { character: any; onCl
 
         {/* Grant a new item */}
         <div className="space-y-2 pt-3 border-t border-parchment-dark/30">
-          <p className="parchment-heading text-xs uppercase tracking-wider">Выдать новый предмет</p>
+          <p className="parchment-heading text-sm uppercase tracking-wider">Выдать новый предмет</p>
           <div>
-            <Label className="parchment-heading text-xs">Тип записи</Label>
+            <Label className="parchment-heading text-sm">Тип записи</Label>
             <Select value={kindFilter} onValueChange={(v) => { setKindFilter(v); setSelectedLabId(""); }}>
               <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 mt-1"><SelectValue /></SelectTrigger>
               <SelectContent className="parchment">
@@ -1340,7 +1340,7 @@ function CharacterInventoryDialog({ character, onClose }: { character: any; onCl
             </Select>
           </div>
           <div>
-            <Label className="parchment-heading text-xs">Запись из Лаборатории Алого</Label>
+            <Label className="parchment-heading text-sm">Запись из Лаборатории Алого</Label>
             <Select value={selectedLabId} onValueChange={setSelectedLabId}>
               <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 mt-1"><SelectValue placeholder="Выбери запись..." /></SelectTrigger>
               <SelectContent className="parchment max-h-60">
@@ -1354,7 +1354,7 @@ function CharacterInventoryDialog({ character, onClose }: { character: any; onCl
             </Select>
           </div>
           <div>
-            <Label className="parchment-heading text-xs">Заметка (необязательно)</Label>
+            <Label className="parchment-heading text-sm">Заметка (необязательно)</Label>
             <Input
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -1436,7 +1436,7 @@ function LabEditor() {
           <div key={k} className="space-y-2">
             <div className="flex items-center gap-2 pt-2">
               <h4 className="font-[family-name:var(--font-cinzel)] text-sm text-gold/90 tracking-wide">{LAB_KIND_LABEL[k]}</h4>
-              <Badge variant="outline" className="border-gold/30 text-gold/70 text-[10px]">{items.length}</Badge>
+              <Badge variant="outline" className="border-gold/30 text-gold/70 text-xs">{items.length}</Badge>
             </div>
             <div className="grid md:grid-cols-2 gap-3">
               {items.map((e) => (
@@ -1447,14 +1447,14 @@ function LabEditor() {
                       <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading truncate">{e.name}</h4>
                       {e.rarity && <RarityBadge rarity={e.rarity} />}
                     </div>
-                    {e.subtitle && <p className="parchment-heading text-xs uppercase tracking-wider">{e.subtitle}</p>}
-                    {e.kind === "SUBRACE" && e.raceParent && <p className="text-xs parchment-muted">⊙ {e.raceParent}</p>}
+                    {e.subtitle && <p className="parchment-heading text-sm uppercase tracking-wider">{e.subtitle}</p>}
+                    {e.kind === "SUBRACE" && e.raceParent && <p className="text-sm parchment-muted">⊙ {e.raceParent}</p>}
                     {e.kind === "SPELL" && (e.spellLevel || e.school) && (
-                      <p className="text-xs parchment-muted">
+                      <p className="text-sm parchment-muted">
                         {[e.spellLevel && (e.spellLevel === "Заговор" ? "Заговор" : `${e.spellLevel} круг`), e.school].filter(Boolean).join(" · ")}
                       </p>
                     )}
-                    {e.kind === "ITEM" && e.itemType && <p className="text-xs parchment-muted">{e.itemType}</p>}
+                    {e.kind === "ITEM" && e.itemType && <p className="text-sm parchment-muted">{e.itemType}</p>}
                     <p className="parchment-muted text-sm line-clamp-2 mt-1">{e.description}</p>
                   </div>
                   <div className="flex gap-1 shrink-0">
@@ -1720,32 +1720,32 @@ function UsersEditor() {
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading truncate">{u.name}</h4>
-                <p className="parchment-muted text-xs truncate">{u.email}</p>
+                <p className="parchment-muted text-sm truncate">{u.email}</p>
               </div>
               <Badge variant="outline" className={u.role === "ADMIN" ? "border-gold/40 text-gold" : "border-wine/30 text-wine"}>
                 {u.role === "ADMIN" ? "✦ Божество" : "⚔ Авантюрист"}
               </Badge>
             </div>
             {u.character && (
-              <p className="text-xs parchment-muted">Герой: {u.character.name} · Ур.{u.character.level} · {u.character.xp} XP</p>
+              <p className="text-sm parchment-muted">Герой: {u.character.name} · Ур.{u.character.level} · {u.character.xp} XP</p>
             )}
             <div className="flex flex-wrap gap-2 pt-2 border-t border-parchment-dark/20">
               <Button size="sm" variant="outline" onClick={() => {
                 const newRole = u.role === "ADMIN" ? "PLAYER" : "ADMIN";
                 updateMut.mutate({ id: u.id, role: newRole });
-              }} className="btn-parchment h-8 px-3 text-xs">
+              }} className="btn-parchment h-8 px-3 text-sm">
                 Сделать {u.role === "ADMIN" ? "Авантюристом" : "Божеством"}
               </Button>
               <Button size="sm" variant="outline" onClick={() => {
                 const pw = prompt(`Новый пароль для ${u.name} (мин. 6 символов):`);
                 if (pw && pw.length >= 6) updateMut.mutate({ id: u.id, password: pw });
                 else if (pw) toast({ title: "Слишком короткий", variant: "destructive" });
-              }} className="btn-parchment h-8 px-3 text-xs">
+              }} className="btn-parchment h-8 px-3 text-sm">
                 <KeyRound className="w-3.5 h-3.5 mr-1" /> Сбросить пароль
               </Button>
               <Button size="sm" variant="ghost" onClick={() => {
                 if (confirm(`Удалить ${u.name}? Все его данные будут стёрты.`)) delMut.mutate(u.id);
-              }} className="text-destructive hover:bg-destructive/10 h-8 px-3 text-xs">
+              }} className="text-destructive hover:bg-destructive/10 h-8 px-3 text-sm">
                 <Trash2 className="w-3.5 h-3.5 mr-1" /> Удалить
               </Button>
             </div>
@@ -1854,7 +1854,7 @@ function GroupsEditor() {
               </div>
             </div>
             <div className="flex gap-1">
-              <Button size="sm" variant="ghost" onClick={() => setExpanded(expanded === g.id ? null : g.id)} className="btn-parchment h-8 px-3 text-xs">{expanded === g.id ? "Свернуть" : "Открыть"}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setExpanded(expanded === g.id ? null : g.id)} className="btn-parchment h-8 px-3 text-sm">{expanded === g.id ? "Свернуть" : "Открыть"}</Button>
               <Button size="icon" variant="ghost" onClick={() => { if (confirm("Распустить группу?")) delMut.mutate(g.id); }} className="text-destructive hover:bg-destructive/10 h-8 w-8"><Trash2 className="w-4 h-4" /></Button>
             </div>
           </div>
@@ -1865,7 +1865,7 @@ function GroupsEditor() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="parchment-heading text-sm">Игроки ({g.members?.length || 0})</p>
-                  <Button size="sm" variant="ghost" onClick={() => setAddMemberGroup(g.id)} className="btn-parchment h-7 px-2 text-xs"><Plus className="w-3 h-3 mr-1" /> Добавить</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setAddMemberGroup(g.id)} className="btn-parchment h-7 px-2 text-sm"><Plus className="w-3 h-3 mr-1" /> Добавить</Button>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-2">
                   {(g.members ?? []).map((m: any) => (
@@ -1875,12 +1875,12 @@ function GroupsEditor() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading truncate">{m.character?.name}</p>
-                        <p className="text-xs parchment-muted">{m.role || "Член"} · {m.character?.race} {m.character?.charClass}</p>
+                        <p className="text-sm parchment-muted">{m.role || "Член"} · {m.character?.race} {m.character?.charClass}</p>
                       </div>
                       <Button size="icon" variant="ghost" onClick={() => removeMemberMut.mutate({ groupId: g.id, characterId: m.characterId })} className="text-destructive hover:bg-destructive/10 h-6 w-6 shrink-0"><X className="w-3 h-3" /></Button>
                     </div>
                   ))}
-                  {(g.members ?? []).length === 0 && <p className="parchment-muted text-xs italic">Игроков пока нет.</p>}
+                  {(g.members ?? []).length === 0 && <p className="parchment-muted text-sm italic">Игроков пока нет.</p>}
                 </div>
                 {addMemberGroup === g.id && (
                   <div className="mt-2 flex gap-2 items-end">
@@ -1888,8 +1888,8 @@ function GroupsEditor() {
                       {(characters ?? []).filter((c) => !(g.members ?? []).some((m: any) => m.characterId === c.id)).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                     <input id={`r-${g.id}`} placeholder="роль" className="px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm w-28" />
-                    <Button size="sm" onClick={() => { const sel = document.getElementById(`m-${g.id}`) as HTMLSelectElement; const role = (document.getElementById(`r-${g.id}`) as HTMLInputElement).value; addMemberMut.mutate({ groupId: g.id, characterId: sel.value, role: role || undefined }); }} className="btn-wine-solid h-8 px-3 text-xs">Добавить</Button>
-                    <Button size="sm" variant="ghost" onClick={() => setAddMemberGroup(null)} className="btn-parchment h-8 px-3 text-xs">Отмена</Button>
+                    <Button size="sm" onClick={() => { const sel = document.getElementById(`m-${g.id}`) as HTMLSelectElement; const role = (document.getElementById(`r-${g.id}`) as HTMLInputElement).value; addMemberMut.mutate({ groupId: g.id, characterId: sel.value, role: role || undefined }); }} className="btn-wine-solid h-8 px-3 text-sm">Добавить</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setAddMemberGroup(null)} className="btn-parchment h-8 px-3 text-sm">Отмена</Button>
                   </div>
                 )}
               </div>
@@ -1898,7 +1898,7 @@ function GroupsEditor() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="parchment-heading text-sm">Встреченные НПС ({g.npcs?.length || 0})</p>
-                  <Button size="sm" variant="ghost" onClick={() => setAddNpcGroup(g.id)} className="btn-parchment h-7 px-2 text-xs"><Plus className="w-3 h-3 mr-1" /> Приписать</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setAddNpcGroup(g.id)} className="btn-parchment h-7 px-2 text-sm"><Plus className="w-3 h-3 mr-1" /> Приписать</Button>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-2">
                   {(g.npcs ?? []).map((n: any) => (
@@ -1908,12 +1908,12 @@ function GroupsEditor() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading truncate">{n.personality?.name}</p>
-                        <p className="text-xs parchment-muted">{n.role || "Контакт"}{n.notes ? ` · ${n.notes}` : ""}</p>
+                        <p className="text-sm parchment-muted">{n.role || "Контакт"}{n.notes ? ` · ${n.notes}` : ""}</p>
                       </div>
                       <Button size="icon" variant="ghost" onClick={() => removeNpcMut.mutate({ groupId: g.id, personalityId: n.personalityId })} className="text-destructive hover:bg-destructive/10 h-6 w-6 shrink-0"><X className="w-3 h-3" /></Button>
                     </div>
                   ))}
-                  {(g.npcs ?? []).length === 0 && <p className="parchment-muted text-xs italic">НПС пока не приписаны.</p>}
+                  {(g.npcs ?? []).length === 0 && <p className="parchment-muted text-sm italic">НПС пока не приписаны.</p>}
                 </div>
                 {addNpcGroup === g.id && (
                   <div className="mt-2 space-y-2">
@@ -1928,8 +1928,8 @@ function GroupsEditor() {
                     <input id={`nrole-${g.id}`} placeholder="роль (Союзник/Контакт/Враг...)" className="w-full px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm" />
                     <input id={`nnotes-${g.id}`} placeholder="заметки" className="w-full px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm" />
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => { const npc = (document.getElementById(`npc-${g.id}`) as HTMLSelectElement).value; const role = (document.getElementById(`nrole-${g.id}`) as HTMLInputElement).value; const notes = (document.getElementById(`nnotes-${g.id}`) as HTMLInputElement).value; addNpcMut.mutate({ groupId: g.id, personalityId: npc, role: role || undefined, notes: notes || undefined }); }} className="btn-wine-solid h-8 px-3 text-xs">Приписать</Button>
-                      <Button size="sm" variant="ghost" onClick={() => setAddNpcGroup(null)} className="btn-parchment h-8 px-3 text-xs">Отмена</Button>
+                      <Button size="sm" onClick={() => { const npc = (document.getElementById(`npc-${g.id}`) as HTMLSelectElement).value; const role = (document.getElementById(`nrole-${g.id}`) as HTMLInputElement).value; const notes = (document.getElementById(`nnotes-${g.id}`) as HTMLInputElement).value; addNpcMut.mutate({ groupId: g.id, personalityId: npc, role: role || undefined, notes: notes || undefined }); }} className="btn-wine-solid h-8 px-3 text-sm">Приписать</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setAddNpcGroup(null)} className="btn-parchment h-8 px-3 text-sm">Отмена</Button>
                     </div>
                   </div>
                 )}
@@ -2028,17 +2028,17 @@ function ContentEditor() {
                 <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading text-base">{ck.label}</h4>
                 {isImageOnly ? (
                   <>
-                    <p className="text-xs parchment-muted">Загрузи изображение карты (JPG/PNG, до ~5MB). Рекомендуемый размер: 2048×1536 или больше. Карта будет отображаться в Зале и Базе Знаний → Страны с возможностью zoom/pan.</p>
+                    <p className="text-sm parchment-muted">Загрузи изображение карты (JPG/PNG, до ~5MB). Рекомендуемый размер: 2048×1536 или больше. Карта будет отображаться в Зале и Базе Знаний → Страны с возможностью zoom/pan.</p>
                     <ImageUpload label="Изображение карты" value={image} onChange={(v) => setDrafts({ ...drafts, [ck.key]: { title: title, body: body, image: v } })} aspect="aspect-[4/3]" />
                   </>
                 ) : (
                   <>
                     <div>
-                      <Label className="parchment-heading text-xs">Заголовок</Label>
+                      <Label className="parchment-heading text-sm">Заголовок</Label>
                       <Input value={title} onChange={(e) => setDrafts({ ...drafts, [ck.key]: { title: e.target.value, body, image } })} className="bg-parchment/60 border-parchment-dark/40 h-10" />
                     </div>
                     <div>
-                      <Label className="parchment-heading text-xs">Текст</Label>
+                      <Label className="parchment-heading text-sm">Текст</Label>
                       <Textarea value={body} onChange={(e) => setDrafts({ ...drafts, [ck.key]: { title, body: e.target.value, image } })} rows={5} className="bg-parchment/60 border-parchment-dark/40" />
                     </div>
                     <ImageUpload label="Изображение (опц.)" value={image} onChange={(v) => setDrafts({ ...drafts, [ck.key]: { title: title, body: body, image: v } })} aspect="aspect-video" />

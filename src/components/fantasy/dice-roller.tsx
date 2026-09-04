@@ -155,11 +155,11 @@ export function DiceRoller() {
       {/* Floating action button — bottom right, above footer */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gradient-to-b from-[oklch(0.55_0.17_30)] to-[oklch(0.38_0.15_25)] border-2 border-gold/50 text-gold shadow-lg hover:scale-105 hover:border-gold transition-all flex items-center justify-center group"
+        className="fixed bottom-6 right-6 z-40 w-16 h-16 rounded-full bg-gradient-to-b from-[oklch(0.55_0.17_30)] to-[oklch(0.38_0.15_25)] border-2 border-gold/50 text-gold shadow-lg hover:scale-105 hover:border-gold transition-all flex items-center justify-center group"
         aria-label="Открыть кости судьбы (клавиша D)"
         title="Кости судьбы (D)"
       >
-        <Dices className="w-7 h-7 group-hover:rotate-12 transition-transform" />
+        <Dices className="w-8 h-8 group-hover:rotate-12 transition-transform" />
         <span className="absolute -top-1 -right-1 text-xs bg-gold text-ink rounded-full w-5 h-5 flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 transition-opacity">D</span>
       </button>
 
@@ -173,7 +173,7 @@ export function DiceRoller() {
           {/* Header — visible title is decorative (h2); semantic heading is DialogTitle above */}
           <div className="flex items-center justify-between mb-3">
             <div className="font-[family-name:var(--font-cinzel)] text-xl text-wine tracking-wide flex items-center gap-2">
-              <Dices className="w-5 h-5" /> Кости судьбы
+              <Dices className="w-6 h-6" /> Кости судьбы
             </div>
             <button
               onClick={() => setOpen(false)}

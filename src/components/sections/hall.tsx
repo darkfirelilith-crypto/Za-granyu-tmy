@@ -139,11 +139,11 @@ function Carousel({ cards, onSelect }: { cards: HallCard[]; onSelect: (c: HallCa
 
   return (
     <div className="relative" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-      <button onClick={() => scrollByFn(-1)} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/80 border border-gold/30 text-gold hover:bg-gold/10 flex items-center justify-center" aria-label="Назад">
-        <ChevronLeft className="w-5 h-5" />
+      <button onClick={() => scrollByFn(-1)} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-background/80 border border-gold/30 text-gold hover:bg-gold/10 flex items-center justify-center" aria-label="Назад">
+        <ChevronLeft className="w-6 h-6" />
       </button>
-      <button onClick={() => scrollByFn(1)} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-background/80 border border-gold/30 text-gold hover:bg-gold/10 flex items-center justify-center" aria-label="Вперёд">
-        <ChevronRight className="w-5 h-5" />
+      <button onClick={() => scrollByFn(1)} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-background/80 border border-gold/30 text-gold hover:bg-gold/10 flex items-center justify-center" aria-label="Вперёд">
+        <ChevronRight className="w-6 h-6" />
       </button>
 
       <div ref={scrollRef} className={`flex gap-4 overflow-x-auto scroll-smooth pb-2 fantasy-scroll ${cards.length <= 3 ? "justify-center" : ""}`} style={{ scrollbarWidth: "thin" }}>
@@ -155,7 +155,7 @@ function Carousel({ cards, onSelect }: { cards: HallCard[]; onSelect: (c: HallCa
               ) : (
                 <span className="text-6xl">{c.emoji}</span>
               )}
-              <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-background/70 border border-gold/30 text-gold/80 text-[10px] font-[family-name:var(--font-cinzel)] uppercase tracking-wider backdrop-blur-sm">
+              <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-background/70 border border-gold/30 text-gold/80 text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider backdrop-blur-sm">
                 {c.category}
               </span>
             </div>
@@ -165,7 +165,7 @@ function Carousel({ cards, onSelect }: { cards: HallCard[]; onSelect: (c: HallCa
           </button>
         ))}
       </div>
-      <p className="text-center text-xs parchment-muted/70 italic mt-3">
+      <p className="text-center text-sm parchment-muted/70 italic mt-3">
         {paused ? "Прокрутка на паузе — наведи, чтобы листать вручную" : "✦ Свитки сменяются сами · наведи курсор, чтобы остановить · кликни, чтобы открыть ✦"}
       </p>
     </div>
@@ -188,7 +188,7 @@ function CardDetail({ card }: { card: HallCard }) {
       {/* Header */}
       <div className="flex items-center gap-2 flex-wrap">
         <h2 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{card.name}</h2>
-        <Badge variant="outline" className="border-gold/30 text-gold/70 text-xs">{card.category}</Badge>
+        <Badge variant="outline" className="border-gold/30 text-gold/70 text-sm">{card.category}</Badge>
       </div>
 
       {/* Type-specific fields */}
@@ -220,10 +220,10 @@ function CardDetail({ card }: { card: HallCard }) {
         <>
           {r.title && <p className="parchment-heading text-sm uppercase tracking-wider">{r.title}</p>}
           <div className="flex flex-wrap gap-2">
-            <Badge variant="outline" className="border-gold/30 text-gold/70 text-xs">{r.domain}</Badge>
-            {r.pantheon && <Badge variant="outline" className="border-gold/30 text-gold/70 text-xs">{r.pantheon}</Badge>}
+            <Badge variant="outline" className="border-gold/30 text-gold/70 text-sm">{r.domain}</Badge>
+            {r.pantheon && <Badge variant="outline" className="border-gold/30 text-gold/70 text-sm">{r.pantheon}</Badge>}
             {r.alignment && (
-              <span className={`text-xs px-2 py-0.5 rounded ${r.alignment === "good" ? "text-green-700 bg-green-100/40" : r.alignment === "evil" ? "text-red-800 bg-red-100/40" : "text-zinc-600 bg-zinc-200/40"}`}>
+              <span className={`text-sm px-2 py-0.5 rounded ${r.alignment === "good" ? "text-green-700 bg-green-100/40" : r.alignment === "evil" ? "text-red-800 bg-red-100/40" : "text-zinc-600 bg-zinc-200/40"}`}>
                 {r.alignment === "good" ? "☀ Добро" : r.alignment === "evil" ? "🌑 Зло" : "⚖ Нейтралитет"}
               </span>
             )}
@@ -243,13 +243,13 @@ function CardDetail({ card }: { card: HallCard }) {
         <>
           {r.unlocked ? (
             <>
-              <Badge variant="outline" className="border-gold/30 text-gold/70 text-xs">📖 Открыто</Badge>
+              <Badge variant="outline" className="border-gold/30 text-gold/70 text-sm">📖 Открыто</Badge>
               {r.loreDate && <p className="parchment-muted text-sm italic">{r.loreDate}</p>}
               <FormattedText className="lore-prose text-base leading-relaxed">{r.realContent}</FormattedText>
             </>
           ) : (
             <>
-              <Badge variant="outline" className="border-foreground/20 text-foreground/60 text-xs">🔒 Запечатано</Badge>
+              <Badge variant="outline" className="border-foreground/20 text-foreground/60 text-sm">🔒 Запечатано</Badge>
               <p className="cipher-strong font-mono text-base leading-relaxed">{r.encodedContent || "◈ ◈ ◈"}</p>
               {r.unlockHint && (
                 <p className="text-sm text-gold/60 italic font-[family-name:var(--font-garamond)]">🔑 {r.unlockHint}</p>

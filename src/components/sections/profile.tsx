@@ -358,7 +358,7 @@ export function ProfileView() {
                   <Field label="Раса" editing={editing} value={current.race} onChange={(v) => setForm({ ...current, race: v })} display={char.race} />
                   <Field label="Класс" editing={editing} value={current.charClass} onChange={(v) => setForm({ ...current, charClass: v })} display={char.charClass} />
                   <div>
-                    <Label className="parchment-heading text-xs uppercase tracking-wider">Мировоззрение</Label>
+                    <Label className="parchment-heading text-sm uppercase tracking-wider">Мировоззрение</Label>
                     {editing ? (
                       <Input value={current.alignment ?? ""} onChange={(e) => setForm({ ...current, alignment: e.target.value })} placeholder="Законопослушный Добрый" className="bg-parchment/60 border-parchment-dark/40 h-9" />
                     ) : (
@@ -376,7 +376,7 @@ export function ProfileView() {
                     <span className="parchment-muted">{char.xp} XP {nextRank && `→ ${nextRank.minXp} XP`}</span>
                   </div>
                   <Progress value={rankProgress} className="h-2 bg-parchment-dark/30" />
-                  {nextRank && <p className="text-xs parchment-muted italic">До ранга «{nextRank.name}» осталось {nextRank.minXp - char.xp} XP</p>}
+                  {nextRank && <p className="text-sm parchment-muted italic">До ранга «{nextRank.name}» осталось {nextRank.minXp - char.xp} XP</p>}
                 </div>
               </div>
             </div>
@@ -399,22 +399,22 @@ export function ProfileView() {
             <ParchmentCard className="text-center space-y-1">
               <Award className="w-7 h-7 text-gold mx-auto" />
               <p className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{achievements.length}</p>
-              <p className="parchment-muted text-xs sm:text-sm">Достижений</p>
+              <p className="parchment-muted text-sm sm:text-sm">Достижений</p>
             </ParchmentCard>
             <ParchmentCard className="text-center space-y-1">
               <Sword className="w-7 h-7 text-wine mx-auto" />
               <p className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{quests.filter((q: any) => q.status === "ASSIGNED").length}</p>
-              <p className="parchment-muted text-xs sm:text-sm">Активных заданий</p>
+              <p className="parchment-muted text-sm sm:text-sm">Активных заданий</p>
             </ParchmentCard>
             <ParchmentCard className="text-center space-y-1">
               <Trophy className="w-7 h-7 text-gold mx-auto" />
               <p className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{quests.filter((q: any) => q.status === "COMPLETED").length}</p>
-              <p className="parchment-muted text-xs sm:text-sm">Завершено</p>
+              <p className="parchment-muted text-sm sm:text-sm">Завершено</p>
             </ParchmentCard>
             <ParchmentCard className="text-center space-y-1">
               <BookOpen className="w-7 h-7 text-gold mx-auto" />
               <p className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{notes.length}</p>
-              <p className="parchment-muted text-xs sm:text-sm">Заметок</p>
+              <p className="parchment-muted text-sm sm:text-sm">Заметок</p>
             </ParchmentCard>
           </div>
 
@@ -438,17 +438,17 @@ export function ProfileView() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline justify-between gap-2 flex-wrap">
                           <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading">{ev.title}</p>
-                          <span className="text-xs parchment-muted/70 shrink-0">{fmtDate(ev.at)}</span>
+                          <span className="text-sm parchment-muted/70 shrink-0">{fmtDate(ev.at)}</span>
                         </div>
                         {ev.detail && (
-                          <p className="text-xs parchment-muted mt-0.5 line-clamp-2">{ev.detail}</p>
+                          <p className="text-sm parchment-muted mt-0.5 line-clamp-2">{ev.detail}</p>
                         )}
                       </div>
                     </div>
                   ))}
                 </div>
                 {timeline.length > 8 && (
-                  <p className="text-center text-xs parchment-muted italic py-2 border-t border-parchment-dark/15">
+                  <p className="text-center text-sm parchment-muted italic py-2 border-t border-parchment-dark/15">
                     … и ещё {timeline.length - 8} деяний в свитке героя
                   </p>
                 )}
@@ -476,7 +476,7 @@ export function ProfileView() {
                         <RarityBadge rarity={a.achievement.rarity} />
                       </div>
                       <p className="parchment-muted text-sm">{a.achievement.description}</p>
-                      <p className="text-xs parchment-muted/70 mt-1 italic">Даровано: {new Date(a.grantedAt).toLocaleDateString("ru-RU")}</p>
+                      <p className="text-sm parchment-muted/70 mt-1 italic">Даровано: {new Date(a.grantedAt).toLocaleDateString("ru-RU")}</p>
                     </div>
                   </ParchmentCard>
                 ))}
@@ -560,7 +560,7 @@ export function ProfileView() {
 function Field({ label, editing, value, onChange, display }: { label: string; editing: boolean; value: any; onChange: (v: string) => void; display: any }) {
   return (
     <div>
-      <Label className="parchment-heading text-xs uppercase tracking-wider">{label}</Label>
+      <Label className="parchment-heading text-sm uppercase tracking-wider">{label}</Label>
       {editing ? (
         <Input value={value ?? ""} onChange={(e) => onChange(e.target.value)} className="bg-parchment/60 border-parchment-dark/40 h-9" />
       ) : (
@@ -643,7 +643,7 @@ function NotesSection({ characterId, notes }: { characterId: string; notes: any[
                   <div className="flex-1 min-w-0">
                     {n.title && <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{n.title}</h4>}
                     <p className="parchment-text text-sm whitespace-pre-line">{n.content}</p>
-                    <p className="text-xs parchment-muted/60 italic mt-1">{new Date(n.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}</p>
+                    <p className="text-sm parchment-muted/60 italic mt-1">{new Date(n.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}</p>
                   </div>
                   <div className="flex gap-1 shrink-0">
                     <Button size="icon" variant="ghost" onClick={() => setEditId(n.id)} className="text-wine hover:bg-wine/10 h-7 w-7"><Pencil className="w-3.5 h-3.5" /></Button>
@@ -762,9 +762,9 @@ function RelationsSection({ characterId }: { characterId: string }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <h5 className="font-[family-name:var(--font-cinzel)] parchment-heading truncate">{r.targetPersonality?.name}</h5>
-                    <Badge variant="outline" className="border-wine/30 text-wine text-xs shrink-0">{r.relationLabel}</Badge>
+                    <Badge variant="outline" className="border-wine/30 text-wine text-sm shrink-0">{r.relationLabel}</Badge>
                   </div>
-                  {r.targetPersonality?.title && <p className="parchment-heading text-xs">{r.targetPersonality.title}</p>}
+                  {r.targetPersonality?.title && <p className="parchment-heading text-sm">{r.targetPersonality.title}</p>}
                   {r.description && <p className="parchment-muted text-sm mt-1">{r.description}</p>}
                 </div>
                 <Button size="icon" variant="ghost" onClick={() => delMut.mutate(r.id)} className="text-destructive hover:bg-destructive/10 h-7 w-7 shrink-0"><Trash2 className="w-3.5 h-3.5" /></Button>
@@ -797,7 +797,7 @@ function RelationsSection({ characterId }: { characterId: string }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <h5 className="font-[family-name:var(--font-cinzel)] parchment-heading truncate">{r.targetCharacter?.name}</h5>
-                    <Badge variant="outline" className="border-wine/30 text-wine text-xs shrink-0">{r.relationLabel}</Badge>
+                    <Badge variant="outline" className="border-wine/30 text-wine text-sm shrink-0">{r.relationLabel}</Badge>
                   </div>
                   {r.description && <p className="parchment-muted text-sm mt-1">{r.description}</p>}
                 </div>
@@ -897,12 +897,12 @@ function ArsenalSection({ characterId }: { characterId: string }) {
                       {lab.rarity && <RarityBadge rarity={lab.rarity} />}
                     </div>
                     {lab.itemType && (
-                      <p className="parchment-heading text-xs uppercase tracking-wider mt-0.5 text-wine/70">{lab.itemType}</p>
+                      <p className="parchment-heading text-sm uppercase tracking-wider mt-0.5 text-wine/70">{lab.itemType}</p>
                     )}
                     {lab.description && (
                       <p className="parchment-muted text-sm line-clamp-2 mt-1">{lab.description}</p>
                     )}
-                    <p className="text-xs text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
+                    <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
                   </div>
                 </button>
               </ParchmentCard>
@@ -955,18 +955,18 @@ function ScrollsSection({ characterId }: { characterId: string }) {
                     <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{lab.name ?? "Безымянный свиток"}</h4>
                     <div className="flex items-center gap-1.5 flex-wrap mt-1">
                       {lab.spellLevel && (
-                        <Badge variant="outline" className="border-gold/30 text-gold/80 text-[10px]">
+                        <Badge variant="outline" className="border-gold/30 text-gold/80 text-xs">
                           {lab.spellLevel === "Заговор" ? "Заговор" : `${lab.spellLevel} круг`}
                         </Badge>
                       )}
                       {lab.school && (
-                        <Badge variant="outline" className="border-wine/30 text-wine/80 text-[10px]">{lab.school}</Badge>
+                        <Badge variant="outline" className="border-wine/30 text-wine/80 text-xs">{lab.school}</Badge>
                       )}
                     </div>
                     {lab.description && (
                       <p className="parchment-muted text-sm line-clamp-2 mt-1">{lab.description}</p>
                     )}
-                    <p className="text-xs text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
+                    <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
                   </div>
                 </button>
               </ParchmentCard>

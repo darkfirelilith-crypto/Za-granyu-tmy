@@ -85,7 +85,7 @@ export function LabView() {
                 <TabsTrigger key={k} value={k} className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold gap-1 shrink-0 px-2.5 py-1.5">
                   <Icon className="w-4 h-4 shrink-0" />
                   <span className="hidden md:inline whitespace-nowrap">{M.label}</span>
-                  <Badge variant="outline" className="ml-0.5 text-[10px] px-1 py-0 border-gold/30 text-gold/60">
+                  <Badge variant="outline" className="ml-0.5 text-xs px-1 py-0 border-gold/30 text-gold/60">
                     {counts[k]}
                   </Badge>
                 </TabsTrigger>
@@ -144,7 +144,7 @@ export function LabView() {
 export function LabDetail({ entry }: { entry: LabEntry }) {
   const M = KIND_META[entry.kind as LabKind];
   const kindBadge = (
-    <Badge variant="outline" className="border-wine/30 text-wine/70 text-[10px]">{M.label}</Badge>
+    <Badge variant="outline" className="border-wine/30 text-wine/70 text-xs">{M.label}</Badge>
   );
   const header = (
     <div className="flex items-start gap-3">
@@ -158,7 +158,7 @@ export function LabDetail({ entry }: { entry: LabEntry }) {
           <h2 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{entry.name}</h2>
           {entry.rarity && <RarityBadge rarity={entry.rarity} />}
         </div>
-        {entry.subtitle && <p className="parchment-heading text-xs uppercase tracking-wider mt-1">{entry.subtitle}</p>}
+        {entry.subtitle && <p className="parchment-heading text-sm uppercase tracking-wider mt-1">{entry.subtitle}</p>}
         <div className="mt-1 flex items-center gap-2 flex-wrap">{kindBadge}</div>
       </div>
     </div>
@@ -336,7 +336,7 @@ function LabGrid({ items, kind, onSelect }: { items: LabEntry[]; kind: LabKind; 
                   <div className="flex-1 min-w-0">
                     <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">{e.name}</h3>
                     {e.kind === "SUBRACE" && e.raceParent && (
-                      <p className="parchment-heading text-xs uppercase tracking-wider mt-0.5 text-wine/70">
+                      <p className="parchment-heading text-sm uppercase tracking-wider mt-0.5 text-wine/70">
                         ⊙ {e.raceParent}
                       </p>
                     )}
@@ -348,7 +348,7 @@ function LabGrid({ items, kind, onSelect }: { items: LabEntry[]; kind: LabKind; 
                   </div>
                 )}
                 <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{e.description}</p>
-                <p className="text-xs text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
+                <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
               </>
             )}
 
@@ -363,14 +363,14 @@ function LabGrid({ items, kind, onSelect }: { items: LabEntry[]; kind: LabKind; 
                   <div className="flex-1 min-w-0">
                     <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">{e.name}</h3>
                     {e.subtitle && (
-                      <p className="parchment-heading text-xs uppercase tracking-wider mt-0.5 text-wine/70">
+                      <p className="parchment-heading text-sm uppercase tracking-wider mt-0.5 text-wine/70">
                         {e.subtitle}
                       </p>
                     )}
                   </div>
                 </div>
                 <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{e.description}</p>
-                <p className="text-xs text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
+                <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
               </>
             )}
 
@@ -383,12 +383,12 @@ function LabGrid({ items, kind, onSelect }: { items: LabEntry[]; kind: LabKind; 
                     <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">{e.name}</h3>
                     <div className="flex items-center gap-1.5 flex-wrap mt-1">
                       {e.spellLevel && (
-                        <Badge variant="outline" className="border-gold/30 text-gold/80 text-[10px]">
+                        <Badge variant="outline" className="border-gold/30 text-gold/80 text-xs">
                           {e.spellLevel === "Заговор" ? "Заговор" : `${e.spellLevel} круг`}
                         </Badge>
                       )}
                       {e.school && (
-                        <Badge variant="outline" className="border-wine/30 text-wine/80 text-[10px]">
+                        <Badge variant="outline" className="border-wine/30 text-wine/80 text-xs">
                           {e.school}
                         </Badge>
                       )}
@@ -396,7 +396,7 @@ function LabGrid({ items, kind, onSelect }: { items: LabEntry[]; kind: LabKind; 
                   </div>
                 </div>
                 <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{e.description}</p>
-                <p className="text-xs text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
+                <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
               </>
             )}
 
@@ -415,7 +415,7 @@ function LabGrid({ items, kind, onSelect }: { items: LabEntry[]; kind: LabKind; 
                       {e.rarity && <RarityBadge rarity={e.rarity} />}
                     </div>
                     {e.itemType && (
-                      <p className="parchment-heading text-xs uppercase tracking-wider mt-0.5 text-wine/70">
+                      <p className="parchment-heading text-sm uppercase tracking-wider mt-0.5 text-wine/70">
                         {e.itemType}
                       </p>
                     )}
@@ -427,7 +427,7 @@ function LabGrid({ items, kind, onSelect }: { items: LabEntry[]; kind: LabKind; 
                   </div>
                 )}
                 <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{e.description}</p>
-                <p className="text-xs text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
+                <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
               </>
             )}
           </button>

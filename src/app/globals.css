@@ -149,7 +149,7 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-garamond), Georgia, serif;
-    font-size: 1.18rem;
+    font-size: 1.32rem;
     line-height: 1.75;
   }
   h1, h2, h3, h4, h5, h6 {
@@ -453,7 +453,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 1.05rem;
   background: transparent;
   color: var(--wine);
   border: 1px solid oklch(0.42 0.15 25 / 0.55);
@@ -472,7 +472,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 1.05rem;
   background: transparent;
   color: oklch(0.50 0.13 70);
   border: 1px solid oklch(0.65 0.13 75 / 0.6);
@@ -491,7 +491,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 1.05rem;
   background: linear-gradient(180deg, oklch(0.48 0.16 28), oklch(0.38 0.15 25));
   color: oklch(0.96 0.02 75);
   border: 1px solid oklch(0.30 0.12 25);
@@ -869,7 +869,7 @@
 .margin-note {
   font-family: var(--font-garamond);
   font-style: italic;
-  font-size: 0.95rem;
+  font-size: 1.08rem;
   color: oklch(0.40 0.05 40 / 0.7);
   padding: 0.5rem 1rem;
   border-left: 2px solid oklch(0.50 0.10 50 / 0.3);
@@ -886,7 +886,7 @@
   content: "❦";
   position: absolute;
   color: oklch(0.72 0.13 75 / 0.6);
-  font-size: 1rem;
+  font-size: 1.12rem;
   top: 0.5rem;
 }
 .corner-ornament::before { left: 0.5rem; }

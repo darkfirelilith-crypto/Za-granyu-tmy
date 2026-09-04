@@ -37,7 +37,7 @@ export function ScrollToTop() {
       aria-label="Наверх"
       title="Наверх"
       className={cn(
-        "fixed bottom-6 left-6 z-30 w-11 h-11 rounded-full",
+        "fixed bottom-6 left-6 z-30 w-12 h-12 rounded-full",
         "bg-parchment-dark/70 border border-gold/30 text-gold",
         "backdrop-blur-sm shadow-lg",
         "flex items-center justify-center",
@@ -47,7 +47,7 @@ export function ScrollToTop() {
         visible ? "opacity-100" : "opacity-0 pointer-events-none"
       )}
     >
-      <ChevronUp className="w-5 h-5" />
+      <ChevronUp className="w-6 h-6" />
     </button>
   );
 }
