@@ -249,7 +249,7 @@ function CardDetail({ card }: { card: HallCard }) {
             </>
           ) : (
             <>
-              <Badge variant="outline" className="border-foreground/20 text-foreground/40 text-xs">🔒 Запечатано</Badge>
+              <Badge variant="outline" className="border-foreground/20 text-foreground/60 text-xs">🔒 Запечатано</Badge>
               <p className="cipher-strong font-mono text-base leading-relaxed">{r.encodedContent || "◈ ◈ ◈"}</p>
               {r.unlockHint && (
                 <p className="text-sm text-gold/60 italic font-[family-name:var(--font-garamond)]">🔑 {r.unlockHint}</p>

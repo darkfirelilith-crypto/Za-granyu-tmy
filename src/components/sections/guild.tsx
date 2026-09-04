@@ -264,7 +264,7 @@ function MembersTab() {
       )}
 
       {chars.length === 0 && npcAdventurers.length === 0 && (
-        <div className="col-span-full text-center py-12 text-foreground/40 italic">
+        <div className="col-span-full text-center py-12 text-foreground/60 italic">
           Пока ни один герой не вписал своё имя в Книгу Гильдии.
         </div>
       )}
@@ -366,7 +366,7 @@ function QuestsTab() {
         );
       })}
       {quests.length === 0 && (
-        <div className="col-span-full text-center py-12 text-foreground/40 italic">
+        <div className="col-span-full text-center py-12 text-foreground/60 italic">
           Заданий пока нет. Божество ещё не изложило их.
         </div>
       )}

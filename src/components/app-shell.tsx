@@ -280,10 +280,10 @@ export function AppShell() {
             <div className="divider-flourish mb-2 text-sm">
               <span className="text-gold">❦</span>
             </div>
-            <p className="text-gold/60 text-xs font-[family-name:var(--font-cinzel)] tracking-[0.2em] uppercase">
+            <p className="text-gold/70 text-sm font-[family-name:var(--font-cinzel)] tracking-[0.2em] uppercase">
               За гранью тьмы · Сага D&D
             </p>
-            <p className="text-foreground/40 text-xs mt-1 font-[family-name:var(--font-garamond)] italic">
+            <p className="text-foreground/60 text-sm mt-1 font-[family-name:var(--font-garamond)] italic">
               «Что записано — не забыто. Что забыто — найдётся вновь.»
             </p>
           </div>

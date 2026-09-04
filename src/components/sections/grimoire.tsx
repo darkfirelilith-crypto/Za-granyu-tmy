@@ -53,7 +53,7 @@ export function GrimoireView() {
     },
   });
 
-  const entries = (data ?? []).sort((a, b) => a.order - b.order);
+  const entries = Array.isArray(data) ? [...data].sort((a, b) => a.order - b.order) : [];
   const unlockedCount = entries.filter((e) => e.unlocked).length;
 
   return (
@@ -96,7 +96,7 @@ export function GrimoireView() {
             />
           ))}
           {entries.length === 0 && (
-            <div className="text-center py-16 text-foreground/40 italic">
+            <div className="text-center py-16 text-foreground/60 italic">
               Страницы Гримуара пусты. Лишь тишина встречает читателя.
             </div>
           )}
@@ -216,7 +216,7 @@ function GrimoirePage({
                   </p>
                 </div>
               )}
-              <p className="text-center text-foreground/40 text-xs italic pt-2">
+              <p className="text-center text-foreground/60 text-xs italic pt-2">
                 ✦ Глава запечатана. Исполни условия, чтобы снять печать. ✦
               </p>
             </div>
