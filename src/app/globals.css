@@ -709,28 +709,12 @@
 }
 .paper-effect.paper-plain { background: transparent; }
 
-/* BLOOD — dark red blood splatter with drips from the top edge */
+/* BLOOD — uses real blood splatter PNG images as overlay */
 .paper-effect.paper-blood {
   background:
-    /* Drips hanging from the top — vertical teardrop shapes */
-    radial-gradient(ellipse 8px 30px at 8% 0%, oklch(0.35 0.22 25 / 0.7), transparent 65%),
-    radial-gradient(ellipse 6px 22px at 22% 0%, oklch(0.38 0.20 25 / 0.6), transparent 65%),
-    radial-gradient(ellipse 10px 35px at 40% 0%, oklch(0.32 0.24 25 / 0.75), transparent 65%),
-    radial-gradient(ellipse 7px 25px at 58% 0%, oklch(0.36 0.21 25 / 0.65), transparent 65%),
-    radial-gradient(ellipse 9px 28px at 75% 0%, oklch(0.34 0.23 25 / 0.7), transparent 65%),
-    radial-gradient(ellipse 5px 18px at 90% 0%, oklch(0.38 0.20 25 / 0.55), transparent 65%),
-    /* Splatter spots — irregular blobs scattered across the page */
-    radial-gradient(ellipse 20px 16px at 12% 25%, oklch(0.30 0.25 25 / 0.5), transparent 60%),
-    radial-gradient(circle 12px at 35% 45%, oklch(0.32 0.24 25 / 0.45), transparent 60%),
-    radial-gradient(ellipse 16px 12px at 65% 35%, oklch(0.30 0.25 25 / 0.4), transparent 60%),
-    radial-gradient(circle 8px at 85% 55%, oklch(0.34 0.23 25 / 0.5), transparent 60%),
-    radial-gradient(ellipse 14px 10px at 20% 70%, oklch(0.30 0.25 25 / 0.35), transparent 60%),
-    radial-gradient(circle 10px at 55% 80%, oklch(0.32 0.24 25 / 0.4), transparent 60%),
-    /* Small splatter dots — spray pattern */
-    radial-gradient(circle 3px at 28% 30%, oklch(0.35 0.22 25 / 0.4), transparent 70%),
-    radial-gradient(circle 2px at 45% 35%, oklch(0.35 0.22 25 / 0.35), transparent 70%),
-    radial-gradient(circle 4px at 70% 50%, oklch(0.35 0.22 25 / 0.3), transparent 70%),
-    radial-gradient(circle 2px at 50% 65%, oklch(0.35 0.22 25 / 0.3), transparent 70%);
+    url('/paper-effects/blood-splatter-1.png') no-repeat top right / 60% auto,
+    url('/paper-effects/blood-splatter-2.jpg') no-repeat bottom left / 40% auto;
+  opacity: 0.75;
 }
 
 /* TEARS — dried tear stains, blue-grey watermarks running down from edges */

@@ -233,9 +233,13 @@ function RelationsTab({ search }: { search: string }) {
     queryKey: ["relations"],
     queryFn: () => fetch("/api/lore/relations").then((r) => r.json()),
   });
+  const { data: countries } = useQuery<any[]>({
+    queryKey: ["countries"],
+    queryFn: () => fetch("/api/lore/countries").then((r) => r.json()),
+  });
   const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
-  const items = (data ?? []).filter(
+  const items = (Array.isArray(data) ? data : []).filter(
     (r) =>
       r.countryAName.toLowerCase().includes(search.toLowerCase()) ||
       r.countryBName.toLowerCase().includes(search.toLowerCase())
@@ -244,38 +248,111 @@ function RelationsTab({ search }: { search: string }) {
     return <EmptyState text={search ? "Связей не найдено" : "Межгосударственные связи ещё не записаны"} sub={search ? "Попробуй иной поиск" : undefined} />;
   }
   const sel = items.find((r) => r.id === selected) ?? items[0];
+
+  // Build relation map data — unique countries + their positions on a circle
+  const countryNames = new Set<string>();
+  items.forEach((r) => { countryNames.add(r.countryAName); countryNames.add(r.countryBName); });
+  const countryList = Array.from(countryNames);
+  const angleStep = (2 * Math.PI) / Math.max(countryList.length, 1);
+  const radius = 35; // % of viewBox
+  const cx = 50, cy = 50;
+  const nodePositions: Record<string, { x: number; y: number }> = {};
+  countryList.forEach((name, i) => {
+    const angle = i * angleStep - Math.PI / 2;
+    nodePositions[name] = { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
+  });
+
+  const relationColors: Record<string, string> = {
+    ally: "#22c55e", enemy: "#ef4444", neutral: "#a3a3a3", trade: "#f59e0b", vassal: "#a855f7",
+  };
+  const relationLabels: Record<string, string> = {
+    ally: "Союз", enemy: "Вражда", neutral: "Нейтралитет", trade: "Торговля", vassal: "Вассал",
+  };
+
   return (
-    <div className="grid lg:grid-cols-[260px_1fr] gap-5">
-      <div className="space-y-2 max-h-[70vh] overflow-y-auto fantasy-scroll pr-2">
-        {items.map((r) => (
-          <button
-            key={r.id}
-            onClick={() => setSelected(r.id)}
-            className={`w-full text-left px-3 py-2 rounded border transition-all ${
-              sel?.id === r.id
-                ? "bg-gold/10 border-gold/40 text-gold"
-                : "bg-background/30 border-gold/10 text-foreground/70 hover:border-gold/30 hover:text-gold"
-            }`}
-          >
-            <p className="font-[family-name:var(--font-cinzel)] text-sm truncate">{r.countryAName}</p>
-            <p className="text-sm parchment-muted/80 truncate">↔ {r.countryBName}</p>
-          </button>
-        ))}
+    <div className="space-y-5">
+      {/* Relation map — SVG with nodes and colored lines */}
+      <ParchmentCard className="p-3 overflow-hidden">
+        <p className="text-center text-sm parchment-heading uppercase tracking-wider mb-2">Карта взаимоотношений</p>
+        <svg viewBox="0 0 100 100" className="w-full" style={{ maxHeight: "50vh" }}>
+          {/* Lines between countries */}
+          {items.map((r) => {
+            const a = nodePositions[r.countryAName];
+            const b = nodePositions[r.countryBName];
+            if (!a || !b) return null;
+            const color = relationColors[r.relationType] ?? "#a3a3a3";
+            const isSel = sel?.id === r.id;
+            return (
+              <g key={r.id} onClick={() => setSelected(r.id)} className="cursor-pointer">
+                <line
+                  x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                  stroke={color}
+                  strokeWidth={isSel ? 1.2 : 0.6}
+                  opacity={isSel ? 1 : 0.5}
+                  strokeDasharray={r.relationType === "neutral" ? "2 1" : undefined}
+                />
+              </g>
+            );
+          })}
+          {/* Country nodes */}
+          {countryList.map((name) => {
+            const pos = nodePositions[name];
+            if (!pos) return null;
+            const c = (Array.isArray(countries) ? countries : []).find((co) => co.name === name);
+            return (
+              <g key={name}>
+                <circle cx={pos.x} cy={pos.y} r="3" fill="oklch(0.55 0.12 75)" stroke="oklch(0.78 0.13 85)" strokeWidth="0.5" />
+                <text x={pos.x} y={pos.y - 4.5} textAnchor="middle" fontSize="2.5" fill="oklch(0.25 0.03 50)" className="font-[family-name:var(--font-cinzel)]" style={{ fontWeight: 600 }}>
+                  {c?.emblem ?? "📍"} {name.length > 12 ? name.slice(0, 10) + "…" : name}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+        {/* Legend */}
+        <div className="flex flex-wrap gap-3 justify-center mt-2 text-sm">
+          {Object.entries(relationLabels).map(([type, label]) => (
+            <span key={type} className="flex items-center gap-1.5">
+              <span className="w-4 h-0.5 rounded" style={{ background: relationColors[type] }} />
+              <span className="parchment-muted">{label}</span>
+            </span>
+          ))}
+        </div>
+      </ParchmentCard>
+
+      {/* List + detail */}
+      <div className="grid lg:grid-cols-[260px_1fr] gap-5">
+        <div className="space-y-2 max-h-[50vh] overflow-y-auto fantasy-scroll pr-2">
+          {items.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => setSelected(r.id)}
+              className={`w-full text-left px-3 py-2 rounded border transition-all ${
+                sel?.id === r.id
+                  ? "bg-gold/10 border-gold/40 text-gold"
+                  : "bg-background/30 border-gold/10 text-foreground/70 hover:border-gold/30 hover:text-gold"
+              }`}
+            >
+              <p className="font-[family-name:var(--font-cinzel)] text-sm truncate">{r.countryAName}</p>
+              <p className="text-sm parchment-muted/80 truncate">↔ {r.countryBName}</p>
+            </button>
+          ))}
+        </div>
+        {sel && (
+          <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
+            <div className="flex items-center justify-center gap-4 flex-wrap text-center mb-4">
+              <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.countryAName}</h3>
+              <RelationBadge type={sel.relationType} />
+              <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.countryBName}</h3>
+            </div>
+            {sel.description ? (
+              <FormattedText className="lore-prose text-base leading-relaxed">{sel.description}</FormattedText>
+            ) : (
+              <p className="parchment-muted italic text-center">Описание связи не записано.</p>
+            )}
+          </ParchmentCard>
+        )}
       </div>
-      {sel && (
-        <ParchmentCard key={sel.id} className="animate-reveal overflow-hidden">
-          <div className="flex items-center justify-center gap-4 flex-wrap text-center mb-4">
-            <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.countryAName}</h3>
-            <RelationBadge type={sel.relationType} />
-            <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.countryBName}</h3>
-          </div>
-          {sel.description ? (
-            <FormattedText className="lore-prose text-base leading-relaxed">{sel.description}</FormattedText>
-          ) : (
-            <p className="parchment-muted italic text-center">Описание связи не записано.</p>
-          )}
-        </ParchmentCard>
-      )}
     </div>
   );
 }

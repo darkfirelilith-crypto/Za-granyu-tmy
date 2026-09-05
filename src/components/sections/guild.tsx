@@ -103,7 +103,7 @@ function RanksTab() {
         {ranks.map((r, i) => (
           <ParchmentCard key={r.id} hover className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <span className="text-gold/40 font-[family-name:var(--font-cinzel)] text-2xl">{i + 1}</span>
+              <span className="text-gold/40 font-[family-name:var(--font-garamond)] text-2xl font-bold">{i + 1}</span>
               <RuneSeal icon={<span className="text-2xl">{r.icon ?? "🏅"}</span>} size="md" />
             </div>
             <div className="flex-1">

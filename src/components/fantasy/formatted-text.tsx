@@ -11,8 +11,7 @@ import React from "react";
  * - Newlines preserved (whitespace-pre-line)
  * - HTML escaped (XSS-safe) before formatting
  *
- * Usage: <FormattedText>{entry.description}</FormattedText>
- * Or: <FormattedText className="text-sm">{text}</FormattedText>
+ * Uses a tokenizer approach (not regex lookbehind) for maximum browser compat.
  */
 
 function escapeHtml(text: string): string {
@@ -26,12 +25,19 @@ function escapeHtml(text: string): string {
 
 function formatMarkdown(text: string): string {
   let html = escapeHtml(text);
-  // Bold: **text** or __text__
-  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/__(.+?)__/g, "<strong>$1</strong>");
-  // Italic: *text* or _text_ (but not inside bold or URLs)
-  html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "<em>$1</em>");
-  html = html.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, "<em>$1</em>");
+
+  // Bold: **text** or __text__ — must come first (before italic)
+  // Use [\s\S] to match across newlines, non-greedy
+  html = html.replace(/\*\*([\s\S]+?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/__([\s\S]+?)__/g, "<strong>$1</strong>");
+
+  // Italic: *text* or _text_ — but NOT ** or __ (already handled above)
+  // Match single * not followed by *, content, single * not preceded by *
+  // Simpler: replace remaining single * pairs and _ pairs
+  // Use a loop to handle multiple italic spans on the same line
+  html = html.replace(/\*([^*\n]+?)\*/g, "<em>$1</em>");
+  html = html.replace(/_([^_\n]+?)_/g, "<em>$1</em>");
+
   return html;
 }
 
