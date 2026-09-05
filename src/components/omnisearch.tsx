@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { MapPin, Crown, Sun, BookMarked, Scale, Sparkles, Link2, Sword, User, FlaskConical } from "lucide-react";
 import type { View } from "@/lib/types";
 import { useAppStore } from "@/store/app-store";
+import { DIFF_LABEL, RARITY_LABEL } from "@/components/fantasy/ui";
 
 interface SearchHit {
   id: string;
@@ -21,7 +22,12 @@ interface SearchHit {
   sub: string;
   icon: React.ReactNode;
   view: View;
+  /** knowledge sub-tab */
   tab?: string;
+  /** lab shelf */
+  labTab?: string;
+  /** open this exact record once the destination view mounts */
+  focus?: boolean;
 }
 
 export function Omnisearch({
@@ -58,31 +64,31 @@ export function Omnisearch({
     data.countries?.forEach((c: any) =>
       hits.push({
         id: c.id, label: c.name, sub: c.capital || "Страна",
-        icon: <MapPin className="w-4 h-4 text-wine" />, view: "knowledge", tab: "countries",
+        icon: <MapPin className="w-4 h-4 text-wine" />, view: "knowledge", tab: "countries", focus: true,
       })
     );
     data.personalities?.forEach((p: any) =>
       hits.push({
         id: p.id, label: p.name, sub: p.title || p.role || "Личность",
-        icon: <Crown className="w-4 h-4 text-wine" />, view: "knowledge", tab: "personalities",
+        icon: <Crown className="w-4 h-4 text-wine" />, view: "knowledge", tab: "personalities", focus: true,
       })
     );
     data.gods?.forEach((g: any) =>
       hits.push({
         id: g.id, label: g.name, sub: g.domain || "Бог",
-        icon: <Sun className="w-4 h-4 text-gold" />, view: "knowledge", tab: "pantheon",
+        icon: <Sun className="w-4 h-4 text-gold" />, view: "knowledge", tab: "pantheon", focus: true,
       })
     );
     data.legends?.forEach((l: any) =>
       hits.push({
         id: l.id, label: l.title, sub: l.era || "Легенда",
-        icon: <BookMarked className="w-4 h-4 text-wine" />, view: "knowledge", tab: "legends",
+        icon: <BookMarked className="w-4 h-4 text-wine" />, view: "knowledge", tab: "legends", focus: true,
       })
     );
     data.systems?.forEach((s: any) =>
       hits.push({
         id: s.id, label: s.title, sub: s.category || "Система",
-        icon: <Scale className="w-4 h-4 text-wine" />, view: "knowledge", tab: "systems",
+        icon: <Scale className="w-4 h-4 text-wine" />, view: "knowledge", tab: "systems", focus: true,
       })
     );
     data.grimoire?.forEach((g: any) =>
@@ -92,12 +98,12 @@ export function Omnisearch({
         // (the whole point of the sealed mechanic is hiding it from players).
         label: g.unlocked ? g.title : (g.encodedTitle || "◈ Запечатанная глава ◈"),
         sub: g.unlocked ? "Открыто" : "Запечатано",
-        icon: <Sparkles className="w-4 h-4 text-magic-glow" />, view: "grimoire",
+        icon: <Sparkles className="w-4 h-4 text-magic-glow" />, view: "grimoire", focus: g.unlocked,
       })
     );
     data.quests?.forEach((q: any) =>
       hits.push({
-        id: q.id, label: q.title, sub: `Задание · ${q.difficulty}`,
+        id: q.id, label: q.title, sub: `Задание · ${DIFF_LABEL[q.difficulty] ?? q.difficulty}`,
         icon: <Sword className="w-4 h-4 text-wine" />, view: "guild",
       })
     );
@@ -113,8 +119,10 @@ export function Omnisearch({
     };
     data.lab?.forEach((l: any) =>
       hits.push({
-        id: l.id, label: l.name, sub: `${labKindLabel[l.kind] ?? l.kind} · ${l.subtitle ?? l.rarity ?? ""}`.trim(),
-        icon: <FlaskConical className="w-4 h-4 text-wine" />, view: "lab",
+        id: l.id,
+        label: l.name,
+        sub: `${labKindLabel[l.kind] ?? l.kind} · ${l.subtitle ?? RARITY_LABEL[l.rarity] ?? l.rarity ?? ""}`.replace(/ ·\s*$/, ""),
+        icon: <FlaskConical className="w-4 h-4 text-wine" />, view: "lab", labTab: l.kind, focus: true,
       })
     );
   }
@@ -131,13 +139,19 @@ export function Omnisearch({
     return () => window.removeEventListener("keydown", handler);
   }, [open, onOpenChange]);
 
-  const setKnowledgeTab = useAppStore((s) => s.setKnowledgeTab);
+  const goTo = useAppStore((s) => s.goTo);
   const setAdminTab = useAppStore((s) => s.setAdminTab);
 
   const handleSelect = (hit: SearchHit) => {
-    // Switch the relevant sub-tab before navigating so the user lands on the right section.
-    if (hit.view === "knowledge" && hit.tab) setKnowledgeTab(hit.tab as any);
+    // Land on the right section AND the right sub-tab, with the record itself
+    // pre-selected — otherwise a search result only got you to the front door.
     if (hit.view === "admin" && hit.tab) setAdminTab(hit.tab);
+    goTo({
+      view: hit.view,
+      knowledgeTab: hit.view === "knowledge" ? (hit.tab as any) : undefined,
+      labTab: hit.labTab,
+      focusId: hit.focus ? hit.id : undefined,
+    });
     onNavigate(hit.view);
     onOpenChange(false);
   };
@@ -179,7 +193,7 @@ export function Omnisearch({
           </CommandList>
           <div className="px-4 py-2 border-t border-parchment-dark/30 flex items-center justify-between text-xs parchment-muted">
             <span className="flex items-center gap-1"><Link2 className="w-3 h-3" /> {hits.length} записей</span>
-            <span className="font-[family-name:var(--font-garamond)] italic">Ctrl+K чтобы призать</span>
+            <span className="font-[family-name:var(--font-garamond)] italic">Ctrl+K — чтобы призвать</span>
           </div>
         </Command>
       </DialogContent>

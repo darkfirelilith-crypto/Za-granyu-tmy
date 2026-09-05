@@ -14,8 +14,8 @@
     "db:reset": "prisma migrate reset",
     "seed:prod": "bun run prisma/seed-admin.ts",
     "seed:neon": "bun run prisma/seed-neon.ts",
-    "db:push:local": "prisma db push --schema prisma/schema.local.prisma --accept-data-loss",
-    "db:generate:local": "prisma generate --schema prisma/schema.local.prisma",
+    "db:push:local": "node scripts/sync-local-schema.mjs && prisma db push --schema prisma/schema.local.prisma --accept-data-loss",
+    "db:generate:local": "node scripts/sync-local-schema.mjs && prisma generate --schema prisma/schema.local.prisma",
     "dev:local": "bun run db:generate:local && next dev -p 3000 2>&1 | tee dev.log"
   },
   "dependencies": {

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAppStore } from "@/store/app-store";
 import { OrnamentTitle } from "@/components/fantasy/ornament-title";
 import { ParchmentCard, RuneSeal, RarityBadge } from "@/components/fantasy/ui";
 import { EmptyPortal } from "@/components/fantasy/page-transition";
@@ -10,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { LabEntry, LabKind } from "@/lib/types";
-import { FormattedText } from "@/components/fantasy/formatted-text";
+import { FormattedText, plainText } from "@/components/fantasy/formatted-text";
 import { ExpandableImage } from "@/components/fantasy/expandable-image";
 import { Search, Dna, Swords, Layers, Wand2, Gem, Star, BookOpen, FlaskConical } from "lucide-react";
 
@@ -28,7 +29,11 @@ const KIND_META: Record<LabKind, { label: string; icon: React.ElementType; emoji
 const KIND_ORDER: LabKind[] = ["RACE", "SUBRACE", "CLASS", "SUBCLASS", "SPELL", "ITEM", "TRAIT", "BACKGROUND"];
 
 export function LabView() {
-  const [tab, setTab] = useState<LabKind>("RACE");
+  // The tab lives in the store so omnisearch and the Hall can land the reader
+  // on the right shelf instead of always dropping them on "Расы".
+  const { labTab, setLabTab, focusId, setFocusId } = useAppStore();
+  const tab = labTab as LabKind;
+  const setTab = (k: LabKind) => { setLabTab(k); setFocusId(null); };
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<LabEntry | null>(null);
 
@@ -40,16 +45,9 @@ export function LabView() {
   const intro = (Array.isArray(content) ? content : []).find((c: any) => c.key === "lab_intro");
 
   const all = Array.isArray(data) ? data : [];
-  const items = all
-    .filter((e) => e.kind === tab)
-    .filter((e) =>
-      !search ||
-      e.name.toLowerCase().includes(search.toLowerCase()) ||
-      (e.subtitle ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      e.description.toLowerCase().includes(search.toLowerCase())
-    )
-    .sort((a, b) => a.order - b.order);
-
+  // A record linked to from elsewhere opens straight away.
+  const focused = focusId ? all.find((e) => e.id === focusId) ?? null : null;
+  const openEntry = selected ?? focused;
   const counts: Record<LabKind, number> = {
     RACE: all.filter((e) => e.kind === "RACE").length,
     SUBRACE: all.filter((e) => e.kind === "SUBRACE").length,
@@ -76,7 +74,7 @@ export function LabView() {
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as LabKind)} className="w-full">
-        <div className="flex justify-center overflow-x-auto pb-2 fantasy-scroll">
+        <div className="flex justify-center overflow-x-auto pb-2 tab-scroll">
           <TabsList className="bg-background/40 border border-gold/20 flex flex-nowrap h-auto gap-0.5">
             {KIND_ORDER.map((k) => {
               const M = KIND_META[k];
@@ -130,10 +128,10 @@ export function LabView() {
         )}
       </Tabs>
 
-      {/* Detail dialog — opens when a card is clicked */}
-      <Dialog open={!!selected} onOpenChange={(v) => !v && setSelected(null)}>
+      {/* Detail dialog — opens when a card is clicked, or when another section linked here */}
+      <Dialog open={!!openEntry} onOpenChange={(v) => { if (!v) { setSelected(null); setFocusId(null); } }}>
         <DialogContent className="parchment gold-frame max-w-2xl max-h-[92vh] overflow-y-auto">
-          {selected && <LabDetail entry={selected} />}
+          {openEntry && <LabDetail entry={openEntry} />}
         </DialogContent>
       </Dialog>
     </div>
@@ -347,7 +345,7 @@ function LabGrid({ items, kind, onSelect }: { items: LabEntry[]; kind: LabKind; 
                     <img src={e.image} alt={e.name} className="w-full h-full object-cover object-top" />
                   </div>
                 )}
-                <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{e.description}</p>
+                <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{plainText(e.description)}</p>
                 <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
               </>
             )}
@@ -369,7 +367,7 @@ function LabGrid({ items, kind, onSelect }: { items: LabEntry[]; kind: LabKind; 
                     )}
                   </div>
                 </div>
-                <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{e.description}</p>
+                <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{plainText(e.description)}</p>
                 <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
               </>
             )}
@@ -395,7 +393,7 @@ function LabGrid({ items, kind, onSelect }: { items: LabEntry[]; kind: LabKind; 
                     </div>
                   </div>
                 </div>
-                <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{e.description}</p>
+                <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{plainText(e.description)}</p>
                 <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
               </>
             )}
@@ -426,7 +424,7 @@ function LabGrid({ items, kind, onSelect }: { items: LabEntry[]; kind: LabKind; 
                     <img src={e.image} alt={e.name} className="w-full h-full object-cover object-top" />
                   </div>
                 )}
-                <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{e.description}</p>
+                <p className="parchment-muted text-sm leading-relaxed line-clamp-2">{plainText(e.description)}</p>
                 <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
               </>
             )}

@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { useToast } from "@/hooks/use-toast";
 import { Award, Sword, BookOpen, Edit3, Save, X, Trophy, Flag, Ban, Plus, Trash2, Pencil, Users, Link2, Heart, Download, Upload, Gem } from "lucide-react";
 import { LabDetail } from "@/components/sections/lab";
-import { FormattedText } from "@/components/fantasy/formatted-text";
+import { FormattedText, plainText } from "@/components/fantasy/formatted-text";
 
 export function ProfileView() {
   const { data, isLoading } = useQuery<any>({
@@ -194,7 +194,7 @@ export function ProfileView() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-4">
         <OrnamentTitle size="md">У тебя пока нет героя</OrnamentTitle>
-        <p className="parchment-muted font-[family-name:var(--font-garamond)]">
+        <p className="page-muted font-[family-name:var(--font-garamond)]">
           Зарегистрируйся и укажи имя персонажа, чтобы ступить на путь авантюриста.
         </p>
       </div>
@@ -288,6 +288,7 @@ export function ProfileView() {
                       onChange={(v) => setForm({ ...current, portrait: v })}
                       aspect="aspect-[3/4]"
                       rounded="rounded-lg"
+                      previewWidth="w-full"
                       maxDim={600}
                     />
                   </div>
@@ -310,7 +311,7 @@ export function ProfileView() {
                       <Input
                         value={current.name}
                         onChange={(e) => setForm({ ...current, name: e.target.value })}
-                        className="bg-parchment/60 border-parchment-dark/40 text-xl font-[family-name:var(--font-cinzel)] h-12"
+                        className="field-parchment text-xl font-[family-name:var(--font-cinzel)] h-12"
                       />
                     ) : (
                       <h2 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading break-words">{char.name}</h2>
@@ -343,7 +344,7 @@ export function ProfileView() {
                 </div>
                 {/* When editing — action buttons on their OWN line, full width, no overlap */}
                 {editing && (
-                  <div className="flex gap-2 items-center pt-1">
+                  <div className="flex gap-2 items-center flex-wrap rounded-md border border-wine/25 bg-wine/5 px-3 py-2">
                     <Button size="sm" onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="btn-wine-solid h-9 px-4">
                       <Save className="w-3.5 h-3.5 mr-1" /> Сохранить
                     </Button>
@@ -357,18 +358,11 @@ export function ProfileView() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Field label="Раса" editing={editing} value={current.race} onChange={(v) => setForm({ ...current, race: v })} display={char.race} />
                   <Field label="Класс" editing={editing} value={current.charClass} onChange={(v) => setForm({ ...current, charClass: v })} display={char.charClass} />
-                  <div>
-                    <Label className="parchment-heading text-sm uppercase tracking-wider">Мировоззрение</Label>
-                    {editing ? (
-                      <Input value={current.alignment ?? ""} onChange={(e) => setForm({ ...current, alignment: e.target.value })} placeholder="Законопослушный Добрый" className="bg-parchment/60 border-parchment-dark/40 h-9" />
-                    ) : (
-                      <p className="parchment-text">{char.alignment ?? "—"}</p>
-                    )}
-                  </div>
+                  <Field label="Мировоззрение" editing={editing} value={current.alignment} onChange={(v) => setForm({ ...current, alignment: v })} display={char.alignment} placeholder="Законопослушный Добрый" />
                 </div>
 
                 {/* Rank progress */}
-                <div className="space-y-1.5 pt-2 border-t border-parchment-dark/20">
+                <div className="field-block space-y-1.5">
                   <div className="flex justify-between text-sm flex-wrap gap-1">
                     <span className="font-[family-name:var(--font-garamond)] font-semibold flex items-center gap-1.5">
                       <Trophy className="w-4 h-4 text-gold" /> {rank?.name ?? "Без ранга"} · Ур.{char.level}
@@ -441,7 +435,7 @@ export function ProfileView() {
                           <span className="text-sm parchment-muted/70 shrink-0">{fmtDate(ev.at)}</span>
                         </div>
                         {ev.detail && (
-                          <p className="text-sm parchment-muted mt-0.5 line-clamp-2">{ev.detail}</p>
+                          <p className="text-sm parchment-muted mt-0.5 line-clamp-2">{plainText(ev.detail)}</p>
                         )}
                       </div>
                     </div>
@@ -475,7 +469,7 @@ export function ProfileView() {
                         <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{a.achievement.name}</h4>
                         <RarityBadge rarity={a.achievement.rarity} />
                       </div>
-                      <p className="parchment-muted text-sm">{a.achievement.description}</p>
+                      <FormattedText className="parchment-muted text-sm">{a.achievement.description}</FormattedText>
                       <p className="text-sm parchment-muted/70 mt-1 italic">Даровано: {new Date(a.grantedAt).toLocaleDateString("ru-RU")}</p>
                     </div>
                   </ParchmentCard>
@@ -494,7 +488,7 @@ export function ProfileView() {
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{q.quest.title}</h4>
-                        <p className="parchment-muted text-sm">{q.quest.description}</p>
+                        <FormattedText className="parchment-muted text-sm">{q.quest.description}</FormattedText>
                       </div>
                       <Badge variant="outline" className={q.status === "COMPLETED" ? "border-green-600/30 text-green-700" : q.status === "FAILED" ? "border-red-700/30 text-red-700" : "border-amber-700/30 text-amber-700"}>
                         {q.status === "COMPLETED" ? "✓ Завершено" : q.status === "FAILED" ? "✗ Провалено" : "⚔ В работе"}
@@ -557,14 +551,16 @@ export function ProfileView() {
 }
 
 /* ===== helpers ===== */
-function Field({ label, editing, value, onChange, display }: { label: string; editing: boolean; value: any; onChange: (v: string) => void; display: any }) {
+function Field({ label, editing, value, onChange, display, placeholder }: {
+  label: string; editing: boolean; value: any; onChange: (v: string) => void; display: any; placeholder?: string;
+}) {
   return (
-    <div>
+    <div className="field-block">
       <Label className="parchment-heading text-sm uppercase tracking-wider">{label}</Label>
       {editing ? (
-        <Input value={value ?? ""} onChange={(e) => onChange(e.target.value)} className="bg-parchment/60 border-parchment-dark/40 h-9" />
+        <Input value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="field-parchment h-9 mt-1.5" />
       ) : (
-        <p className="parchment-text">{display ?? "—"}</p>
+        <p className="parchment-text mt-1 break-words">{display || "—"}</p>
       )}
     </div>
   );
@@ -574,10 +570,10 @@ function SectionField({ label, editing, value, onChange, display, placeholder, r
   label: string; editing: boolean; value: any; onChange: (v: string) => void; display: any; placeholder?: string; rows?: number; dropCap?: boolean;
 }) {
   return (
-    <div>
-      <Label className="parchment-heading text-sm">{label}</Label>
+    <div className="field-block">
+      <Label className="parchment-heading text-sm uppercase tracking-wider">{label}</Label>
       {editing ? (
-        <Textarea value={value ?? ""} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} className="bg-parchment/60 border-parchment-dark/40 mt-1" />
+        <Textarea value={value ?? ""} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} className="field-parchment mt-1.5" />
       ) : display ? (
         <FormattedText className={`parchment-text mt-1 ${dropCap ? "lore-prose drop-cap" : ""}`}>{display}</FormattedText>
       ) : (
@@ -619,12 +615,12 @@ function NotesSection({ characterId, notes }: { characterId: string; notes: any[
           </Button>
         )}
       </div>
-      <p className="parchment-muted text-sm italic -mt-2">Здесь ты записываешь наблюдения и догадки — то, что важно сохранить между сессиями.</p>
+      <p className="page-muted text-sm italic -mt-2">Здесь ты записываешь наблюдения и догадки — то, что важно сохранить между сессиями.</p>
 
       {draft && (
         <ParchmentCard className="space-y-2 border-t-2 border-gold/40">
-          <Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Заголовок (необязательно)" className="bg-parchment/60 border-parchment-dark/40" />
-          <Textarea value={draft.content} onChange={(e) => setDraft({ ...draft, content: e.target.value })} rows={4} placeholder="Что ты хочешь запомнить?" className="bg-parchment/60 border-parchment-dark/40" />
+          <Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Заголовок (необязательно)" className="field-parchment" />
+          <Textarea value={draft.content} onChange={(e) => setDraft({ ...draft, content: e.target.value })} rows={4} placeholder="Что ты хочешь запомнить?" className="field-parchment" />
           <div className="flex gap-2">
             <Button size="sm" onClick={() => createMut.mutate(draft)} disabled={!draft.content.trim() || createMut.isPending} className="btn-wine-solid h-8 px-3"><Save className="w-3.5 h-3.5 mr-1" /> Записать</Button>
             <Button size="sm" variant="ghost" onClick={() => setDraft(null)} className="btn-parchment h-8 px-3"><X className="w-3.5 h-3.5 mr-1" /> Отмена</Button>
@@ -642,7 +638,7 @@ function NotesSection({ characterId, notes }: { characterId: string; notes: any[
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     {n.title && <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{n.title}</h4>}
-                    <p className="parchment-text text-sm whitespace-pre-line">{n.content}</p>
+                    <FormattedText className="parchment-text text-sm">{n.content}</FormattedText>
                     <p className="text-sm parchment-muted/60 italic mt-1">{new Date(n.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}</p>
                   </div>
                   <div className="flex gap-1 shrink-0">
@@ -671,8 +667,8 @@ function NoteEditForm({ note, onSave, onCancel, pending }: { note: any; onSave: 
   const [content, setContent] = useState(note.content);
   return (
     <div className="space-y-2">
-      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Заголовок" className="bg-parchment/60 border-parchment-dark/40" />
-      <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={4} className="bg-parchment/60 border-parchment-dark/40" />
+      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Заголовок" className="field-parchment" />
+      <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={4} className="field-parchment" />
       <div className="flex gap-2">
         <Button size="sm" onClick={() => onSave({ id: note.id, title, content })} disabled={pending || !content.trim()} className="btn-wine-solid h-8 px-3"><Save className="w-3.5 h-3.5 mr-1" /> Сохранить</Button>
         <Button size="sm" variant="ghost" onClick={onCancel} className="btn-parchment h-8 px-3"><X className="w-3.5 h-3.5 mr-1" /> Отмена</Button>
@@ -722,7 +718,7 @@ function RelationsSection({ characterId }: { characterId: string }) {
           </Button>
         )}
       </div>
-      <p className="parchment-muted text-sm italic -mt-3">
+      <p className="page-muted text-sm italic -mt-3">
         Здесь ты видишь всех, с кем встретился и кому прописал отношение — НПС и других персонажей.
       </p>
 
@@ -741,8 +737,8 @@ function RelationsSection({ characterId }: { characterId: string }) {
 
       {/* NPC relations */}
       <div className="space-y-3">
-        <h4 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading flex items-center gap-2">
-          <Users className="w-5 h-5 text-wine" /> Встреченные НПС ({npcRelations.length})
+        <h4 className="font-[family-name:var(--font-cinzel)] text-lg page-heading flex items-center gap-2">
+          <Users className="w-5 h-5 text-gold" /> Встреченные НПС ({npcRelations.length})
         </h4>
         {npcRelations.length === 0 ? (
           <ParchmentCard className="empty-portal">
@@ -765,7 +761,7 @@ function RelationsSection({ characterId }: { characterId: string }) {
                     <Badge variant="outline" className="border-wine/30 text-wine text-sm shrink-0">{r.relationLabel}</Badge>
                   </div>
                   {r.targetPersonality?.title && <p className="parchment-heading text-sm">{r.targetPersonality.title}</p>}
-                  {r.description && <p className="parchment-muted text-sm mt-1">{r.description}</p>}
+                  {r.description && <FormattedText className="parchment-muted text-sm mt-1">{r.description}</FormattedText>}
                 </div>
                 <Button size="icon" variant="ghost" onClick={() => delMut.mutate(r.id)} className="text-destructive hover:bg-destructive/10 h-7 w-7 shrink-0"><Trash2 className="w-3.5 h-3.5" /></Button>
               </ParchmentCard>
@@ -776,8 +772,8 @@ function RelationsSection({ characterId }: { characterId: string }) {
 
       {/* Character relations */}
       <div className="space-y-3">
-        <h4 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading flex items-center gap-2">
-          <Heart className="w-5 h-5 text-wine" /> Отношения с персонажами ({charRelations.length})
+        <h4 className="font-[family-name:var(--font-cinzel)] text-lg page-heading flex items-center gap-2">
+          <Heart className="w-5 h-5 text-gold" /> Отношения с персонажами ({charRelations.length})
         </h4>
         {charRelations.length === 0 ? (
           <ParchmentCard className="empty-portal">
@@ -799,7 +795,7 @@ function RelationsSection({ characterId }: { characterId: string }) {
                     <h5 className="font-[family-name:var(--font-cinzel)] parchment-heading truncate">{r.targetCharacter?.name}</h5>
                     <Badge variant="outline" className="border-wine/30 text-wine text-sm shrink-0">{r.relationLabel}</Badge>
                   </div>
-                  {r.description && <p className="parchment-muted text-sm mt-1">{r.description}</p>}
+                  {r.description && <FormattedText className="parchment-muted text-sm mt-1">{r.description}</FormattedText>}
                 </div>
                 <Button size="icon" variant="ghost" onClick={() => delMut.mutate(r.id)} className="text-destructive hover:bg-destructive/10 h-7 w-7 shrink-0"><Trash2 className="w-3.5 h-3.5" /></Button>
               </ParchmentCard>
@@ -825,13 +821,13 @@ function RelationForm({ personalities, characters, onSave, onCancel, pending }: 
       <div>
         <Label className="parchment-heading text-sm">К кому отношение</Label>
         <div className="grid grid-cols-2 gap-2 mt-1">
-          <button type="button" onClick={() => { setTargetType("personality"); setTargetId(""); }} className={`px-3 py-2 rounded border text-sm font-[family-name:var(--font-cinzel)] ${targetType === "personality" ? "border-gold/40 bg-gold/10 text-gold" : "border-parchment-dark/30 text-parchment-muted"}`}>НПС (личность)</button>
-          <button type="button" onClick={() => { setTargetType("character"); setTargetId(""); }} className={`px-3 py-2 rounded border text-sm font-[family-name:var(--font-cinzel)] ${targetType === "character" ? "border-gold/40 bg-gold/10 text-gold" : "border-parchment-dark/30 text-parchment-muted"}`}>Другой персонаж</button>
+          <button type="button" onClick={() => { setTargetType("personality"); setTargetId(""); }} className={`px-3 py-2 rounded border text-sm font-[family-name:var(--font-cinzel)] ${targetType === "personality" ? "border-gold/40 bg-gold/10 text-gold" : "border-parchment-dark/40 parchment-muted"}`}>НПС (личность)</button>
+          <button type="button" onClick={() => { setTargetType("character"); setTargetId(""); }} className={`px-3 py-2 rounded border text-sm font-[family-name:var(--font-cinzel)] ${targetType === "character" ? "border-gold/40 bg-gold/10 text-gold" : "border-parchment-dark/40 parchment-muted"}`}>Другой персонаж</button>
         </div>
       </div>
       <div>
         <Label className="parchment-heading text-sm">Выбери {targetType === "personality" ? "НПС" : "персонажа"}</Label>
-        <select value={targetId} onChange={(e) => setTargetId(e.target.value)} className="w-full mt-1 px-3 py-2 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text h-9">
+        <select value={targetId} onChange={(e) => setTargetId(e.target.value)} className="w-full mt-1 px-3 py-2 rounded border field-parchment parchment-text h-9">
           <option value="">— выбери —</option>
           {targetType === "personality"
             ? personalities.map((p) => <option key={p.id} value={p.id}>{p.name}{p.title ? ` — ${p.title}` : ""}</option>)
@@ -840,13 +836,13 @@ function RelationForm({ personalities, characters, onSave, onCancel, pending }: 
       </div>
       <div>
         <Label className="parchment-heading text-sm">Тип отношения</Label>
-        <select value={label} onChange={(e) => setLabel(e.target.value)} className="w-full mt-1 px-3 py-2 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text h-9">
+        <select value={label} onChange={(e) => setLabel(e.target.value)} className="w-full mt-1 px-3 py-2 rounded border field-parchment parchment-text h-9">
           {labels.map((l) => <option key={l} value={l}>{l}</option>)}
         </select>
       </div>
       <div>
         <Label className="parchment-heading text-sm">Описание (необязательно)</Label>
-        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Как твой герой относится к этому персонажу?" className="bg-parchment/60 border-parchment-dark/40 mt-1" />
+        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Как твой герой относится к этому персонажу?" className="field-parchment mt-1" />
       </div>
       <div className="flex gap-2">
         <Button size="sm" onClick={() => onSave({ [targetType === "personality" ? "targetPersonalityId" : "targetCharacterId"]: targetId, relationLabel: label, description: description || undefined })} disabled={!targetId || pending} className="btn-wine-solid h-9 px-3"><Save className="w-3.5 h-3.5 mr-1" /> Записать</Button>
@@ -900,7 +896,7 @@ function ArsenalSection({ characterId }: { characterId: string }) {
                       <p className="parchment-heading text-sm uppercase tracking-wider mt-0.5 text-wine/70">{lab.itemType}</p>
                     )}
                     {lab.description && (
-                      <p className="parchment-muted text-sm line-clamp-2 mt-1">{lab.description}</p>
+                      <p className="parchment-muted text-sm line-clamp-2 mt-1">{plainText(lab.description)}</p>
                     )}
                     <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
                   </div>
@@ -964,7 +960,7 @@ function ScrollsSection({ characterId }: { characterId: string }) {
                       )}
                     </div>
                     {lab.description && (
-                      <p className="parchment-muted text-sm line-clamp-2 mt-1">{lab.description}</p>
+                      <p className="parchment-muted text-sm line-clamp-2 mt-1">{plainText(lab.description)}</p>
                     )}
                     <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
                   </div>

@@ -9,9 +9,11 @@ import { FormattedText } from "@/components/fantasy/formatted-text";
 import { ExpandableImage } from "@/components/fantasy/expandable-image";
 import type { View } from "@/lib/types";
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, Sword, Sparkles, FlaskConical, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { BookOpen, Sword, Sparkles, FlaskConical, ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useAppStore } from "@/store/app-store";
 
 export function HallView({ onNavigate }: { onNavigate: (v: View) => void }) {
   const { data } = useQuery<any[]>({
@@ -39,6 +41,21 @@ export function HallView({ onNavigate }: { onNavigate: (v: View) => void }) {
   const cards = data ?? [];
   const content = useContent();
   const [selected, setSelected] = useState<HallCard | null>(null);
+  const goTo = useAppStore((s) => s.goTo);
+
+  // Every card in the carousel belongs somewhere; this is the door to it.
+  const openInSection = (card: HallCard) => {
+    const dest = SECTION_OF[card.kind];
+    goTo({
+      view: dest.view,
+      knowledgeTab: dest.knowledgeTab,
+      labTab: card.kind === "lab" ? card.raw?.kind : undefined,
+      // A sealed chapter has nothing to open — just take the reader to the Гримуар.
+      focusId: card.kind === "grimoire" && !card.raw?.unlocked ? undefined : card.id,
+    });
+    onNavigate(dest.view);
+    setSelected(null);
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-10 md:py-14 space-y-10">
@@ -77,12 +94,22 @@ export function HallView({ onNavigate }: { onNavigate: (v: View) => void }) {
       {/* Detail modal */}
       <Dialog open={!!selected} onOpenChange={(v) => !v && setSelected(null)}>
         <DialogContent className="parchment gold-frame max-w-2xl max-h-[92vh] overflow-y-auto">
-          {selected && <CardDetail card={selected} />}
+          {selected && <CardDetail card={selected} onOpenSection={() => openInSection(selected)} />}
         </DialogContent>
       </Dialog>
     </div>
   );
 }
+
+/** Where each kind of carousel card lives in the site. */
+const SECTION_OF: Record<HallCard["kind"], { view: View; label: string; knowledgeTab?: any }> = {
+  country: { view: "knowledge", label: "Открыть в Базе Знаний", knowledgeTab: "countries" },
+  personality: { view: "knowledge", label: "Открыть в Базе Знаний", knowledgeTab: "personalities" },
+  god: { view: "knowledge", label: "Открыть в Пантеоне", knowledgeTab: "pantheon" },
+  legend: { view: "knowledge", label: "Открыть в Легендах", knowledgeTab: "legends" },
+  grimoire: { view: "grimoire", label: "Открыть в Гримуаре" },
+  lab: { view: "lab", label: "Открыть в Лаборатории" },
+};
 
 interface HallCard {
   id: string;
@@ -173,7 +200,7 @@ function Carousel({ cards, onSelect }: { cards: HallCard[]; onSelect: (c: HallCa
 }
 
 /* ===== Detail modal — renders type-specific content from raw entity data ===== */
-function CardDetail({ card }: { card: HallCard }) {
+function CardDetail({ card, onOpenSection }: { card: HallCard; onOpenSection: () => void }) {
   const r = card.raw;
   return (
     <div className="space-y-4">
@@ -271,6 +298,14 @@ function CardDetail({ card }: { card: HallCard }) {
           )}
         </>
       )}
+
+      {/* The card is only a taster — this is the way into the full record. */}
+      <div className="pt-4 border-t border-parchment-dark/20 flex justify-end">
+        <Button size="sm" onClick={onOpenSection} className="btn-parchment h-9 px-4">
+          {SECTION_OF[card.kind].label}
+          <ArrowRight className="w-4 h-4 ml-1.5" />
+        </Button>
+      </div>
     </div>
   );
 }

@@ -118,7 +118,7 @@ export function AuthDialog({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="герой@эльдрион.мир"
-                className="bg-parchment/60 border-parchment-dark/40"
+                className="field-parchment"
               />
             </div>
             <div className="space-y-1.5">
@@ -128,7 +128,7 @@ export function AuthDialog({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="bg-parchment/60 border-parchment-dark/40"
+                className="field-parchment"
                 onKeyDown={(e) => e.key === "Enter" && submit()}
               />
             </div>
@@ -141,7 +141,7 @@ export function AuthDialog({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Сэр Игрок"
-                className="bg-parchment/60 border-parchment-dark/40"
+                className="field-parchment"
               />
             </div>
             <div className="space-y-1.5">
@@ -150,7 +150,7 @@ export function AuthDialog({
                 value={characterName}
                 onChange={(e) => setCharacterName(e.target.value)}
                 placeholder="Тэодрик Зорестрелец"
-                className="bg-parchment/60 border-parchment-dark/40"
+                className="field-parchment"
               />
             </div>
             <div className="space-y-1.5">
@@ -160,7 +160,7 @@ export function AuthDialog({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="герой@эльдрион.мир"
-                className="bg-parchment/60 border-parchment-dark/40"
+                className="field-parchment"
               />
             </div>
             <div className="space-y-1.5">
@@ -170,7 +170,7 @@ export function AuthDialog({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="минимум 6 знаков"
-                className="bg-parchment/60 border-parchment-dark/40"
+                className="field-parchment"
                 onKeyDown={(e) => e.key === "Enter" && submit()}
               />
             </div>

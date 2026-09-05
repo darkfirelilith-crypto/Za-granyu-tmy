@@ -13,7 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import type { GuildRank, Quest, Character } from "@/lib/types";
 import { Shield, Trophy, MapPin, Sword, Crown, Star, Award, Users } from "lucide-react";
-import { FormattedText } from "@/components/fantasy/formatted-text";
+import { FormattedText, plainText } from "@/components/fantasy/formatted-text";
 
 const DIFF_REWARD: Record<string, string> = {
   TRIVIAL: "20", EASY: "50", MEDIUM: "120", HARD: "250", DEADLY: "500",
@@ -69,7 +69,7 @@ function GuildInfo() {
     <div className="grid md:grid-cols-2 gap-5">
       <ParchmentCard className="lore-prose drop-cap space-y-3">
         <h3 className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading">История Гильдии</h3>
-        <div className="whitespace-pre-line">{map.guild_history?.body || "История ещё не записана Божеством."}</div>
+        <FormattedText>{map.guild_history?.body || "История ещё не записана Божеством."}</FormattedText>
       </ParchmentCard>
       <div className="space-y-4">
         <ParchmentCard className="space-y-2">
@@ -80,7 +80,7 @@ function GuildInfo() {
         </ParchmentCard>
         <ParchmentCard className="space-y-2">
           <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">Залы Гильдии</h3>
-          <div className="parchment-muted text-sm whitespace-pre-line">{map.guild_halls?.body || "Залы ещё не описаны."}</div>
+          <FormattedText className="parchment-muted text-sm">{map.guild_halls?.body || "Залы ещё не описаны."}</FormattedText>
         </ParchmentCard>
       </div>
     </div>
@@ -108,7 +108,7 @@ function RanksTab() {
             </div>
             <div className="flex-1">
               <h3 className="font-[family-name:var(--font-cinzel)] text-lg parchment-heading">{r.name}</h3>
-              {r.description && <p className="parchment-muted text-sm">{r.description}</p>}
+              {r.description && <FormattedText className="parchment-muted text-sm">{r.description}</FormattedText>}
               <p className="text-sm parchment-muted/80 mt-1">Минимальный опыт: {r.minXp} XP</p>
             </div>
             <div className="hidden sm:flex items-center gap-1 text-gold">
@@ -245,7 +245,7 @@ function MembersTab() {
                     <Badge variant="outline" className="border-wine/30 text-wine text-xs shrink-0">🎭 НПС</Badge>
                   </div>
                   {p.description && (
-                    <p className="text-sm parchment-muted line-clamp-2">{p.description}</p>
+                    <p className="text-sm parchment-muted line-clamp-2">{plainText(p.description)}</p>
                   )}
                   <div className="flex items-center gap-2 pt-2 border-t border-parchment-dark/20 text-sm">
                     {p.affiliation && <span className="parchment-muted">🏛️ {p.affiliation}</span>}

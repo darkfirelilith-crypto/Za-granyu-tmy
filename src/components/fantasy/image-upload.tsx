@@ -17,6 +17,7 @@ export function ImageUpload({
   maxDim = 2400,
   aspect = "aspect-square",
   rounded = "rounded-lg",
+  previewWidth = "w-28",
 }: {
   value: string | null;
   onChange: (base64: string | null) => void;
@@ -25,6 +26,8 @@ export function ImageUpload({
   maxDim?: number;
   aspect?: string;
   rounded?: string;
+  /** width of the preview tile — pass "w-full" in narrow columns */
+  previewWidth?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -57,12 +60,14 @@ export function ImageUpload({
       {label && (
         <label className="parchment-heading text-sm block">{label}</label>
       )}
-      <div className="flex items-start gap-3">
+      {/* flex-wrap so the controls drop below the preview in narrow columns
+          instead of spilling over whatever sits to the right of the field. */}
+      <div className="flex flex-wrap items-start gap-3">
         <div
           className={cn(
             "relative shrink-0 overflow-hidden gold-frame bg-parchment-dark/20",
             aspect,
-            "w-28",
+            previewWidth,
             rounded
           )}
         >
@@ -79,7 +84,7 @@ export function ImageUpload({
               </button>
             </>
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-parchment-muted/60 gap-1">
+            <div className="w-full h-full flex flex-col items-center justify-center parchment-muted opacity-60 gap-1">
               {busy ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
@@ -88,7 +93,7 @@ export function ImageUpload({
             </div>
           )}
         </div>
-        <div className="flex-1 space-y-2">
+        <div className="flex-1 min-w-[7.5rem] space-y-2">
           <input
             ref={inputRef}
             type="file"

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { OrnamentTitle } from "@/components/fantasy/ornament-title";
-import { ParchmentCard, RuneSeal, RarityBadge, DifficultyBadge } from "@/components/fantasy/ui";
+import { ParchmentCard, RuneSeal, RarityBadge, DifficultyBadge, RARITY_LABEL, DIFF_LABEL, GRIMOIRE_CAT_LABEL, SYSTEM_CAT_LABEL, RELATION_TYPE_LABEL, ALIGNMENT_LABEL } from "@/components/fantasy/ui";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +15,9 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ImageUpload } from "@/components/fantasy/image-upload";
+import { PaperEffect } from "@/components/fantasy/paper-effects";
 import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Users as UsersIcon, Sword, Sparkles, Scale, Sun, BookMarked, Link2, Trophy, Star, FlaskConical, ShieldCheck, UserPlus, KeyRound, Users, FileText, X, Gem } from "lucide-react";
+import { plainText } from "@/components/fantasy/formatted-text";
 
 const ENTITIES = {
   countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries", fields: ["name","description","emblem","banner","capital","government","population","culture","climate"] },
@@ -191,6 +193,13 @@ function Overview() {
 }
 
 /* ===== GENERIC ENTITY EDITOR ===== */
+/** Enum values are stored in English; every select in the Чертог shows Russian. */
+const OPTION_LABEL: Record<string, string> = {
+  ...SYSTEM_CAT_LABEL,
+  ...RELATION_TYPE_LABEL,
+  ...ALIGNMENT_LABEL,
+};
+
 const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"|"checkbox"|"country-select"; options?: string[]; label: string }> = {
   name: { type: "text", label: "Название" },
   title: { type: "text", label: "Титул" },
@@ -242,7 +251,7 @@ function CountrySelect({ value, onChange }: { value: string; onChange: (v: strin
   const countries = (Array.isArray(data) ? data : []).sort((a, b) => a.name.localeCompare(b.name));
   return (
     <Select value={value || ""} onValueChange={onChange}>
-      <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 h-10"><SelectValue placeholder="Выбери страну..." /></SelectTrigger>
+      <SelectTrigger className="field-parchment h-10"><SelectValue placeholder="Выбери страну..." /></SelectTrigger>
       <SelectContent className="parchment max-h-72">
         {countries.map((c) => (
           <SelectItem key={c.id} value={c.name}>
@@ -350,7 +359,7 @@ function EntityEditor({ entityKey }: { entityKey: EntityKey }) {
             </div>
           </ParchmentCard>
         ))}
-        {items.length === 0 && <p className="col-span-full text-center parchment-muted italic py-8">Пока пусто.</p>}
+        {items.length === 0 && <p className="col-span-full text-center page-muted italic py-8">Пока пусто.</p>}
       </div>
 
       <EntityFormDialog
@@ -426,7 +435,7 @@ function EntityFormDialog({
                   <Label className="parchment-heading text-sm">
                     {meta.label}{req && <span className="text-red-700 ml-0.5">*</span>}
                   </Label>
-                  <Input value={getVal(f)} onChange={(e) => setVal(f, e.target.value)} className="bg-parchment/60 border-parchment-dark/40 h-10" />
+                  <Input value={getVal(f)} onChange={(e) => setVal(f, e.target.value)} className="field-parchment h-10" />
                 </div>
               );
             })}
@@ -439,9 +448,9 @@ function EntityFormDialog({
                     {meta.label}{req && <span className="text-red-700 ml-0.5">*</span>}
                   </Label>
                   <Select value={getVal(f)} onValueChange={(v) => setVal(f, v)}>
-                    <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 h-10"><SelectValue placeholder="Выбери..." /></SelectTrigger>
+                    <SelectTrigger className="field-parchment h-10"><SelectValue placeholder="Выбери..." /></SelectTrigger>
                     <SelectContent className="parchment">
-                      {meta.options!.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      {meta.options!.map((o) => <SelectItem key={o} value={o}>{OPTION_LABEL[o] ?? o}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -471,7 +480,7 @@ function EntityFormDialog({
                 <Label className="parchment-heading text-sm">
                   {meta.label}{req && <span className="text-red-700 ml-0.5">*</span>}
                 </Label>
-                <Textarea value={getVal(f)} onChange={(e) => setVal(f, e.target.value)} rows={4} className="bg-parchment/60 border-parchment-dark/40" />
+                <Textarea value={getVal(f)} onChange={(e) => setVal(f, e.target.value)} rows={4} className="field-parchment" />
               </div>
             );
           })}
@@ -521,7 +530,7 @@ function VisibilitySelector({ label, value, onChange }: { label: string; value: 
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text h-10"
+        className="w-full px-3 py-2 rounded border field-parchment parchment-text h-10"
       >
         <option value="">Всем (без ограничения)</option>
         {(Array.isArray(groups) ? groups : []).map((g) => (
@@ -610,7 +619,7 @@ function QuestsEditor() {
               <h4 className="font-[family-name:var(--font-cinzel)] parchment-heading">{q.title}</h4>
               <DifficultyBadge difficulty={q.difficulty} />
             </div>
-            <p className="parchment-muted text-sm line-clamp-2">{q.description}</p>
+            <p className="parchment-muted text-sm line-clamp-2">{plainText(q.description)}</p>
             <div className="flex justify-between items-center pt-2">
               <span className="text-sm parchment-muted">{q.status}</span>
               <div className="flex gap-1">
@@ -644,19 +653,19 @@ function QuestFormDialog({ open,onOpenChange,item,onSave,pending }:{open:boolean
           <DialogDescription className="sr-only">Форма редактирования задания гильдии</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div><Label className="parchment-heading text-sm">Название</Label><Input value={getVal("title")} onChange={e=>setVal("title",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
-          <div><Label className="parchment-heading text-sm">Описание</Label><Textarea value={getVal("description")} onChange={e=>setVal("description",e.target.value)} rows={3} className="bg-parchment/60 border-parchment-dark/40"/></div>
+          <div><Label className="parchment-heading text-sm">Название</Label><Input value={getVal("title")} onChange={e=>setVal("title",e.target.value)} className="field-parchment"/></div>
+          <div><Label className="parchment-heading text-sm">Описание</Label><Textarea value={getVal("description")} onChange={e=>setVal("description",e.target.value)} rows={3} className="field-parchment"/></div>
           <div><Label className="parchment-heading text-sm">Сложность</Label>
             <Select value={getVal("difficulty")} onValueChange={v=>setVal("difficulty",v)}>
-              <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue/></SelectTrigger>
-              <SelectContent className="parchment">{["TRIVIAL","EASY","MEDIUM","HARD","DEADLY"].map(o=><SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+              <SelectTrigger className="field-parchment"><SelectValue/></SelectTrigger>
+              <SelectContent className="parchment">{["TRIVIAL","EASY","MEDIUM","HARD","DEADLY"].map(o=><SelectItem key={o} value={o}>{DIFF_LABEL[o]}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div><Label className="parchment-heading text-sm">Локация</Label><Input value={getVal("location")??""} onChange={e=>setVal("location",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
-          <div><Label className="parchment-heading text-sm">Награда</Label><Input value={getVal("reward")??""} onChange={e=>setVal("reward",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
+          <div><Label className="parchment-heading text-sm">Локация</Label><Input value={getVal("location")??""} onChange={e=>setVal("location",e.target.value)} className="field-parchment"/></div>
+          <div><Label className="parchment-heading text-sm">Награда</Label><Input value={getVal("reward")??""} onChange={e=>setVal("reward",e.target.value)} className="field-parchment"/></div>
           {item?.id && <div><Label className="parchment-heading text-sm">Статус</Label>
             <Select value={getVal("status")} onValueChange={v=>setVal("status",v)}>
-              <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue/></SelectTrigger>
+              <SelectTrigger className="field-parchment"><SelectValue/></SelectTrigger>
               <SelectContent className="parchment">{["OPEN","ASSIGNED","COMPLETED","FAILED"].map(o=><SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
             </Select>
           </div>}
@@ -716,7 +725,7 @@ function GrimoireEditor() {
                 <p className="font-[family-name:var(--font-cinzel)] parchment-heading truncate">
                   {g.unlocked ? g.title : (g.encodedTitle || "◈ Запечатанная глава ◈")}
                 </p>
-                <p className="parchment-muted text-sm">{g.category} · {g.unlocked?"открыто":"запечатано"}</p>
+                <p className="parchment-muted text-sm">{GRIMOIRE_CAT_LABEL[g.category] ?? g.category} · {g.unlocked ? "открыто" : "запечатано"}</p>
               </div>
             </div>
             <div className="flex gap-1 shrink-0">
@@ -774,29 +783,29 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
 
         <div className="space-y-5">
           {/* Секция 1: Основное */}
-          <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
-            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Основное</p>
+          <div className="form-section space-y-3">
+            <span className="form-section-title">❖ Основное</span>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="sm:col-span-2">
                 <Label className="parchment-heading text-sm">Название главы</Label>
-                <Input value={getVal("title")} onChange={e=>setVal("title",e.target.value)} placeholder="напр. Глава 1: Падение с Неба" className="bg-parchment/60 border-parchment-dark/40 h-10" />
+                <Input value={getVal("title")} onChange={e=>setVal("title",e.target.value)} placeholder="напр. Глава 1: Падение с Неба" className="field-parchment h-10" />
               </div>
               <div>
                 <Label className="parchment-heading text-sm">Дата (по лору)</Label>
-                <Input value={getVal("loreDate") ?? ""} onChange={e=>setVal("loreDate",e.target.value)} placeholder="напр. 3 Эра, 15 день" className="bg-parchment/60 border-parchment-dark/40 h-10" />
+                <Input value={getVal("loreDate") ?? ""} onChange={e=>setVal("loreDate",e.target.value)} placeholder="напр. 3 Эра, 15 день" className="field-parchment h-10" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label className="parchment-heading text-sm">Категория</Label>
                 <Select value={getVal("category")} onValueChange={v=>setVal("category",v)}>
-                  <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 h-10"><SelectValue/></SelectTrigger>
-                  <SelectContent className="parchment">{["SECRETS","RITUALS","PROPHECY","HISTORY","BEASTIARY"].map(o=><SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                  <SelectTrigger className="field-parchment h-10"><SelectValue/></SelectTrigger>
+                  <SelectContent className="parchment">{["SECRETS","RITUALS","PROPHECY","HISTORY","BEASTIARY"].map(o=><SelectItem key={o} value={o}>{GRIMOIRE_CAT_LABEL[o]}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
                 <Label className="parchment-heading text-sm">Порядок</Label>
-                <Input type="number" value={getVal("order")??0} onChange={e=>setVal("order",Number(e.target.value))} className="bg-parchment/60 border-parchment-dark/40 h-10" />
+                <Input type="number" value={getVal("order")??0} onChange={e=>setVal("order",Number(e.target.value))} className="field-parchment h-10" />
               </div>
               {/* Toggle: Запечатана / Открыта */}
               <div>
@@ -805,14 +814,14 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
                   <button
                     type="button"
                     onClick={() => setVal("unlocked", false)}
-                    className={`px-4 py-2 rounded-lg border-2 text-sm font-[family-name:var(--font-cinzel)] transition-all ${sealed ? "border-amber-700/50 bg-amber-700/10 text-amber-700" : "border-parchment-dark/30 text-parchment-muted"}`}
+                    className={`px-4 py-2 rounded-lg border-2 text-sm font-[family-name:var(--font-cinzel)] transition-all ${sealed ? "border-amber-700/50 bg-amber-700/10 text-amber-700" : "border-parchment-dark/40 parchment-muted"}`}
                   >
                     🔒 Запечатана
                   </button>
                   <button
                     type="button"
                     onClick={() => setVal("unlocked", true)}
-                    className={`px-4 py-2 rounded-lg border-2 text-sm font-[family-name:var(--font-cinzel)] transition-all ${!sealed ? "border-green-600/50 bg-green-600/10 text-green-700" : "border-parchment-dark/30 text-parchment-muted"}`}
+                    className={`px-4 py-2 rounded-lg border-2 text-sm font-[family-name:var(--font-cinzel)] transition-all ${!sealed ? "border-green-600/50 bg-green-600/10 text-green-700" : "border-parchment-dark/40 parchment-muted"}`}
                   >
                     🔓 Открыта
                   </button>
@@ -827,8 +836,8 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
           </div>
 
           {/* Секция 2: Тип записи */}
-          <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
-            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Тип записи — выбран: {ENTRY_TYPES.find(t=>t.value===entryType)?.label || "Заметка"}</p>
+          <div className="form-section space-y-3">
+            <span className="form-section-title">❖ Тип записи — выбран: {ENTRY_TYPES.find(t=>t.value===entryType)?.label || "Заметка"}</span>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {ENTRY_TYPES.map((t) => (
                 <button
@@ -852,55 +861,66 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
           </div>
 
           {/* Секция 3: Оформление страницы */}
-          <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
-            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Оформление страницы — выбрано: {PAPER_STYLES.find(ps=>ps.value===(getVal("paperStyle") || "PLAIN"))?.label || "Чистый пергамент"}</p>
-            <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
-              {PAPER_STYLES.map((ps) => (
-                <button
-                  key={ps.value}
-                  type="button"
-                  onClick={() => setVal("paperStyle", ps.value)}
-                  className={`p-2 rounded-lg border-2 text-center transition-all ${(getVal("paperStyle") || "PLAIN") === ps.value
-                    ? "border-wine bg-wine/15 shadow-md ring-2 ring-wine/30"
-                    : "border-parchment-dark/30 hover:border-wine/40 opacity-60 hover:opacity-100"
-                  }`}
-                >
-                  <div className="text-2xl mb-0.5">{ps.emoji}</div>
-                  <p className="text-xs font-[family-name:var(--font-cinzel)] parchment-heading leading-tight">{ps.label}</p>
-                </button>
-              ))}
+          <div className="form-section space-y-3">
+            <span className="form-section-title">❖ Оформление страницы — выбрано: {PAPER_STYLES.find(ps=>ps.value===(getVal("paperStyle") || "PLAIN"))?.label || "Чистый пергамент"}</span>
+            <p className="parchment-muted text-sm italic">Так будет выглядеть страница главы, когда печать снята.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+              {PAPER_STYLES.map((ps) => {
+                const active = (getVal("paperStyle") || "PLAIN") === ps.value;
+                return (
+                  <button
+                    key={ps.value}
+                    type="button"
+                    onClick={() => setVal("paperStyle", ps.value)}
+                    aria-pressed={active}
+                    className={`rounded-lg border-2 overflow-hidden text-center transition-all ${active
+                      ? "border-wine shadow-md ring-2 ring-wine/30"
+                      : "border-parchment-dark/30 hover:border-wine/50 opacity-75 hover:opacity-100"
+                    }`}
+                  >
+                    <div className="paper-swatch">
+                      <PaperEffect style={ps.value} seed={`swatch-${ps.value}`} intensity={0.5} />
+                      <span className="paper-swatch-lines" aria-hidden />
+                      {active && <span className="paper-swatch-check" aria-hidden>✓</span>}
+                    </div>
+                    <p className="text-xs font-[family-name:var(--font-cinzel)] parchment-heading leading-tight px-1 py-1.5 bg-parchment-dark/15">
+                      {ps.emoji} {ps.label}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Секция 4: Пометки на полях */}
-          <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
-            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Пометки на полях</p>
+          <div className="form-section space-y-3">
+            <span className="form-section-title">❖ Пометки на полях</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="parchment-heading text-sm">Пометка сверху</Label>
-                <Textarea value={getVal("marginTop") ?? ""} onChange={e=>setVal("marginTop",e.target.value)} rows={2} placeholder="Заметка на верхнем поле" className="bg-parchment/60 border-parchment-dark/40" />
+                <Textarea value={getVal("marginTop") ?? ""} onChange={e=>setVal("marginTop",e.target.value)} rows={2} placeholder="Заметка на верхнем поле" className="field-parchment" />
               </div>
               <div>
                 <Label className="parchment-heading text-sm">Пометка снизу</Label>
-                <Textarea value={getVal("marginBottom") ?? ""} onChange={e=>setVal("marginBottom",e.target.value)} rows={2} placeholder="Заметка на нижнем поле" className="bg-parchment/60 border-parchment-dark/40" />
+                <Textarea value={getVal("marginBottom") ?? ""} onChange={e=>setVal("marginBottom",e.target.value)} rows={2} placeholder="Заметка на нижнем поле" className="field-parchment" />
               </div>
             </div>
           </div>
 
           {/* Секция 5: Содержание (зависит от типа) */}
-          <div className="space-y-3 pb-4 border-b border-parchment-dark/30">
-            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Содержание — {ENTRY_TYPES.find(t=>t.value===entryType)?.label || "Заметка"}</p>
+          <div className="form-section space-y-3">
+            <span className="form-section-title">❖ Содержание — {ENTRY_TYPES.find(t=>t.value===entryType)?.label || "Заметка"}</span>
 
             {/* ДНЕВНИК: большое полотно текста + постскриптум */}
             {entryType === "DIARY" && (
               <div className="space-y-3">
                 <div>
                   <Label className="parchment-heading text-sm">Полотно текста (тело дневника)</Label>
-                  <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={12} placeholder="Огромное полотно текста — запись из дневника автора" className="bg-parchment/60 border-parchment-dark/40" />
+                  <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={12} placeholder="Огромное полотно текста — запись из дневника автора" className="field-parchment" />
                 </div>
                 <div>
                   <Label className="parchment-heading text-sm">Постскриптум (P.S.)</Label>
-                  <Textarea value={getVal("postscript") ?? ""} onChange={e=>setVal("postscript",e.target.value)} rows={3} placeholder="Постскриптум — дополнение после основной записи" className="bg-parchment/60 border-parchment-dark/40" />
+                  <Textarea value={getVal("postscript") ?? ""} onChange={e=>setVal("postscript",e.target.value)} rows={3} placeholder="Постскриптум — дополнение после основной записи" className="field-parchment" />
                 </div>
               </div>
             )}
@@ -910,15 +930,15 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
               <div className="space-y-3">
                 <div>
                   <Label className="parchment-heading text-sm">Описание и размышления автора о заклинании</Label>
-                  <Textarea value={getVal("spellReflection") ?? ""} onChange={e=>setVal("spellReflection",e.target.value)} rows={6} placeholder="Описание заклинания и размышления автора о нём" className="bg-parchment/60 border-parchment-dark/40" />
+                  <Textarea value={getVal("spellReflection") ?? ""} onChange={e=>setVal("spellReflection",e.target.value)} rows={6} placeholder="Описание заклинания и размышления автора о нём" className="field-parchment" />
                 </div>
                 <div>
                   <Label className="parchment-heading text-sm">Формула заклинания (характеристики)</Label>
-                  <Textarea value={getVal("spellFormula") ?? ""} onChange={e=>setVal("spellFormula",e.target.value)} rows={8} placeholder="Круг, компоненты, время накладывания, дистанция, длительность, урон/эффект..." className="bg-parchment/60 border-parchment-dark/40 font-mono text-sm" />
+                  <Textarea value={getVal("spellFormula") ?? ""} onChange={e=>setVal("spellFormula",e.target.value)} rows={8} placeholder="Круг, компоненты, время накладывания, дистанция, длительность, урон/эффект..." className="field-parchment font-mono text-sm" />
                 </div>
                 <div>
                   <Label className="parchment-heading text-sm">Дополнительные заметки о заклинании</Label>
-                  <Textarea value={getVal("spellNotes") ?? ""} onChange={e=>setVal("spellNotes",e.target.value)} rows={3} placeholder="Побочные эффекты, ограничения, история создания..." className="bg-parchment/60 border-parchment-dark/40" />
+                  <Textarea value={getVal("spellNotes") ?? ""} onChange={e=>setVal("spellNotes",e.target.value)} rows={3} placeholder="Побочные эффекты, ограничения, история создания..." className="field-parchment" />
                 </div>
               </div>
             )}
@@ -927,7 +947,7 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
             {entryType === "NOTE" && (
               <div>
                 <Label className="parchment-heading text-sm">Текст заметки</Label>
-                <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={8} placeholder="Текст заметки" className="bg-parchment/60 border-parchment-dark/40" />
+                <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={8} placeholder="Текст заметки" className="field-parchment" />
               </div>
             )}
 
@@ -935,28 +955,28 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
             {!entryType && (
               <div>
                 <Label className="parchment-heading text-sm">Текст главы</Label>
-                <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={8} className="bg-parchment/60 border-parchment-dark/40" />
+                <Textarea value={getVal("realContent")} onChange={e=>setVal("realContent",e.target.value)} rows={8} className="field-parchment" />
               </div>
             )}
 
             <div>
               <Label className="parchment-heading text-sm">Подсказка для разблокировки</Label>
-              <Input value={getVal("unlockHint")??""} onChange={e=>setVal("unlockHint",e.target.value)} placeholder="напр. Заверши три задания гильдии" className="bg-parchment/60 border-parchment-dark/40 h-10" />
+              <Input value={getVal("unlockHint")??""} onChange={e=>setVal("unlockHint",e.target.value)} placeholder="напр. Заверши три задания гильдии" className="field-parchment h-10" />
             </div>
           </div>
 
           {/* Секция 6: Видимость */}
-          <div className="space-y-2 pb-4 border-b border-parchment-dark/30">
-            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Видимость для групп</p>
+          <div className="form-section space-y-2">
+            <span className="form-section-title">❖ Видимость для групп</span>
             <VisibilitySelector label="Какая группа видит главу" value={getVal("visibleGroupId") || ""} onChange={(v) => setVal("visibleGroupId", v || null)} />
           </div>
 
           {/* Секция 7: Условие авто-снятия */}
-          <div className="space-y-2">
-            <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ Условие авто-снятия печати</p>
+          <div className="form-section space-y-2">
+            <span className="form-section-title">❖ Условие авто-снятия печати</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select value={getVal("conditionType") || "MANUAL"} onValueChange={(v) => setVal("conditionType", v === "MANUAL" ? null : v)}>
-                <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 h-10"><SelectValue/></SelectTrigger>
+                <SelectTrigger className="field-parchment h-10"><SelectValue/></SelectTrigger>
                 <SelectContent className="parchment">
                   <SelectItem value="MANUAL">Вручную</SelectItem>
                   <SelectItem value="QUEST_COMPLETED">Задание завершено</SelectItem>
@@ -966,7 +986,7 @@ function GrimoireFormDialog({ open,onOpenChange,item,onSave,pending }:{open:bool
                   <SelectItem value="ACHIEVEMENT_EARNED">Получено достижение</SelectItem>
                 </SelectContent>
               </Select>
-              <Input value={getVal("conditionValue")??""} onChange={e=>setVal("conditionValue",e.target.value)} placeholder="значение (ID/число)" className="bg-parchment/60 border-parchment-dark/40 h-10" disabled={!getVal("conditionType")||getVal("conditionType")==="MANUAL"}/>
+              <Input value={getVal("conditionValue")??""} onChange={e=>setVal("conditionValue",e.target.value)} placeholder="значение (ID/число)" className="field-parchment h-10" disabled={!getVal("conditionType")||getVal("conditionType")==="MANUAL"}/>
             </div>
             <p className="parchment-muted text-sm italic">При исполнении условия печать снимется автоматически для героев, видящих главу.</p>
           </div>
@@ -1045,7 +1065,7 @@ function AchievementsEditor() {
           {grant && (
             <div className="space-y-3">
               <Select value={grant.charId} onValueChange={(v)=>setGrant({...grant,charId:v})}>
-                <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue placeholder="Герой..."/></SelectTrigger>
+                <SelectTrigger className="field-parchment"><SelectValue placeholder="Герой..."/></SelectTrigger>
                 <SelectContent className="parchment">
                   {(chars ?? []).map((c)=>(<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                 </SelectContent>
@@ -1079,21 +1099,21 @@ function AchFormDialog({ open,onOpenChange,item,onSave,pending }:{open:boolean;o
           <DialogDescription className="sr-only">Форма редактирования достижения</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div><Label className="parchment-heading text-sm">Название</Label><Input value={getVal("name")} onChange={e=>setVal("name",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
-          <div><Label className="parchment-heading text-sm">Описание</Label><Textarea value={getVal("description")} onChange={e=>setVal("description",e.target.value)} rows={2} className="bg-parchment/60 border-parchment-dark/40"/></div>
-          <div><Label className="parchment-heading text-sm">Иконка (эмодзи)</Label><Input value={getVal("icon")??""} onChange={e=>setVal("icon",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
+          <div><Label className="parchment-heading text-sm">Название</Label><Input value={getVal("name")} onChange={e=>setVal("name",e.target.value)} className="field-parchment"/></div>
+          <div><Label className="parchment-heading text-sm">Описание</Label><Textarea value={getVal("description")} onChange={e=>setVal("description",e.target.value)} rows={2} className="field-parchment"/></div>
+          <div><Label className="parchment-heading text-sm">Иконка (эмодзи)</Label><Input value={getVal("icon")??""} onChange={e=>setVal("icon",e.target.value)} className="field-parchment"/></div>
           <div><Label className="parchment-heading text-sm">Редкость</Label>
             <Select value={getVal("rarity")??"COMMON"} onValueChange={v=>setVal("rarity",v)}>
-              <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue/></SelectTrigger>
-              <SelectContent className="parchment">{["COMMON","RARE","EPIC","LEGENDARY","MYTHIC"].map(o=><SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+              <SelectTrigger className="field-parchment"><SelectValue/></SelectTrigger>
+              <SelectContent className="parchment">{["COMMON","RARE","EPIC","LEGENDARY","MYTHIC"].map(o=><SelectItem key={o} value={o}>{RARITY_LABEL[o]}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div><Label className="parchment-heading text-sm">Категория</Label><Input value={getVal("category")??""} onChange={e=>setVal("category",e.target.value)} className="bg-parchment/60 border-parchment-dark/40"/></div>
+          <div><Label className="parchment-heading text-sm">Категория</Label><Input value={getVal("category")??""} onChange={e=>setVal("category",e.target.value)} className="field-parchment"/></div>
           <div className="pt-3 border-t border-parchment-dark/30">
             <p className="parchment-heading text-sm mb-2">⚗ Условие авто-выдачи</p>
             <div className="grid grid-cols-2 gap-2">
               <Select value={getVal("conditionType") || "MANUAL"} onValueChange={(v) => setVal("conditionType", v === "MANUAL" ? null : v)}>
-                <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue/></SelectTrigger>
+                <SelectTrigger className="field-parchment"><SelectValue/></SelectTrigger>
                 <SelectContent className="parchment">
                   <SelectItem value="MANUAL">Вручную</SelectItem>
                   <SelectItem value="QUEST_COMPLETED">Задание завершено</SelectItem>
@@ -1102,7 +1122,7 @@ function AchFormDialog({ open,onOpenChange,item,onSave,pending }:{open:boolean;o
                   <SelectItem value="RANK_REACHED">Достигнут ранг</SelectItem>
                 </SelectContent>
               </Select>
-              <Input value={getVal("conditionValue") || ""} onChange={(e) => setVal("conditionValue", e.target.value)} placeholder="значение (ID/число)" className="bg-parchment/60 border-parchment-dark/40" disabled={!getVal("conditionType") || getVal("conditionType") === "MANUAL"} />
+              <Input value={getVal("conditionValue") || ""} onChange={(e) => setVal("conditionValue", e.target.value)} placeholder="значение (ID/число)" className="field-parchment" disabled={!getVal("conditionType") || getVal("conditionType") === "MANUAL"} />
             </div>
             <p className="parchment-muted text-sm mt-1 italic">Достижение вручится само, когда условие исполнится.</p>
           </div>
@@ -1153,12 +1173,12 @@ function CharactersEditor() {
             {editing?.id === c.id ? (
               <div className="space-y-2 pt-2 border-t border-parchment-dark/20">
                 <div className="grid grid-cols-2 gap-2">
-                  <div><Label className="parchment-heading text-sm">Опыт</Label><Input type="number" value={editing.xp} onChange={e=>setEditing({...editing,xp:e.target.value})} className="bg-parchment/60 border-parchment-dark/40"/></div>
-                  <div><Label className="parchment-heading text-sm">Уровень</Label><Input type="number" value={editing.level} onChange={e=>setEditing({...editing,level:e.target.value})} className="bg-parchment/60 border-parchment-dark/40"/></div>
+                  <div><Label className="parchment-heading text-sm">Опыт</Label><Input type="number" value={editing.xp} onChange={e=>setEditing({...editing,xp:e.target.value})} className="field-parchment"/></div>
+                  <div><Label className="parchment-heading text-sm">Уровень</Label><Input type="number" value={editing.level} onChange={e=>setEditing({...editing,level:e.target.value})} className="field-parchment"/></div>
                 </div>
                 <div><Label className="parchment-heading text-sm">Ранг</Label>
                   <Select value={editing.guildRankId ?? ""} onValueChange={v=>setEditing({...editing,guildRankId:v})}>
-                    <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue placeholder="Ранг..."/></SelectTrigger>
+                    <SelectTrigger className="field-parchment"><SelectValue placeholder="Ранг..."/></SelectTrigger>
                     <SelectContent className="parchment">{(ranks ?? []).map(r=><SelectItem key={r.id} value={r.id}>{r.icon} {r.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
@@ -1328,7 +1348,7 @@ function CharacterInventoryDialog({ character, onClose }: { character: any; onCl
           <div>
             <Label className="parchment-heading text-sm">Тип записи</Label>
             <Select value={kindFilter} onValueChange={(v) => { setKindFilter(v); setSelectedLabId(""); }}>
-              <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 mt-1"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="field-parchment mt-1"><SelectValue /></SelectTrigger>
               <SelectContent className="parchment">
                 <SelectItem value="ITEM">💎 Предметы</SelectItem>
                 <SelectItem value="SPELL">✨ Заклинания</SelectItem>
@@ -1342,7 +1362,7 @@ function CharacterInventoryDialog({ character, onClose }: { character: any; onCl
           <div>
             <Label className="parchment-heading text-sm">Запись из Лаборатории Алого</Label>
             <Select value={selectedLabId} onValueChange={setSelectedLabId}>
-              <SelectTrigger className="bg-parchment/60 border-parchment-dark/40 mt-1"><SelectValue placeholder="Выбери запись..." /></SelectTrigger>
+              <SelectTrigger className="field-parchment mt-1"><SelectValue placeholder="Выбери запись..." /></SelectTrigger>
               <SelectContent className="parchment max-h-60">
                 {labOptions.map((e) => (
                   <SelectItem key={e.id} value={e.id}>
@@ -1359,7 +1379,7 @@ function CharacterInventoryDialog({ character, onClose }: { character: any; onCl
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Как и за что предмет был дарован..."
-              className="bg-parchment/60 border-parchment-dark/40 mt-1"
+              className="field-parchment mt-1"
             />
           </div>
           <div className="flex justify-end gap-2 pt-1">
@@ -1398,7 +1418,7 @@ const SELECT_NONE = "__none";
 
 const SPELL_LEVELS = ["Заговор", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const SPELL_SCHOOLS = ["Ограждение", "Вызов", "Прорицание", "Очарование", "Преобразование", "Иллюзия", "Некромантия", "Порча"];
-const RARITIES = ["COMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC"];
+const RARITIES = ["COMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC"].map((v) => ({ value: v, label: RARITY_LABEL[v] }));
 
 function LabEditor() {
   const { data } = useQuery<any[]>({ queryKey: ["lab"], queryFn: () => fetch("/api/lab").then((r) => r.json()) });
@@ -1455,7 +1475,7 @@ function LabEditor() {
                       </p>
                     )}
                     {e.kind === "ITEM" && e.itemType && <p className="text-sm parchment-muted">{e.itemType}</p>}
-                    <p className="parchment-muted text-sm line-clamp-2 mt-1">{e.description}</p>
+                    <p className="parchment-muted text-sm line-clamp-2 mt-1">{plainText(e.description)}</p>
                   </div>
                   <div className="flex gap-1 shrink-0">
                     <Button size="icon" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }} className="text-wine"><Pencil className="w-4 h-4" /></Button>
@@ -1484,11 +1504,11 @@ function LabField({ label, children }: { label: string; children: React.ReactNod
 }
 
 function LabInput({ value, onChange, placeholder, type }: { value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
-  return <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="bg-parchment/60 border-parchment-dark/40" />;
+  return <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="field-parchment" />;
 }
 
 function LabTextarea({ value, onChange, rows = 3, placeholder }: { value: string; onChange: (v: string) => void; rows?: number; placeholder?: string }) {
-  return <Textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} className="bg-parchment/60 border-parchment-dark/40" />;
+  return <Textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} className="field-parchment" />;
 }
 
 function LabSelect({ value, onChange, options, placeholder, allowNone }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[] | string[]; placeholder?: string; allowNone?: boolean }) {
@@ -1496,7 +1516,7 @@ function LabSelect({ value, onChange, options, placeholder, allowNone }: { value
   const val = value || (allowNone ? SELECT_NONE : opts[0]?.value ?? "");
   return (
     <Select value={val} onValueChange={(v) => onChange(v === SELECT_NONE ? "" : v)}>
-      <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue placeholder={placeholder} /></SelectTrigger>
+      <SelectTrigger className="field-parchment"><SelectValue placeholder={placeholder} /></SelectTrigger>
       <SelectContent className="parchment">
         {allowNone && <SelectItem value={SELECT_NONE}>{placeholder ?? "(не выбрано)"}</SelectItem>}
         {opts.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
@@ -1541,7 +1561,7 @@ function LabFormDialog({ open, onOpenChange, item, onSave, pending }: { open: bo
           {/* Kind selector — fixed for existing entries */}
           <LabField label="Тип записи">
             <Select value={kind} onValueChange={(v) => setVal("kind", v)} disabled={isExisting}>
-              <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="field-parchment"><SelectValue /></SelectTrigger>
               <SelectContent className="parchment">
                 {LAB_KIND_ORDER.map((k) => <SelectItem key={k} value={k}>{LAB_KIND_LABEL[k]}</SelectItem>)}
               </SelectContent>
@@ -1713,7 +1733,7 @@ function UsersEditor() {
         <h3 className="font-[family-name:var(--font-cinzel)] text-lg text-gold">Пользователи мира</h3>
         <Button onClick={() => setCreating(true)} className="btn-rune bg-primary text-primary-foreground"><UserPlus className="w-4 h-4 mr-1" /> Создать</Button>
       </div>
-      <p className="parchment-muted text-sm italic">Здесь ты создаёшь аккаунты героев и Божеств, назначаешь роли и сбрасываешь пароли.</p>
+      <p className="page-muted text-sm italic">Здесь ты создаёшь аккаунты героев и Божеств, назначаешь роли и сбрасываешь пароли.</p>
       <div className="grid md:grid-cols-2 gap-3">
         {(users ?? []).map((u) => (
           <ParchmentCard key={u.id} className="space-y-2">
@@ -1773,13 +1793,13 @@ function CreateUserForm({ onSave, pending }: { onSave: (body: any) => void; pend
   const [characterName, setCharacterName] = useState("");
   return (
     <div className="space-y-3">
-      <div><Label className="parchment-heading text-sm">Имя (игрок или персонаж)</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="bg-parchment/60 border-parchment-dark/40" /></div>
-      <div><Label className="parchment-heading text-sm">Email (знак для входа)</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-parchment/60 border-parchment-dark/40" /></div>
-      <div><Label className="parchment-heading text-sm">Пароль (мин. 6 символов)</Label><Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-parchment/60 border-parchment-dark/40" /></div>
+      <div><Label className="parchment-heading text-sm">Имя (игрок или персонаж)</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="field-parchment" /></div>
+      <div><Label className="parchment-heading text-sm">Email (знак для входа)</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="field-parchment" /></div>
+      <div><Label className="parchment-heading text-sm">Пароль (мин. 6 символов)</Label><Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} className="field-parchment" /></div>
       <div>
         <Label className="parchment-heading text-sm">Роль</Label>
         <Select value={role} onValueChange={setRole}>
-          <SelectTrigger className="bg-parchment/60 border-parchment-dark/40"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="field-parchment"><SelectValue /></SelectTrigger>
           <SelectContent className="parchment">
             <SelectItem value="PLAYER">⚔ Авантюрист (игрок)</SelectItem>
             <SelectItem value="ADMIN">✦ Божество (админ)</SelectItem>
@@ -1787,7 +1807,7 @@ function CreateUserForm({ onSave, pending }: { onSave: (body: any) => void; pend
         </Select>
       </div>
       {role === "PLAYER" && (
-        <div><Label className="parchment-heading text-sm">Имя персонажа (необязательно)</Label><Input value={characterName} onChange={(e) => setCharacterName(e.target.value)} placeholder="напр. Тэодрик Зорестрелец" className="bg-parchment/60 border-parchment-dark/40" /></div>
+        <div><Label className="parchment-heading text-sm">Имя персонажа (необязательно)</Label><Input value={characterName} onChange={(e) => setCharacterName(e.target.value)} placeholder="напр. Тэодрик Зорестрелец" className="field-parchment" /></div>
       )}
       <div className="flex justify-end gap-2 pt-2">
         <Button onClick={() => onSave({ name, email, password, role, characterName: characterName || undefined })} disabled={pending || !name || !email || !password} className="bg-primary text-primary-foreground btn-rune">
@@ -1839,7 +1859,7 @@ function GroupsEditor() {
         <h3 className="font-[family-name:var(--font-cinzel)] text-lg text-gold">Группы игроков</h3>
         <Button onClick={() => setCreating(true)} className="btn-rune bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-1" /> Создать группу</Button>
       </div>
-      <p className="parchment-muted text-sm italic">Группируй игроков одной кампании. К группе можно приписать НПС, с которыми группа встретилась и контактировала.</p>
+      <p className="page-muted text-sm italic">Группируй игроков одной кампании. К группе можно приписать НПС, с которыми группа встретилась и контактировала.</p>
 
       {(groups ?? []).map((g) => (
         <ParchmentCard key={g.id} className="space-y-3">
@@ -1884,10 +1904,10 @@ function GroupsEditor() {
                 </div>
                 {addMemberGroup === g.id && (
                   <div className="mt-2 flex gap-2 items-end">
-                    <select id={`m-${g.id}`} className="flex-1 px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm">
+                    <select id={`m-${g.id}`} className="flex-1 px-2 py-1.5 rounded border field-parchment parchment-text text-sm">
                       {(characters ?? []).filter((c) => !(g.members ?? []).some((m: any) => m.characterId === c.id)).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
-                    <input id={`r-${g.id}`} placeholder="роль" className="px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm w-28" />
+                    <input id={`r-${g.id}`} placeholder="роль" className="px-2 py-1.5 rounded border field-parchment parchment-text text-sm w-28" />
                     <Button size="sm" onClick={() => { const sel = document.getElementById(`m-${g.id}`) as HTMLSelectElement; const role = (document.getElementById(`r-${g.id}`) as HTMLInputElement).value; addMemberMut.mutate({ groupId: g.id, characterId: sel.value, role: role || undefined }); }} className="btn-wine-solid h-8 px-3 text-sm">Добавить</Button>
                     <Button size="sm" variant="ghost" onClick={() => setAddMemberGroup(null)} className="btn-parchment h-8 px-3 text-sm">Отмена</Button>
                   </div>
@@ -1917,7 +1937,7 @@ function GroupsEditor() {
                 </div>
                 {addNpcGroup === g.id && (
                   <div className="mt-2 space-y-2">
-                    <select id={`npc-${g.id}`} className="w-full px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm">
+                    <select id={`npc-${g.id}`} className="w-full px-2 py-1.5 rounded border field-parchment parchment-text text-sm">
                       <optgroup label="Личности (НПС)">
                       {(personalities ?? []).filter((p) => p.isNpc && !(g.npcs ?? []).some((n: any) => n.personalityId === p.id)).map((p) => <option key={p.id} value={p.id}>{p.name}{p.title ? ` — ${p.title}` : ""}</option>)}
                       </optgroup>
@@ -1925,8 +1945,8 @@ function GroupsEditor() {
                       {(personalities ?? []).filter((p) => !p.isNpc && !(g.npcs ?? []).some((n: any) => n.personalityId === p.id)).map((p) => <option key={p.id} value={p.id}>{p.name}{p.title ? ` — ${p.title}` : ""}</option>)}
                       </optgroup>
                     </select>
-                    <input id={`nrole-${g.id}`} placeholder="роль (Союзник/Контакт/Враг...)" className="w-full px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm" />
-                    <input id={`nnotes-${g.id}`} placeholder="заметки" className="w-full px-2 py-1.5 rounded border border-parchment-dark/40 bg-parchment/60 parchment-text text-sm" />
+                    <input id={`nrole-${g.id}`} placeholder="роль (Союзник/Контакт/Враг...)" className="w-full px-2 py-1.5 rounded border field-parchment parchment-text text-sm" />
+                    <input id={`nnotes-${g.id}`} placeholder="заметки" className="w-full px-2 py-1.5 rounded border field-parchment parchment-text text-sm" />
                     <div className="flex gap-2">
                       <Button size="sm" onClick={() => { const npc = (document.getElementById(`npc-${g.id}`) as HTMLSelectElement).value; const role = (document.getElementById(`nrole-${g.id}`) as HTMLInputElement).value; const notes = (document.getElementById(`nnotes-${g.id}`) as HTMLInputElement).value; addNpcMut.mutate({ groupId: g.id, personalityId: npc, role: role || undefined, notes: notes || undefined }); }} className="btn-wine-solid h-8 px-3 text-sm">Приписать</Button>
                       <Button size="sm" variant="ghost" onClick={() => setAddNpcGroup(null)} className="btn-parchment h-8 px-3 text-sm">Отмена</Button>
@@ -1938,7 +1958,7 @@ function GroupsEditor() {
           )}
         </ParchmentCard>
       ))}
-      {(groups ?? []).length === 0 && <p className="text-center parchment-muted italic py-8">Групп пока нет. Создай первую, чтобы объединить игроков.</p>}
+      {(groups ?? []).length === 0 && <p className="text-center page-muted italic py-8">Групп пока нет. Создай первую, чтобы объединить игроков.</p>}
 
       <Dialog open={creating} onOpenChange={setCreating}>
         <DialogContent className="parchment gold-frame max-w-md">
@@ -1956,8 +1976,8 @@ function GroupForm({ onSave, pending }: { onSave: (b: any) => void; pending: boo
   const [image, setImage] = useState<string | null>(null);
   return (
     <div className="space-y-3">
-      <div><Label className="parchment-heading text-sm">Название группы</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="напр. Компания «Серебряное Пламя»" className="bg-parchment/60 border-parchment-dark/40" /></div>
-      <div><Label className="parchment-heading text-sm">Описание</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Краткое описание группы" className="bg-parchment/60 border-parchment-dark/40" /></div>
+      <div><Label className="parchment-heading text-sm">Название группы</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="напр. Компания «Серебряное Пламя»" className="field-parchment" /></div>
+      <div><Label className="parchment-heading text-sm">Описание</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Краткое описание группы" className="field-parchment" /></div>
       <ImageUpload label="Герб / эмблема" value={image} onChange={setImage} aspect="aspect-video" />
       <div className="flex justify-end gap-2 pt-2">
         <Button onClick={() => onSave({ name, description, image: image || undefined })} disabled={!name || pending} className="bg-primary text-primary-foreground btn-rune">{pending ? "Создаём..." : "Создать"}</Button>
@@ -2003,7 +2023,7 @@ function ContentEditor() {
     <div className="space-y-6">
       <div>
         <h3 className="font-[family-name:var(--font-cinzel)] text-lg text-gold">Контент страниц</h3>
-        <p className="parchment-muted text-sm italic">Здесь ты редактируешь все вступительные тексты на страницах сайта. Изменения видны мгновенно.</p>
+        <p className="page-muted text-sm italic">Здесь ты редактируешь все вступительные тексты на страницах сайта. Изменения видны мгновенно.</p>
       </div>
       {/* Группировка по секциям */}
       {Object.entries(
@@ -2014,7 +2034,7 @@ function ContentEditor() {
         }, {})
       ).map(([section, keys]) => (
         <div key={section} className="space-y-3">
-          <p className="parchment-heading text-sm uppercase tracking-wider text-wine">❖ {section}</p>
+          <span className="page-heading block text-sm uppercase tracking-[0.12em] mb-2">❖ {section}</span>
           {keys.map((ck) => {
             const cur = map[ck.key];
             const draft = drafts[ck.key];
@@ -2035,11 +2055,11 @@ function ContentEditor() {
                   <>
                     <div>
                       <Label className="parchment-heading text-sm">Заголовок</Label>
-                      <Input value={title} onChange={(e) => setDrafts({ ...drafts, [ck.key]: { title: e.target.value, body, image } })} className="bg-parchment/60 border-parchment-dark/40 h-10" />
+                      <Input value={title} onChange={(e) => setDrafts({ ...drafts, [ck.key]: { title: e.target.value, body, image } })} className="field-parchment h-10" />
                     </div>
                     <div>
                       <Label className="parchment-heading text-sm">Текст</Label>
-                      <Textarea value={body} onChange={(e) => setDrafts({ ...drafts, [ck.key]: { title, body: e.target.value, image } })} rows={5} className="bg-parchment/60 border-parchment-dark/40" />
+                      <Textarea value={body} onChange={(e) => setDrafts({ ...drafts, [ck.key]: { title, body: e.target.value, image } })} rows={5} className="field-parchment" />
                     </div>
                     <ImageUpload label="Изображение (опц.)" value={image} onChange={(v) => setDrafts({ ...drafts, [ck.key]: { title: title, body: body, image: v } })} aspect="aspect-video" />
                   </>

@@ -43,14 +43,32 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Fantasy palette. These MUST be registered here: the whole app is written
+     in terms of `text-gold`, `border-gold/30`, `bg-wine/10`, `bg-parchment/60`
+     and friends, and without a --color-* entry Tailwind emits nothing for any
+     of them, which is why gold rules, wine accents and parchment fills were
+     invisible. `inline` keeps the reference to the raw token so the dark-theme
+     overrides below still apply. */
+  --color-gold: var(--gold);
+  --color-gold-bright: var(--gold-bright);
+  --color-wine: var(--wine);
+  --color-parchment: var(--parchment);
+  --color-parchment-dark: var(--parchment-dark);
+  --color-ink: var(--ink);
+  --color-magic-glow: var(--magic-glow);
+  --color-ember: var(--ember);
 }
 
 /* ===== LIGHT THEME: Dawn of Eldrin (warm parchment daylight) ===== */
 :root {
   --radius: 0.4rem;
 
-  /* Warm dawn backdrop — sunlit library */
-  --background: oklch(0.96 0.025 75);
+  /* Warm dawn backdrop — sunlit library.
+     Deliberately a touch darker than --parchment (0.93): the cards have to read
+     as sheets lying on a desk. At the old 0.96 they were lighter than the page
+     and every card boundary disappeared. */
+  --background: oklch(0.90 0.032 72);
   --foreground: oklch(0.22 0.04 40);
 
   /* Slightly darker parchment for cards */
@@ -86,7 +104,7 @@
   --chart-4: oklch(0.45 0.14 290);
   --chart-5: oklch(0.68 0.12 90);
 
-  --sidebar: oklch(0.94 0.02 75);
+  --sidebar: oklch(0.92 0.025 74);
   --sidebar-foreground: oklch(0.22 0.04 40);
   --sidebar-primary: oklch(0.62 0.13 70);
   --sidebar-primary-foreground: oklch(0.96 0.02 75);
@@ -104,9 +122,9 @@
   --ink: oklch(0.22 0.03 45);
   --magic-glow: oklch(0.55 0.15 290);
   --ember: oklch(0.55 0.18 40);
-  --ambient-1: oklch(0.92 0.04 75 / 0.5);
-  --ambient-2: oklch(0.88 0.08 60 / 0.25);
-  --ambient-3: oklch(0.90 0.06 290 / 0.2);
+  --ambient-1: oklch(0.95 0.04 78 / 0.55);
+  --ambient-2: oklch(0.86 0.09 55 / 0.3);
+  --ambient-3: oklch(0.88 0.06 290 / 0.22);
 }
 
 .dark {
@@ -244,12 +262,26 @@
 
 /* Decorative gold gradient text */
 .text-gold {
-  background: linear-gradient(180deg, oklch(0.88 0.14 90) 0%, oklch(0.68 0.12 72) 60%, oklch(0.55 0.10 60) 100%);
+  /* Light theme: a burnished, darker gold — the bright leaf tone below is only
+     legible against the dark ground. */
+  background: linear-gradient(180deg, oklch(0.62 0.13 78) 0%, oklch(0.50 0.12 64) 60%, oklch(0.41 0.10 52) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  color: transparent;
+  /* Not `transparent`: icons inside stroke with currentColor and would vanish.
+     -webkit-text-fill-color already hides the glyphs so the gradient shows. */
+  color: var(--gold);
+  text-shadow: none;
+}
+.dark .text-gold {
+  background: linear-gradient(180deg, oklch(0.88 0.14 90) 0%, oklch(0.68 0.12 72) 60%, oklch(0.55 0.10 60) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
   text-shadow: 0 0 30px oklch(0.78 0.13 85 / 0.3);
+}
+/* SVG children paint themselves — undo the text clipping for them. */
+.text-gold svg {
+  -webkit-text-fill-color: currentColor;
 }
 
 .text-glow {
@@ -314,6 +346,22 @@
 .shimmer-gold {
   background: linear-gradient(
     90deg,
+    oklch(0.48 0.12 62) 0%,
+    oklch(0.66 0.14 82) 25%,
+    oklch(0.48 0.12 62) 50%,
+    oklch(0.66 0.14 82) 75%,
+    oklch(0.48 0.12 62) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--gold);
+  animation: shimmer 6s linear infinite;
+}
+.dark .shimmer-gold {
+  background: linear-gradient(
+    90deg,
     oklch(0.68 0.12 72) 0%,
     oklch(0.88 0.14 90) 25%,
     oklch(0.68 0.12 72) 50%,
@@ -323,8 +371,6 @@
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer 6s linear infinite;
 }
 
 /* Pulsing magical glow */
@@ -360,23 +406,50 @@
   animation: ink-draw 2.5s ease-out forwards;
 }
 
-/* ===== SCROLLBAR ===== */
+/* ===== SCROLLBAR =====
+   Was hard-coded to the dark theme, so the light theme got a black gutter.
+   Both now follow the theme tokens. */
+:root {
+  --scrollbar-track: oklch(0.88 0.035 75);
+  --scrollbar-thumb-a: oklch(0.68 0.10 65);
+  --scrollbar-thumb-b: oklch(0.55 0.10 50);
+}
+.dark {
+  --scrollbar-track: oklch(0.14 0.02 45);
+  --scrollbar-thumb-a: oklch(0.55 0.10 60);
+  --scrollbar-thumb-b: oklch(0.42 0.10 40);
+}
 ::-webkit-scrollbar { width: 12px; height: 12px; }
 ::-webkit-scrollbar-track {
-  background: oklch(0.14 0.02 45);
+  background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, oklch(0.55 0.10 60), oklch(0.42 0.10 40));
-  border: 2px solid oklch(0.14 0.02 45);
+  background: linear-gradient(180deg, var(--scrollbar-thumb-a), var(--scrollbar-thumb-b));
+  border: 2px solid var(--scrollbar-track);
   border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, oklch(0.72 0.13 75), oklch(0.55 0.10 50));
 }
+::-webkit-scrollbar-corner { background: var(--scrollbar-track); }
 
-/* Custom scroll area styling */
+/* Firefox + any element that opts in explicitly */
+html {
+  scrollbar-color: var(--scrollbar-thumb-a) var(--scrollbar-track);
+}
 .fantasy-scroll {
-  scrollbar-color: oklch(0.55 0.10 60) oklch(0.14 0.02 45);
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-a) var(--scrollbar-track);
+}
+
+/* Tab strips scroll horizontally when they overflow, but a gutter stripe under
+   the tabs looks like a defect — the tabs themselves are the affordance. */
+.tab-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.tab-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 /* ===== DARK ON PARCHMENT (card content) ===== */
@@ -390,6 +463,19 @@
   color: oklch(0.25 0.07 35);
   font-family: var(--font-cinzel);
   letter-spacing: 0.03em;
+}
+
+/* ===== SAME TYPOGRAPHY, BUT ON THE PAGE BACKGROUND =====
+   `.parchment-*` colours are ink tones meant for the light cards. Used straight
+   on the page they vanish in the dark theme. These follow --foreground instead,
+   so they stay legible in both themes. */
+.page-heading {
+  color: color-mix(in oklab, var(--foreground) 92%, transparent);
+  font-family: var(--font-cinzel);
+  letter-spacing: 0.03em;
+}
+.page-muted {
+  color: color-mix(in oklab, var(--foreground) 72%, transparent);
 }
 
 /* ===== DROP CAP — disabled per user request (large first letter hurt readability) ===== */
@@ -413,11 +499,50 @@
   margin-top: 1.4rem;
   margin-bottom: 0.6rem;
 }
-.lore-prose strong { color: oklch(0.30 0.06 30); font-weight: 700; }
-.lore-prose em { color: oklch(0.35 0.05 40); }
-/* Ensure FormattedText strong/em work everywhere (not just .lore-prose) */
-.formatted-text strong, .lore-prose strong { font-weight: 700; }
-.formatted-text em, .lore-prose em { font-style: italic; }
+/* Emphasis produced by <FormattedText> (**жирный** / *курсив*) must read the
+   same wherever it appears, not only inside .lore-prose. */
+.formatted-text strong,
+.lore-prose strong {
+  font-weight: 700;
+}
+.formatted-text em,
+.lore-prose em {
+  font-style: italic;
+}
+/* On parchment surfaces emphasis also takes a deeper ink tone. */
+.lore-prose strong,
+.parchment .formatted-text strong,
+.grimoire-page .formatted-text strong {
+  color: oklch(0.28 0.09 30);
+}
+.lore-prose em,
+.parchment .formatted-text em,
+.grimoire-page .formatted-text em {
+  color: oklch(0.33 0.06 38);
+}
+
+/* ===== Marginalia — notes scribbled in the margin of a Grimoire page ===== */
+.margin-note {
+  position: relative;
+  max-width: 34rem;
+  padding-left: 0.9rem;
+  border-left: 2px solid oklch(0.42 0.15 25 / 0.35);
+  font-family: var(--font-garamond), Georgia, serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: oklch(0.40 0.09 30 / 0.92);
+  transform: rotate(-0.4deg);
+}
+.margin-note::before {
+  content: "✒";
+  position: absolute;
+  left: -1.1rem;
+  top: 0.1em;
+  font-size: 0.85em;
+  font-style: normal;
+  color: oklch(0.42 0.15 25 / 0.6);
+}
 
 /* ===== ENCRYPTED / CIPHER text (grimoire locked) ===== */
 .cipher {
@@ -447,6 +572,78 @@
   text-transform: uppercase;
   font-weight: 600;
   transition: all 0.3s ease;
+}
+
+/* ===== Form fields ON PARCHMENT =====
+   Inputs used to be `bg-parchment/60` on a `.parchment` card, i.e. the same
+   colour as the card they sit in — the field boundaries disappeared and the
+   blocks read as one mass. These are deliberately recessed instead: a darker
+   well, a real border and an inset shadow, so every field is visibly a hole in
+   the sheet. The [data-slot] selectors are needed to outrank shadcn's
+   `dark:bg-input/30`, which would otherwise win in the dark theme. */
+.field-parchment,
+[data-slot="input"].field-parchment,
+[data-slot="textarea"].field-parchment,
+[data-slot="select-trigger"].field-parchment,
+select.field-parchment {
+  background-color: oklch(0.87 0.05 78);
+  border: 1px solid oklch(0.52 0.07 55 / 0.55);
+  border-radius: var(--radius);
+  color: var(--ink);
+  box-shadow: inset 0 2px 4px oklch(0.45 0.06 55 / 0.16);
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.field-parchment::placeholder {
+  color: oklch(0.47 0.04 55 / 0.7);
+  font-style: italic;
+}
+.field-parchment:hover:not(:disabled) {
+  border-color: oklch(0.45 0.11 35 / 0.6);
+}
+.field-parchment:focus,
+.field-parchment:focus-visible,
+[data-slot="input"].field-parchment:focus-visible,
+[data-slot="textarea"].field-parchment:focus-visible {
+  outline: none;
+  background-color: oklch(0.92 0.05 80);
+  border-color: oklch(0.42 0.15 25 / 0.8);
+  box-shadow:
+    inset 0 2px 4px oklch(0.45 0.06 55 / 0.1),
+    0 0 0 3px oklch(0.42 0.15 25 / 0.16);
+}
+.field-parchment:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* A labelled block on a parchment card. Without this, stacked label/value
+   pairs run together — the complaint about the profile editor. */
+.field-block {
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius);
+  background: oklch(0.90 0.045 76 / 0.55);
+  border: 1px solid oklch(0.60 0.05 60 / 0.28);
+}
+
+/* Groups of controls inside a dialog / card, separated by a hairline rule. */
+.form-section {
+  padding: 0.9rem 1rem;
+  border-radius: calc(var(--radius) + 2px);
+  background: oklch(0.91 0.04 76 / 0.5);
+  border: 1px solid oklch(0.58 0.05 58 / 0.3);
+}
+.form-section-title {
+  display: block;
+  margin-bottom: 0.6rem;
+  color: oklch(0.32 0.10 30);
+  font-family: var(--font-cinzel);
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.form-section > .form-section-title {
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid oklch(0.58 0.05 58 / 0.28);
 }
 
 /* Fantasy buttons that work ON PARCHMENT (light) backgrounds.
@@ -538,128 +735,104 @@
   filter: drop-shadow(0 0 12px oklch(0.72 0.13 75 / 0.2));
 }
 
-/* ===== Grimoire paper decoration styles — bold, visible, clean ===== */
-.paper-plain {
-  /* just parchment, no extra decoration */
+/* ===== Grimoire paper decoration =====
+   Marks are generated in components/fantasy/paper-effects.tsx and dropped into
+   the page as two absolutely positioned layers: `under` soaks into the sheet
+   behind the writing, `over` lies on top of it. */
+
+/* Hidden host for the shared SVG filters / gradients. */
+.paper-fx-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
-/* BLOOD — dark red stains dripping from top */
-.paper-blood {
-  position: relative;
-}
-.paper-blood::before {
-  content: "";
+.paper-fx {
   position: absolute;
-  top: 0; left: 0; right: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+  animation: paper-fx-settle 900ms ease-out both;
+}
+.paper-fx-mark {
+  position: absolute;
+  transform-origin: center;
+}
+/* Edge treatments (scorching, gilding) stretch over the whole sheet so they
+   never leave a visible sprite seam. */
+.paper-fx-mark.paper-fx-full {
+  left: 0;
+  top: 0;
+  width: 100%;
   height: 100%;
-  background:
-    radial-gradient(ellipse 40px 50px at 12% 8%, oklch(0.42 0.22 25 / 0.55), transparent 65%),
-    radial-gradient(ellipse 25px 35px at 80% 5%, oklch(0.40 0.20 25 / 0.45), transparent 65%),
-    radial-gradient(ellipse 30px 40px at 50% 95%, oklch(0.38 0.18 25 / 0.35), transparent 65%),
-    radial-gradient(ellipse 15px 25px at 90% 90%, oklch(0.40 0.20 25 / 0.30), transparent 65%);
-  pointer-events: none;
-  z-index: 0;
+  transform: none;
 }
 
-/* BURNED — dark scorched edges all around */
-.paper-burned {
-  position: relative;
-}
-.paper-burned::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 100% 60px at 50% 0%, oklch(0.18 0.05 35 / 0.5), transparent 70%),
-    radial-gradient(ellipse 100% 60px at 50% 100%, oklch(0.18 0.05 35 / 0.5), transparent 70%),
-    radial-gradient(ellipse 40px 100% at 0% 50%, oklch(0.18 0.05 35 / 0.3), transparent 70%),
-    radial-gradient(ellipse 40px 100% at 100% 50%, oklch(0.18 0.05 35 / 0.3), transparent 70%);
-  pointer-events: none;
+/* Soaked-in stains — behind the text, so reading is never impaired. */
+.paper-fx-under {
   z-index: 0;
+  mix-blend-mode: multiply;
 }
-.paper-burned::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  box-shadow: inset 0 0 80px oklch(0.15 0.04 35 / 0.25);
-  pointer-events: none;
-  z-index: 0;
+/* Marks that landed on the finished page — deliberately over the writing. */
+.paper-fx-over {
+  z-index: 20;
+  mix-blend-mode: multiply;
+  opacity: 0.92;
+  animation-delay: 220ms;
 }
 
-/* TEARS — blue water stains at corners and edges */
-.paper-tears {
-  position: relative;
-}
-.paper-tears::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 30px 60px at 8% 3%, oklch(0.55 0.08 200 / 0.3), transparent 60%),
-    radial-gradient(ellipse 20px 45px at 92% 97%, oklch(0.55 0.08 200 / 0.25), transparent 60%),
-    radial-gradient(ellipse 15px 35px at 50% 100%, oklch(0.55 0.08 200 / 0.2), transparent 60%),
-    radial-gradient(ellipse 12px 30px at 95% 30%, oklch(0.55 0.08 200 / 0.15), transparent 60%);
-  pointer-events: none;
-  z-index: 0;
+/* Pale styles must sit on the paper rather than darken it. */
+.paper-fx-over.paper-fx-frost,
+.paper-fx-under.paper-fx-frost { mix-blend-mode: normal; }
+.paper-fx-over.paper-fx-gold { mix-blend-mode: normal; }
+.paper-fx-under.paper-fx-gold { mix-blend-mode: normal; opacity: 0.7; }
+.paper-fx-over.paper-fx-tears { mix-blend-mode: normal; opacity: 0.8; }
+
+/* Collapsed chapter headers get a hint of the style, not the full mess. */
+.paper-fx-quiet.paper-fx-over { opacity: 0.42; }
+.paper-fx-quiet.paper-fx-under { opacity: 0.55; }
+
+@keyframes paper-fx-settle {
+  from { opacity: 0; }
 }
 
-/* INK — dark splatter marks */
-.paper-ink {
-  position: relative;
-}
-.paper-ink::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle 12px at 15% 12%, oklch(0.15 0.02 40 / 0.5), transparent 75%),
-    radial-gradient(circle 8px at 78% 82%, oklch(0.15 0.02 40 / 0.45), transparent 75%),
-    radial-gradient(circle 5px at 60% 25%, oklch(0.15 0.02 40 / 0.35), transparent 75%),
-    radial-gradient(circle 10px at 35% 70%, oklch(0.15 0.02 40 / 0.3), transparent 75%),
-    radial-gradient(circle 3px at 50% 50%, oklch(0.15 0.02 40 / 0.25), transparent 75%);
-  pointer-events: none;
-  z-index: 0;
+@media (prefers-reduced-motion: reduce) {
+  .paper-fx { animation: none; }
 }
 
-/* FROST — icy blue crystals at corners */
-.paper-frost {
+/* Swatches in the admin style picker — a miniature of the finished page. */
+.paper-swatch {
   position: relative;
+  isolation: isolate;
+  height: 72px;
+  overflow: hidden;
+  background-color: var(--parchment);
+  background-image: radial-gradient(ellipse at 25% 15%, oklch(0.96 0.05 80 / 0.6), transparent 55%);
 }
-.paper-frost::before {
-  content: "";
+.paper-swatch-lines {
   position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 60px 80px at 5% 5%, oklch(0.75 0.08 230 / 0.3), transparent 55%),
-    radial-gradient(ellipse 50px 70px at 95% 95%, oklch(0.75 0.08 230 / 0.25), transparent 55%),
-    radial-gradient(ellipse 40px 50px at 95% 5%, oklch(0.75 0.08 230 / 0.2), transparent 55%);
-  pointer-events: none;
-  z-index: 0;
+  inset: 10px 12px;
+  z-index: 1;
+  background-image: repeating-linear-gradient(
+    0deg,
+    oklch(0.35 0.04 45 / 0.42) 0,
+    oklch(0.35 0.04 45 / 0.42) 2px,
+    transparent 2px,
+    transparent 9px
+  );
 }
-
-/* GOLD — shimmering gold particles */
-.paper-gold {
-  position: relative;
-}
-.paper-gold::before {
-  content: "";
+.paper-swatch-check {
   position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 80px 100px at 50% 0%, oklch(0.75 0.15 85 / 0.2), transparent 55%),
-    radial-gradient(circle 6px at 20% 30%, oklch(0.80 0.14 85 / 0.4), transparent 70%),
-    radial-gradient(circle 4px at 70% 60%, oklch(0.80 0.14 85 / 0.35), transparent 70%),
-    radial-gradient(circle 5px at 40% 80%, oklch(0.80 0.14 85 / 0.3), transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-}
-.paper-gold::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  box-shadow: inset 0 0 50px oklch(0.75 0.15 85 / 0.1);
-  pointer-events: none;
-  z-index: 0;
+  z-index: 30;
+  right: 4px;
+  bottom: 2px;
+  color: var(--wine);
+  font-size: 1rem;
+  line-height: 1;
+  text-shadow: 0 0 4px oklch(0.93 0.045 75);
 }
 
 /* Grimoire book page — large readable area */
@@ -678,9 +851,11 @@
     inset 0 0 40px oklch(0.60 0.06 60 / 0.1),
     0 8px 30px oklch(0.15 0.02 45 / 0.4);
   overflow: hidden;
+  /* keep multiply blending inside the page instead of bleeding onto the app */
+  isolation: isolate;
 }
-/* Paper decorations sit behind text */
-.grimoire-page > * {
+/* Page content sits above the soaked-in stains, below the marks on top. */
+.grimoire-page > *:not(.paper-fx):not(.paper-fx-defs) {
   position: relative;
   z-index: 1;
 }

@@ -3,25 +3,21 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
+import { useAppStore } from "@/store/app-store";
 import { OrnamentTitle } from "@/components/fantasy/ornament-title";
-import { ParchmentCard, RuneSeal } from "@/components/fantasy/ui";
+import { ParchmentCard, RuneSeal, GRIMOIRE_CAT_LABEL } from "@/components/fantasy/ui";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import type { GrimoireEntry } from "@/lib/types";
 import { Lock, Unlock, Sparkles, KeyRound, Crown } from "lucide-react";
-import { FormattedText } from "@/components/fantasy/formatted-text";
-
-const CAT_LABEL: Record<string, string> = {
-  SECRETS: "Тайны",
-  RITUALS: "Ритуалы",
-  PROPHECY: "Пророчества",
-  HISTORY: "История",
-  BEASTIARY: "Бестиарий",
-};
+import { FormattedText, plainText } from "@/components/fantasy/formatted-text";
+import { PaperEffect } from "@/components/fantasy/paper-effects";
 
 export function GrimoireView() {
   const { data: session } = useSession();
+  // A chapter opened from search or from the Hall unfolds on arrival.
+  const { focusId, setFocusId } = useAppStore();
   const isAdmin = session?.user?.role === "ADMIN";
   const { data, isLoading } = useQuery<GrimoireEntry[]>({
     queryKey: ["grimoire"],
@@ -93,6 +89,8 @@ export function GrimoireView() {
               isAdmin={isAdmin}
               onUnlock={() => unlockMut.mutate(entry.id)}
               pending={unlockMut.isPending}
+              linked={entry.id === focusId}
+              onInteract={() => setFocusId(null)}
             />
           ))}
           {entries.length === 0 && (
@@ -117,22 +115,35 @@ function GrimoirePage({
   isAdmin,
   onUnlock,
   pending,
+  linked = false,
+  onInteract,
 }: {
   entry: GrimoireEntry;
   isAdmin: boolean;
   onUnlock: () => void;
   pending: boolean;
+  /** another section linked straight to this chapter */
+  linked?: boolean;
+  onInteract?: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  const expanded = (toggled ?? linked) && entry.unlocked;
+  const setExpanded = (v: boolean) => {
+    setToggled(v);
+    onInteract?.();
+  };
 
   return (
     <div className="space-y-2">
       {/* Chapter header (always visible) — click to expand */}
       <ParchmentCard
-        className={`relative overflow-hidden cursor-pointer transition-all ${entry.unlocked ? "gold-frame-hover" : ""}`}
+        className={`relative isolate overflow-hidden cursor-pointer transition-all ${entry.unlocked ? "gold-frame-hover" : ""}`}
         frame={entry.unlocked}
       >
         {!entry.unlocked && <div className="absolute inset-0 locked-veil z-0 rounded-lg" />}
+        {entry.unlocked && (
+          <PaperEffect style={entry.paperStyle} seed={`${entry.id}:card`} intensity={0.35} quiet />
+        )}
         <div
           className="relative z-10"
           onClick={() => entry.unlocked && setExpanded(!expanded)}
@@ -156,7 +167,7 @@ function GrimoirePage({
                 )}
                 <div className="flex items-center gap-2 flex-wrap mt-1">
                   <Badge variant="outline" className={`text-sm ${entry.unlocked ? "border-gold/30 text-gold/70" : "border-foreground/20 text-foreground/40"}`}>
-                    {entry.unlocked ? (CAT_LABEL[entry.category] ?? entry.category) : "Запечатано"}
+                    {entry.unlocked ? (GRIMOIRE_CAT_LABEL[entry.category] ?? entry.category) : "Запечатано"}
                   </Badge>
                   {entry.unlocked && (
                     <Badge variant="outline" className="text-sm border-wine/30 text-wine/70">
@@ -226,7 +237,7 @@ function GrimoirePage({
           {entry.unlocked && !expanded && (
             <div className="mt-3 pt-3 border-t border-parchment-dark/20">
               <p className="parchment-muted text-sm italic line-clamp-2">
-                {entry.realContent || entry.spellReflection || "Нажми, чтобы раскрыть главу..."}
+                {plainText(entry.realContent || entry.spellReflection) || "Нажми, чтобы раскрыть главу..."}
               </p>
               <p className="text-sm text-gold/60 mt-1">▼ Кликни, чтобы раскрыть</p>
             </div>
@@ -237,9 +248,12 @@ function GrimoirePage({
       {/* When unlocked and expanded — show full book page */}
       {entry.unlocked && expanded && (
         <div className="grimoire-page animate-reveal">
+          {/* State of the paper — blood, tears, ink, burns, frost or gold leaf */}
+          <PaperEffect style={entry.paperStyle} seed={entry.id} />
+
           {/* Margin note top */}
           {entry.marginTop && (
-            <div className="margin-note mb-4 ml-12">{entry.marginTop}</div>
+            <FormattedText className="margin-note mb-4 ml-12">{entry.marginTop}</FormattedText>
           )}
 
           {/* Title + date */}
@@ -300,7 +314,7 @@ function GrimoirePage({
 
           {/* Margin note bottom */}
           {entry.marginBottom && (
-            <div className="margin-note mt-4 ml-12">{entry.marginBottom}</div>
+            <FormattedText className="margin-note mt-4 ml-12">{entry.marginBottom}</FormattedText>
           )}
 
           {/* Collapse button */}

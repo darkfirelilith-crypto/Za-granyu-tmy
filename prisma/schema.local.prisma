@@ -1,3 +1,6 @@
+// GENERATED FILE — do not edit by hand.
+// Run `node scripts/sync-local-schema.mjs` (or any db:*:local script) to refresh
+// it from prisma/schema.prisma. Only the datasource differs.
 // Prisma schema for the world beyond the darkness ("За гранью тьмы")
 // Deployed to Vercel with PostgreSQL (Neon). Local dev can use either.
 
@@ -49,6 +52,7 @@ model Character {
   groupMemberships GroupMember[]
   relationsOwned   CharacterRelation[] @relation("RelationOwner")
   relationsAsTarget CharacterRelation[] @relation("RelationTarget")
+  inventory   CharacterItem[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -169,6 +173,7 @@ model WorldSystem {
   category    String   // POLITICS | ECONOMY | MILITARY | MAGIC | RELIGION | LAW
   description String
   icon        String?
+  image       String?  // base64 image (illustration)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -180,6 +185,7 @@ model God {
   domain      String   // war, love, death, knowledge, etc.
   description String
   symbol      String?  // emoji
+  image       String?  // base64 image (portrait/illustration)
   alignment   String?  // good | neutral | evil
   pantheon    String?
   createdAt   DateTime @default(now())
@@ -192,6 +198,7 @@ model Legend {
   content     String
   era         String?
   icon        String?
+  image       String?  // base64 image (illustration)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -274,17 +281,32 @@ model GrimoireEntry {
 
 model LabEntry {
   id          String   @id @default(cuid())
-  kind        String   // RACE | CLASS | SUBCLASS | SPELL | ITEM
+  kind        String   // RACE | SUBRACE | CLASS | SUBCLASS | SPELL | ITEM | TRAIT | BACKGROUND
   name        String   @unique
-  subtitle    String?  // e.g. "Подкласс Паладина", "Заклинание 3 круга"
-  description String   // main text
-  details     String?  // structured extra info (traits, stats, components, etc.)
-  icon        String?  // emoji
-  image       String?  // base64 image (illustration / symbol)
-  rarity      String?  // for items/spells: COMMON..MYTHIC or spell level
+  subtitle    String?
+  description String
+  details     String?
+  icon        String?
+  image       String?
+  rarity      String?
   order       Int      @default(0)
+  // Race fields
+  raceParent  String?  // for SUBRACE: parent race name
+  // Spell fields
+  spellLevel  String?  // "1".."9" or "Заговор"
+  school      String?  // "Ограждение"|"Вызов"|"Прорицание"|"Очарование"|"Преобразование"|"Иллюзия"|"Некромантия"|"Порча"
+  concentration String? // text: "Нет" | "Да, потому что ..."
+  ritual      String?  // "Да" | "Нет"
+  components  String?  // "В, С, М (перышко)" etc
+  castingTime String?  // "1 действие" etc
+  spellRange  String?  // "На себя" / "18 м" etc
+  spellClasses String? // "Жрец, Друид" etc
+  // Item fields
+  itemType    String?  // "Доспех"|"Оружие"|"Посох"|"Кольцо"|"Снадобье"etc
+  attunement  String?  // text: "Нет" | "Да, ..." etc
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  characterItems CharacterItem[]
 }
 
 // ===== Editable Site Content (история гильдии, девиз, залы, описание зала) =====
@@ -297,6 +319,22 @@ model SiteContent {
   image     String?  // base64 image (optional)
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+}
+
+// ===== Character Inventory — магические предметы из Лаборатории Алого =====
+// Admin grants items to characters. Links Character → LabEntry.
+
+model CharacterItem {
+  id          String   @id @default(cuid())
+  characterId String
+  labEntryId  String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  labEntry    LabEntry  @relation(fields: [labEntryId], references: [id], onDelete: Cascade)
+  grantedAt   DateTime @default(now())
+  grantedBy   String?  // admin userId or "story"
+  note        String?  // optional note about how/why it was granted
+
+  @@unique([characterId, labEntryId])
 }
 
 // ===== Groups (кампания — объединение игроков + встреченные НПС) =====

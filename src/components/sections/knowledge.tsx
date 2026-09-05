@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "@/store/app-store";
 import { OrnamentTitle } from "@/components/fantasy/ornament-title";
-import { ParchmentCard, RuneSeal, RelationBadge } from "@/components/fantasy/ui";
+import { ParchmentCard, RuneSeal, RelationBadge, SYSTEM_CAT_LABEL } from "@/components/fantasy/ui";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,7 +31,7 @@ export function KnowledgeView() {
       </p>
 
       <Tabs value={knowledgeTab} onValueChange={(v) => setKnowledgeTab(v as any)} className="w-full">
-        <div className="flex justify-center overflow-x-auto pb-2">
+        <div className="flex justify-center overflow-x-auto pb-2 tab-scroll">
           <TabsList className="bg-background/40 border border-gold/20 flex flex-wrap h-auto">
             <TabsTrigger value="countries" className="font-[family-name:var(--font-cinzel)] data-[state=active]:text-gold">
               <MapPin className="w-4 h-4 mr-1" /> Страны
@@ -83,7 +83,7 @@ function CountriesTab({ search }: { search: string }) {
     queryKey: ["countries"],
     queryFn: () => fetch("/api/lore/countries").then((r) => r.json()),
   });
-  const { selectedCountryName, setSelectedCountryName } = useAppStore();
+  const { selectedCountryName, setSelectedCountryName, focusId, setFocusId } = useAppStore();
   const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
   const items = (data ?? []).filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
@@ -93,14 +93,14 @@ function CountriesTab({ search }: { search: string }) {
   // If a country was selected from the world map (selectedCountryName), pre-select it
   // and clear the cross-view signal so it doesn't override future manual selections.
   const preSelected = selectedCountryName ? items.find((c) => c.name === selectedCountryName) : undefined;
-  const sel = items.find((c) => c.id === selected) ?? preSelected ?? items[0];
+  const sel = items.find((c) => c.id === selected) ?? items.find((c) => c.id === focusId) ?? preSelected ?? items[0];
   return (
     <div className="grid lg:grid-cols-[260px_1fr] gap-5">
       <div className="space-y-2 max-h-[70vh] overflow-y-auto fantasy-scroll pr-2">
         {items.map((c) => (
           <button
             key={c.id}
-            onClick={() => { setSelected(c.id); setSelectedCountryName(null); }}
+            onClick={() => { setSelected(c.id); setSelectedCountryName(null); setFocusId(null); }}
             className={`w-full text-left px-3 py-2 rounded border transition-all ${
               sel?.id === c.id
                 ? "bg-gold/10 border-gold/40 text-gold"
@@ -139,7 +139,7 @@ function CountriesTab({ search }: { search: string }) {
           {sel.culture && (
             <div className="mt-4 pt-4 border-t border-parchment-dark/30">
               <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Культура</p>
-              <p className="parchment-muted text-sm whitespace-pre-line">{sel.culture}</p>
+              <FormattedText className="parchment-muted text-sm">{sel.culture}</FormattedText>
             </div>
           )}
           </ParchmentCard>
@@ -155,20 +155,21 @@ function PersonalitiesTab({ search }: { search: string }) {
     queryKey: ["personalities"],
     queryFn: () => fetch("/api/lore/personalities").then((r) => r.json()),
   });
+  const { focusId, setFocusId } = useAppStore();
   const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
   const items = (data ?? []).filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   if (items.length === 0) {
     return <EmptyState text={search ? "Личностей не найдено" : "Летопись личностей пуста"} sub={search ? "Попробуй иной поиск" : "Божество впишет имена героев и злодеев"} />;
   }
-  const sel = items.find((p) => p.id === selected) ?? items[0];
+  const sel = items.find((p) => p.id === selected) ?? items.find((p) => p.id === focusId) ?? items[0];
   return (
     <div className="grid lg:grid-cols-[260px_1fr] gap-5">
       <div className="space-y-2 max-h-[70vh] overflow-y-auto fantasy-scroll pr-2">
         {items.map((p) => (
           <button
             key={p.id}
-            onClick={() => setSelected(p.id)}
+            onClick={() => { setSelected(p.id); setFocusId(null); }}
             className={`w-full text-left px-3 py-2 rounded border transition-all ${
               sel?.id === p.id
                 ? "bg-gold/10 border-gold/40 text-gold"
@@ -211,7 +212,7 @@ function PersonalitiesTab({ search }: { search: string }) {
           {sel.appearance && (
             <div className="mb-4 p-3 bg-parchment-dark/10 rounded-lg">
               <p className="parchment-heading text-sm uppercase tracking-wider mb-1">Внешность</p>
-              <p className="parchment-muted text-sm whitespace-pre-line">{sel.appearance}</p>
+              <FormattedText className="parchment-muted text-sm">{sel.appearance}</FormattedText>
             </div>
           )}
           {/* Description */}
@@ -237,6 +238,7 @@ function RelationsTab({ search }: { search: string }) {
     queryKey: ["countries"],
     queryFn: () => fetch("/api/lore/countries").then((r) => r.json()),
   });
+  const { focusId, setFocusId } = useAppStore();
   const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
   const items = (Array.isArray(data) ? data : []).filter(
@@ -247,7 +249,7 @@ function RelationsTab({ search }: { search: string }) {
   if (items.length === 0) {
     return <EmptyState text={search ? "Связей не найдено" : "Межгосударственные связи ещё не записаны"} sub={search ? "Попробуй иной поиск" : undefined} />;
   }
-  const sel = items.find((r) => r.id === selected) ?? items[0];
+  const sel = items.find((r) => r.id === selected) ?? items.find((r) => r.id === focusId) ?? items[0];
 
   // Build relation map data — unique countries + their positions on a circle
   const countryNames = new Set<string>();
@@ -283,7 +285,7 @@ function RelationsTab({ search }: { search: string }) {
             const color = relationColors[r.relationType] ?? "#a3a3a3";
             const isSel = sel?.id === r.id;
             return (
-              <g key={r.id} onClick={() => setSelected(r.id)} className="cursor-pointer">
+              <g key={r.id} onClick={() => { setSelected(r.id); setFocusId(null); }} className="cursor-pointer">
                 <line
                   x1={a.x} y1={a.y} x2={b.x} y2={b.y}
                   stroke={color}
@@ -326,7 +328,7 @@ function RelationsTab({ search }: { search: string }) {
           {items.map((r) => (
             <button
               key={r.id}
-              onClick={() => setSelected(r.id)}
+              onClick={() => { setSelected(r.id); setFocusId(null); }}
               className={`w-full text-left px-3 py-2 rounded border transition-all ${
                 sel?.id === r.id
                   ? "bg-gold/10 border-gold/40 text-gold"
@@ -363,24 +365,21 @@ function SystemsTab({ search }: { search: string }) {
     queryKey: ["systems"],
     queryFn: () => fetch("/api/lore/systems").then((r) => r.json()),
   });
+  const { focusId, setFocusId } = useAppStore();
   const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
   const items = (data ?? []).filter((s) => s.title.toLowerCase().includes(search.toLowerCase()) || s.category.toLowerCase().includes(search.toLowerCase()));
-  const catLabel: Record<string, string> = {
-    POLITICS: "Политика", ECONOMY: "Экономика", MILITARY: "Военное дело",
-    MAGIC: "Магия", RELIGION: "Религия", LAW: "Закон",
-  };
   if (items.length === 0) {
     return <EmptyState text={search ? "Систем не найдено" : "Мировые системы ещё не описаны"} sub={search ? "Попробуй иной поиск" : undefined} />;
   }
-  const sel = items.find((s) => s.id === selected) ?? items[0];
+  const sel = items.find((s) => s.id === selected) ?? items.find((s) => s.id === focusId) ?? items[0];
   return (
     <div className="grid lg:grid-cols-[260px_1fr] gap-5">
       <div className="space-y-2 max-h-[70vh] overflow-y-auto fantasy-scroll pr-2">
         {items.map((s) => (
           <button
             key={s.id}
-            onClick={() => setSelected(s.id)}
+            onClick={() => { setSelected(s.id); setFocusId(null); }}
             className={`w-full text-left px-3 py-2 rounded border transition-all ${
               sel?.id === s.id
                 ? "bg-gold/10 border-gold/40 text-gold"
@@ -389,7 +388,7 @@ function SystemsTab({ search }: { search: string }) {
           >
             <span className="mr-2">{s.icon ?? "📜"}</span>
             <span className="font-[family-name:var(--font-cinzel)] text-sm">{s.title}</span>
-            <p className="text-sm parchment-muted/80">{catLabel[s.category] ?? s.category}</p>
+            <p className="text-sm parchment-muted/80">{SYSTEM_CAT_LABEL[s.category] ?? s.category}</p>
           </button>
         ))}
       </div>
@@ -404,7 +403,7 @@ function SystemsTab({ search }: { search: string }) {
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-[family-name:var(--font-cinzel)] text-2xl parchment-heading">{sel.title}</h3>
                 <Badge variant="outline" className="border-gold/30 text-gold/70 text-sm">
-                  {catLabel[sel.category] ?? sel.category}
+                  {SYSTEM_CAT_LABEL[sel.category] ?? sel.category}
                 </Badge>
               </div>
             </div>
@@ -422,6 +421,7 @@ function PantheonTab({ search }: { search: string }) {
     queryKey: ["gods"],
     queryFn: () => fetch("/api/lore/gods").then((r) => r.json()),
   });
+  const { focusId, setFocusId } = useAppStore();
   const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
   const items = (data ?? []).filter((g) => g.name.toLowerCase().includes(search.toLowerCase()) || g.domain.toLowerCase().includes(search.toLowerCase()));
@@ -434,14 +434,14 @@ function PantheonTab({ search }: { search: string }) {
     Младшие: "border-zinc-400/50 text-zinc-600 bg-zinc-300/10",
     Алый: "border-wine/50 text-wine/90 bg-wine/10",
   };
-  const sel = items.find((g) => g.id === selected) ?? items[0];
+  const sel = items.find((g) => g.id === selected) ?? items.find((g) => g.id === focusId) ?? items[0];
   return (
     <div className="grid lg:grid-cols-[260px_1fr] gap-5">
       <div className="space-y-2 max-h-[70vh] overflow-y-auto fantasy-scroll pr-2">
         {items.map((g) => (
           <button
             key={g.id}
-            onClick={() => setSelected(g.id)}
+            onClick={() => { setSelected(g.id); setFocusId(null); }}
             className={`w-full text-left px-3 py-2 rounded border transition-all ${
               sel?.id === g.id
                 ? "bg-gold/10 border-gold/40 text-gold"
@@ -506,20 +506,21 @@ function LegendsTab({ search }: { search: string }) {
     queryKey: ["legends"],
     queryFn: () => fetch("/api/lore/legends").then((r) => r.json()),
   });
+  const { focusId, setFocusId } = useAppStore();
   const [selected, setSelected] = useState<string | null>(null);
   if (isLoading) return <LoadingScroll />;
   const items = (data ?? []).filter((l) => l.title.toLowerCase().includes(search.toLowerCase()));
   if (items.length === 0) {
     return <EmptyState text={search ? "Легенд не найдено" : "Легенды этого мира ещё не поведаны"} sub={search ? "Попробуй иной поиск" : undefined} />;
   }
-  const sel = items.find((l) => l.id === selected) ?? items[0];
+  const sel = items.find((l) => l.id === selected) ?? items.find((l) => l.id === focusId) ?? items[0];
   return (
     <div className="grid lg:grid-cols-[260px_1fr] gap-5">
       <div className="space-y-2 max-h-[70vh] overflow-y-auto fantasy-scroll pr-2">
         {items.map((l) => (
           <button
             key={l.id}
-            onClick={() => setSelected(l.id)}
+            onClick={() => { setSelected(l.id); setFocusId(null); }}
             className={`w-full text-left px-3 py-2 rounded border transition-all ${
               sel?.id === l.id
                 ? "bg-gold/10 border-gold/40 text-gold"
