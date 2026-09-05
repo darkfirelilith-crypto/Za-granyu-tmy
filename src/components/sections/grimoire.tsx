@@ -237,8 +237,6 @@ function GrimoirePage({
       {/* When unlocked and expanded — show full book page */}
       {entry.unlocked && expanded && (
         <div className="grimoire-page animate-reveal">
-          {/* Paper effect overlay — images for BLOOD, CSS for others */}
-          <div className={`paper-effect paper-${(entry.paperStyle || "PLAIN").toLowerCase()}`} aria-hidden />
           {/* Margin note top */}
           {entry.marginTop && (
             <div className="margin-note mb-4 ml-12">{entry.marginTop}</div>

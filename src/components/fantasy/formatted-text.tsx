@@ -52,7 +52,7 @@ export function FormattedText({
   const html = formatMarkdown(children);
   return (
     <div
-      className={className}
+      className={`formatted-text ${className ?? ""}`}
       style={{ whiteSpace: "pre-line" }}
       dangerouslySetInnerHTML={{ __html: html }}
     />
