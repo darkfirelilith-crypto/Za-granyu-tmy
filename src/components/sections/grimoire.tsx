@@ -290,7 +290,9 @@ function GrimoirePage({
               {entry.spellFormula && (
                 <div className="my-4 p-4 bg-parchment-dark/20 rounded-lg border border-wine/20">
                   <p className="font-[family-name:var(--font-cinzel)] text-sm parchment-heading mb-2">✦ Формула заклинания ✦</p>
-                  <pre className="whitespace-pre-wrap font-mono text-sm parchment-text">{entry.spellFormula}</pre>
+                  <FormattedText as="pre" whiteSpace="pre-wrap" className="font-mono text-sm parchment-text">
+                    {entry.spellFormula}
+                  </FormattedText>
                 </div>
               )}
               {entry.spellNotes && (

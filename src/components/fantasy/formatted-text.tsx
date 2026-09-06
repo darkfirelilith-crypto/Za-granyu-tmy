@@ -169,15 +169,19 @@ export function FormattedText({
   children,
   className,
   as: Comp = "div",
+  whiteSpace = "pre-line",
 }: {
   children: string | null | undefined;
   className?: string;
   /** element to render — use "span" when the text sits inside a paragraph */
   as?: React.ElementType;
+  /** "pre-line" collapses runs of spaces; "pre-wrap" keeps the author's own
+   *  indentation — use it for block-shaped text such as a spell formula. */
+  whiteSpace?: "pre-line" | "pre-wrap";
 }) {
   if (children === null || children === undefined || children === "") return null;
   return (
-    <Comp className={`formatted-text ${className ?? ""}`} style={{ whiteSpace: "pre-line" }}>
+    <Comp className={`formatted-text ${className ?? ""}`} style={{ whiteSpace }}>
       {formatInline(String(children))}
     </Comp>
   );
