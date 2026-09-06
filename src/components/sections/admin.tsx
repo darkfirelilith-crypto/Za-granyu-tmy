@@ -1216,7 +1216,7 @@ function CharactersEditor() {
             {/* Inventory — open the grant/revoke dialog */}
             <div className="pt-2 border-t border-parchment-dark/20">
               <Button size="sm" variant="outline" onClick={()=>setItemsChar(c)} className="border-gold/30 text-gold hover:bg-gold/10 btn-rune w-full">
-                <Gem className="w-3.5 h-3.5 mr-1.5" /> Магические предметы
+                <Gem className="w-3.5 h-3.5 mr-1.5" /> Предметы и заклинания
               </Button>
             </div>
           </ParchmentCard>
@@ -1289,7 +1289,10 @@ function CharacterInventoryDialog({ character, onClose }: { character: any; onCl
     onError: (e: Error) => toast({ title: "Ошибка", description: e.message, variant: "destructive" }),
   });
 
-  const labOptions = (labEntries ?? []).filter((e) => kindFilter === "ALL" || e.kind === kindFilter);
+  // Only ITEM and SPELL are grantable: those are the two kinds the player's
+  // «Коллекция» renders (Арсенал and Свитки). Granting a race or a class would
+  // write a row nobody ever sees.
+  const labOptions = (labEntries ?? []).filter((e) => e.kind === kindFilter);
   const itemList = items ?? [];
 
   return (
@@ -1298,20 +1301,21 @@ function CharacterInventoryDialog({ character, onClose }: { character: any; onCl
         <DialogHeader>
           <DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading flex items-center gap-2">
             <Gem className="w-5 h-5 text-gold" />
-            Магические предметы: {character.name}
+            Коллекция: {character.name}
           </DialogTitle>
-          <DialogDescription className="sr-only">
-            Управление инвентарём магических предметов героя
+          <DialogDescription className="parchment-muted">
+            Магические предметы и заклинания, выданные герою. Всё, что здесь есть,
+            игрок видит в своём разделе «Коллекция».
           </DialogDescription>
         </DialogHeader>
 
         {/* Current inventory */}
         <div className="space-y-2">
-          <p className="parchment-heading text-sm uppercase tracking-wider">Текущие предметы ({itemList.length})</p>
+          <p className="parchment-heading text-sm uppercase tracking-wider">Уже выдано ({itemList.length})</p>
           {isLoading ? (
             <p className="parchment-muted italic text-sm">Читаем опись...</p>
           ) : itemList.length === 0 ? (
-            <p className="parchment-muted italic text-sm">У героя пока нет магических предметов.</p>
+            <p className="parchment-muted italic text-sm">Герою пока ничего не выдано.</p>
           ) : (
             <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
               {itemList.map((it: any) => {
@@ -1344,18 +1348,14 @@ function CharacterInventoryDialog({ character, onClose }: { character: any; onCl
 
         {/* Grant a new item */}
         <div className="space-y-2 pt-3 border-t border-parchment-dark/30">
-          <p className="parchment-heading text-sm uppercase tracking-wider">Выдать новый предмет</p>
+          <p className="parchment-heading text-sm uppercase tracking-wider">Выдать из Лаборатории Алого</p>
           <div>
             <Label className="parchment-heading text-sm">Тип записи</Label>
             <Select value={kindFilter} onValueChange={(v) => { setKindFilter(v); setSelectedLabId(""); }}>
               <SelectTrigger className="field-parchment mt-1"><SelectValue /></SelectTrigger>
               <SelectContent className="parchment">
-                <SelectItem value="ITEM">💎 Предметы</SelectItem>
+                <SelectItem value="ITEM">💎 Магические предметы</SelectItem>
                 <SelectItem value="SPELL">✨ Заклинания</SelectItem>
-                <SelectItem value="RACE">🧬 Расы</SelectItem>
-                <SelectItem value="CLASS">⚔️ Классы</SelectItem>
-                <SelectItem value="SUBCLASS">🔱 Подклассы</SelectItem>
-                <SelectItem value="ALL">⛓ Все записи</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1426,6 +1426,7 @@ function LabEditor() {
   const { toast } = useToast();
   const [editing, setEditing] = useState<any>(null);
   const [open, setOpen] = useState(false);
+  const [granting, setGranting] = useState<any>(null);
 
   const save = useMutation({
     mutationFn: async (item: any) => {
@@ -1477,9 +1478,22 @@ function LabEditor() {
                     {e.kind === "ITEM" && e.itemType && <p className="text-sm parchment-muted">{e.itemType}</p>}
                     <p className="parchment-muted text-sm line-clamp-2 mt-1">{plainText(e.description)}</p>
                   </div>
-                  <div className="flex gap-1 shrink-0">
-                    <Button size="icon" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }} className="text-wine"><Pencil className="w-4 h-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Стёреть запись «${e.name}»?`)) del.mutate(e.id); }} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {/* Only items and spells land in a hero's Коллекция — races,
+                        classes and traits are reference reading, not loot. */}
+                    {(e.kind === "ITEM" || e.kind === "SPELL") && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setGranting(e)}
+                        className="text-gold hover:bg-gold/10 h-8 px-2"
+                        title={`Выдать героям: ${e.name}`}
+                      >
+                        <UserPlus className="w-3.5 h-3.5 mr-1" /> Выдать
+                      </Button>
+                    )}
+                    <Button size="icon" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }} className="text-wine" title="Изменить запись" aria-label={`Изменить запись «${e.name}»`}><Pencil className="w-4 h-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Стёреть запись «${e.name}»?`)) del.mutate(e.id); }} className="text-destructive" title="Стереть запись" aria-label={`Стереть запись «${e.name}»`}><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </ParchmentCard>
               ))}
@@ -1489,7 +1503,158 @@ function LabEditor() {
       })}
 
       <LabFormDialog key={editing?.id ?? "new"} open={open} onOpenChange={setOpen} item={editing} onSave={(it) => save.mutate(it)} pending={save.isPending} />
+      {granting && <LabGrantDialog key={granting.id} entry={granting} onClose={() => setGranting(null)} />}
     </div>
+  );
+}
+
+/* ===== LAB GRANT DIALOG — выдать одну запись сразу нескольким героям =====
+   The mirror image of CharacterInventoryDialog: that one starts from a hero and
+   picks records, this one starts from a record and picks heroes. Same endpoints
+   underneath, so an item granted here shows up in the hero's «Коллекция» and can
+   be taken back from either side. */
+function LabGrantDialog({ entry, onClose }: { entry: any; onClose: () => void }) {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [note, setNote] = useState("");
+
+  const { data: characters, isLoading: charsLoading } = useQuery<any[]>({
+    queryKey: ["characters"],
+    queryFn: () => fetch("/api/characters").then((r) => r.json()),
+  });
+  const { data: holders, isLoading: holdersLoading } = useQuery<any[]>({
+    queryKey: ["lab-holders", entry.id],
+    queryFn: () => fetch(`/api/lab/${entry.id}/holders`).then((r) => r.json()),
+  });
+
+  // characterId → CharacterItem.id, so a row knows both "does he have it" and
+  // which inventory row to delete when taking it back.
+  const holderBy = new Map<string, any>();
+  (Array.isArray(holders) ? holders : []).forEach((h) => holderBy.set(h.characterId, h));
+
+  const refresh = (characterId: string) => {
+    qc.invalidateQueries({ queryKey: ["lab-holders", entry.id] });
+    qc.invalidateQueries({ queryKey: ["inventory", characterId] });
+    qc.invalidateQueries({ queryKey: ["me"] });
+  };
+
+  const grant = useMutation({
+    mutationFn: async (characterId: string) => {
+      const res = await fetch(`/api/characters/${characterId}/inventory`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ labEntryId: entry.id, note: note.trim() || undefined }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) throw new Error(json.error || "Не удалось выдать");
+      return json;
+    },
+    onSuccess: (_d, characterId) => { refresh(characterId); toast({ title: "Выдано", description: `Запись «${entry.name}» вписана в свиток героя.` }); },
+    onError: (e: Error) => toast({ title: "Ошибка", description: e.message, variant: "destructive" }),
+  });
+
+  const revoke = useMutation({
+    mutationFn: async ({ characterId, itemId }: { characterId: string; itemId: string }) => {
+      const res = await fetch(`/api/characters/${characterId}/inventory/${itemId}`, { method: "DELETE" });
+      const json = await res.json();
+      if (!res.ok || json.error) throw new Error(json.error || "Не удалось забрать");
+      return json;
+    },
+    onSuccess: (_d, vars) => { refresh(vars.characterId); toast({ title: "Забрано", description: `Запись «${entry.name}» стёрта из свитка героя.` }); },
+    onError: (e: Error) => toast({ title: "Ошибка", description: e.message, variant: "destructive" }),
+  });
+
+  const list = Array.isArray(characters) ? characters : [];
+  const busy = grant.isPending || revoke.isPending;
+  const kindWord = entry.kind === "SPELL" ? "Заклинание" : "Предмет";
+
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="parchment gold-frame max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-[family-name:var(--font-cinzel)] text-xl parchment-heading flex items-center gap-2">
+            <span className="text-2xl">{entry.icon ?? (entry.kind === "SPELL" ? "✨" : "💎")}</span>
+            Выдать героям
+          </DialogTitle>
+          <DialogDescription className="parchment-muted">
+            {kindWord} «{entry.name}» попадёт в раздел «Коллекция» выбранных героев.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="form-section">
+          <Label className="parchment-heading text-sm">Заметка к выдаче (необязательно)</Label>
+          <Input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Как запись попала к герою — награда, находка, дар..."
+            className="field-parchment mt-1"
+          />
+          <p className="parchment-muted text-sm italic mt-1">
+            Заметка сохраняется в момент выдачи — впишите её до нажатия «Выдать».
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <p className="parchment-heading text-sm uppercase tracking-wider">
+            Герои ({holderBy.size} из {list.length} уже владеют)
+          </p>
+
+          {charsLoading || holdersLoading ? (
+            <p className="parchment-muted italic text-sm">Сверяем описи...</p>
+          ) : list.length === 0 ? (
+            <p className="parchment-muted italic text-sm">Героев пока нет.</p>
+          ) : (
+            <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+              {list.map((c) => {
+                const held = holderBy.get(c.id);
+                return (
+                  <div
+                    key={c.id}
+                    className={`flex items-center gap-2 p-2 rounded border transition-colors ${
+                      held ? "border-gold/40 bg-gold/10" : "border-parchment-dark/30 bg-parchment/40"
+                    }`}
+                  >
+                    <span className="text-lg shrink-0">{c.guildRank?.icon ?? "🛡️"}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-[family-name:var(--font-cinzel)] parchment-heading text-sm truncate">{c.name}</p>
+                      <p className="parchment-muted text-sm truncate">
+                        {held
+                          ? `Выдано ${new Date(held.grantedAt).toLocaleDateString("ru-RU")}${held.note ? ` · «${held.note}»` : ""}`
+                          : `${c.race ?? "—"} · ${c.charClass ?? "—"} · Ур.${c.level}`}
+                      </p>
+                    </div>
+                    {held ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => revoke.mutate({ characterId: c.id, itemId: held.id })}
+                        disabled={busy}
+                        className="text-destructive hover:bg-destructive/10 h-8 px-2 shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1" /> Забрать
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => grant.mutate(c.id)}
+                        disabled={busy}
+                        className="btn-wine-solid h-8 px-3 shrink-0"
+                      >
+                        <UserPlus className="w-3.5 h-3.5 mr-1" /> Выдать
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end pt-1">
+          <Button variant="ghost" onClick={onClose} className="parchment-muted">Закрыть</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

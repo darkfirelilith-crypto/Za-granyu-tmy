@@ -898,6 +898,10 @@ function ArsenalSection({ characterId }: { characterId: string }) {
                     {lab.description && (
                       <p className="parchment-muted text-sm line-clamp-2 mt-1">{plainText(lab.description)}</p>
                     )}
+                    {/* Why Божество handed it over — written at the moment of granting. */}
+                    {it.note && (
+                      <p className="text-sm italic text-wine/80 mt-1">✦ {it.note}</p>
+                    )}
                     <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
                   </div>
                 </button>
@@ -961,6 +965,10 @@ function ScrollsSection({ characterId }: { characterId: string }) {
                     </div>
                     {lab.description && (
                       <p className="parchment-muted text-sm line-clamp-2 mt-1">{plainText(lab.description)}</p>
+                    )}
+                    {/* Why Божество handed it over — written at the moment of granting. */}
+                    {it.note && (
+                      <p className="text-sm italic text-wine/80 mt-1">✦ {it.note}</p>
                     )}
                     <p className="text-sm text-wine font-[family-name:var(--font-cinzel)] pt-1">▼ Открыть подробности</p>
                   </div>
