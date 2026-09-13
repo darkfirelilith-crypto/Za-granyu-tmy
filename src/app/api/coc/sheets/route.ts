@@ -77,6 +77,13 @@ export async function POST(req: NextRequest) {
   } else if (tpl) {
     sheetData = buildTemplateSheet(tpl.id) || {};
   }
+  // Тот же предохранитель от гигантских payload'ов, что и в PUT (~4 МБ JSON)
+  if (JSON.stringify(sheetData).length > 4_000_000) {
+    return NextResponse.json(
+      { error: "Досье слишком велико — уменьшите изображение" },
+      { status: 413 }
+    );
+  }
   const generatedName =
     body.template === "random"
       ? (sheetData as { info?: { name?: string } })?.info?.name
