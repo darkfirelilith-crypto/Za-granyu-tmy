@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/store/app-store";
+import { CthulhuPortalButton } from "@/components/coc/portal-transition";
 
 export function HallView({ onNavigate }: { onNavigate: (v: View) => void }) {
   const { data } = useQuery<any[]>({
@@ -70,6 +71,46 @@ export function HallView({ onNavigate }: { onNavigate: (v: View) => void }) {
           <NavBtn icon={Sword} label="Гильдия" onClick={() => onNavigate("guild")} />
           <NavBtn icon={Sparkles} label="Гримуар" onClick={() => onNavigate("grimoire")} />
           <NavBtn icon={FlaskConical} label="Лаборатория Алого" onClick={() => onNavigate("lab")} />
+        </div>
+      </section>
+
+      {/* Врата в другую вселенную — «Зов Ктулху» */}
+      <section className="animate-reveal">
+        <div className="relative rounded-xl overflow-hidden border border-[#2e4a3a]/50 group/portal">
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover/portal:scale-[1.04]"
+            style={{ backgroundImage: "url(/coc/gate.jpg)", filter: "brightness(0.6) saturate(0.9)" }}
+            aria-hidden="true"
+          />
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(to right, rgba(4,4,3,0.94) 0%, rgba(4,4,3,0.72) 45%, rgba(4,4,3,0.25) 100%)" }}
+            aria-hidden="true"
+          />
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-5 p-6 md:p-8">
+            <div className="flex-1 space-y-2.5 text-center md:text-left">
+              <p className="text-[#5f8f6e] text-xs font-[family-name:var(--font-cinzel)] tracking-[0.4em] uppercase">
+                За вратами — иная вселенная
+              </p>
+              <h2
+                className="text-2xl md:text-4xl text-[#d8cbb0] tracking-wide"
+                style={{ fontFamily: "var(--coc-font-display, Georgia), serif", textShadow: "0 0 24px rgba(95,143,110,0.35)" }}
+              >
+                Зов Ктулху
+              </h2>
+              <p className="text-foreground/80 font-[family-name:var(--font-garamond)] italic max-w-xl mx-auto md:mx-0 leading-relaxed">
+                Интерактивное досье сыщика 1920-х: характеристики, навыки, рассудок и заметки по сюжету.
+                Правила той вселенной не имеют ничего общего с этой сагой.
+              </p>
+              <p className="text-[#6e6350] text-xs font-[family-name:var(--font-cinzel)] tracking-[0.2em] uppercase">
+                That is not dead which can eternal lie…
+              </p>
+            </div>
+            <CthulhuPortalButton
+              className="shrink-0 inline-flex items-center gap-2.5 px-7 py-4 rounded-lg border border-[#5f8f6e]/60 text-[#7fc39a] bg-black/60 backdrop-blur-sm transition-all hover:text-[#a8dcc0] hover:border-[#7fc39a] hover:shadow-[0_0_30px_rgba(95,143,110,0.45)] hover:scale-[1.03] active:scale-[0.98] font-[family-name:var(--font-cinzel)] tracking-[0.15em] uppercase text-sm"
+              label="Прикоснуться к вратам"
+            />
+          </div>
         </div>
       </section>
 

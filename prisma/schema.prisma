@@ -20,8 +20,24 @@ model User {
   password  String
   role      String    @default("PLAYER") // ADMIN (Божество) | PLAYER (Приключенец)
   character Character?
+  cocSheets CocSheet[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+// ===== Call of Cthulhu — интерактивные листы сыщика (Зов Ктулху) =====
+// Отдельная вселенная: до 5 листов на пользователя, данные листа хранятся в JSON.
+
+model CocSheet {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String   @default("Новый сыщик")
+  data      String   @default("{}") // JSON-снапшот всего листа персонажа
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 // ===== Characters & Achievements =====

@@ -22,6 +22,7 @@ import { PageTransition } from "@/components/fantasy/page-transition";
 import { Omnisearch } from "@/components/omnisearch";
 import { DiceRoller } from "@/components/fantasy/dice-roller";
 import { ScrollToTop } from "@/components/fantasy/scroll-to-top";
+import { CthulhuPortalButton, UniverseFade } from "@/components/coc/portal-transition";
 
 interface MeResponse {
   user: { id: string; name: string; email: string; role: string } | null;
@@ -105,6 +106,7 @@ export function AppShell() {
           </Button>
         </div>
         <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+        <UniverseFade />
       </div>
     );
   }
@@ -164,6 +166,12 @@ export function AppShell() {
                     </button>
                   );
                 })}
+                <CthulhuPortalButton
+                  compact
+                  label="Ктулху"
+                  labelClassName="hidden md:inline"
+                  className="group flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm tracking-wide transition-all text-[#7fc39a]/80 border border-[#2e4a3a]/60 bg-black/30 hover:text-[#7fc39a] hover:border-[#5f8f6e]/70 hover:shadow-[0_0_14px_rgba(95,143,110,0.35)]"
+                />
                 {isPlayer && (
                   <button
                     onClick={() => setView("profile")}
@@ -291,6 +299,7 @@ export function AppShell() {
       </div>
 
       <ScrollToTop />
+      <UniverseFade />
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
       <Omnisearch open={searchOpen} onOpenChange={setSearchOpen} onNavigate={setView} />
       <DiceRoller />
