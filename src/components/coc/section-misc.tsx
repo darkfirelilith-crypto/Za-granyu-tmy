@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   CocSheetData,
   CocWeapon,
@@ -39,6 +40,39 @@ export function CombatSection({ data, mutate, derived }: SectionProps) {
     }
     const sk = data.skills.find((s) => (s.key || "") === (w.skillKey || ""));
     return sk ? skillTotal(sk) : 0;
+  };
+
+  /** Патроны как число (или null, если поле не числовое — ближний бой, «—» и т.п.) */
+  const ammoNum = (w: CocWeapon): number | null => {
+    const t = (w.ammo || "").trim();
+    if (!t || !/^\d+$/.test(t)) return null;
+    return parseInt(t, 10);
+  };
+
+  /** Выстрел: проверка навыка + расход патрона по правилам (бросок = выстрел). */
+  const shoot = (w: CocWeapon) => {
+    const reg = weaponRegular(w);
+    if (reg <= 0) return;
+    rollSkillCheck(w.name || "Оружие", reg);
+    const left = ammoNum(w);
+    if (left !== null && left > 0) {
+      const remaining = left - 1;
+      mutate((d) => {
+        const t = d.weapons.find((x) => x.id === w.id);
+        if (t) t.ammo = String(remaining);
+      });
+      if (remaining === 0) {
+        toast.warning("Обойма пуста!", {
+          description: `${w.name || "Оружие"}: последний патрон израсходован.`,
+          duration: 6000,
+        });
+      } else {
+        toast("−1 патрон", {
+          description: `${w.name || "Оружие"}: осталось ${remaining}.`,
+          duration: 3600,
+        });
+      }
+    }
   };
 
   return (
@@ -154,7 +188,31 @@ export function CombatSection({ data, mutate, derived }: SectionProps) {
                       <input className="coc-input !py-1 text-xs" value={w.attacks} onChange={(e) => upd((x) => { x.attacks = e.target.value; })} placeholder="1" aria-label="Атаки за раунд" />
                     </td>
                     <td className="px-1 py-1.5 w-16">
-                      <input className="coc-input !py-1 text-xs" value={w.ammo} onChange={(e) => upd((x) => { x.ammo = e.target.value; })} placeholder="6" aria-label="Патроны" />
+                      {(() => {
+                        const a = ammoNum(w);
+                        const cls =
+                          a === 0
+                            ? "coc-ammo-empty"
+                            : a !== null && a <= 3
+                              ? "coc-ammo-low"
+                              : "";
+                        return (
+                          <input
+                            className={`coc-input !py-1 text-xs ${cls}`}
+                            value={w.ammo}
+                            onChange={(e) => upd((x) => { x.ammo = e.target.value; })}
+                            placeholder="6"
+                            aria-label={`Патроны: ${w.name || "оружие"}`}
+                            title={
+                              a === 0
+                                ? "Патронов нет — оружие не стреляет"
+                                : a !== null && a <= 3
+                                  ? `Патроны на исходе: ${a}`
+                                  : "Число — при выстреле (🎲) списывается автоматически"
+                            }
+                          />
+                        );
+                      })()}
                     </td>
                     <td className="px-1 py-1.5 w-16">
                       <input className="coc-input !py-1 text-xs" value={w.malfunction} onChange={(e) => upd((x) => { x.malfunction = e.target.value; })} placeholder="—" aria-label="Неисправность" />
@@ -162,10 +220,10 @@ export function CombatSection({ data, mutate, derived }: SectionProps) {
                     <td className="px-1 py-1.5">
                       <div className="flex items-center gap-0.5">
                         <button
-                          onClick={() => reg > 0 && rollSkillCheck(w.name || "Оружие", reg)}
+                          onClick={() => shoot(w)}
                           disabled={reg <= 0}
                           className="coc-mono text-[0.7rem] px-1 py-0.5 rounded border border-transparent hover:border-[#2e4a3a] text-[#5f8f6e] hover:text-[#7fc39a] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          title={reg > 0 ? `Проверка навыка (${reg})` : "Сначала задайте навык или уровень"}
+                          title={reg > 0 ? `Проверка навыка (${reg})${ammoNum(w) !== null ? " · расход патрона" : ""}` : "Сначала задайте навык или уровень"}
                           aria-label={`Проверка навыка для ${w.name || "оружия"}`}
                         >
                           🎲
@@ -180,6 +238,7 @@ export function CombatSection({ data, mutate, derived }: SectionProps) {
           </table>
           <p className="coc-hint mt-2">
             Уровни Обычн/Трудн/Чрезвыч считаются из связанного навыка автоматически; впишите число вручную, чтобы задать своё.
+            Выстрел по 🎲 списывает патрон, если он указан числом — следите за обоймой.
           </p>
         </div>
       </div>

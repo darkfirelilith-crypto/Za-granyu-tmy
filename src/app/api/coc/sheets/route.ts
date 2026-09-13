@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireLiveUser } from "@/lib/session";
 import { MAX_SHEETS } from "@/lib/coc-data";
+import { COC_TEMPLATES, buildTemplateSheet } from "@/lib/coc-templates";
 
 const UNAUTHORIZED = { error: "Сессия недействительна — войдите заново" };
 
@@ -37,11 +38,13 @@ export async function GET() {
   return NextResponse.json(sheets);
 }
 
-/** POST — создать новый лист (не более 5 на пользователя). */
+/** POST — создать новый лист (не более 5 на пользователя).
+ *  Тело: { name?: string, template?: string } — template это id готового
+ *  сыщика из COC_TEMPLATES (лист создаётся сразу заполненным). */
 export async function POST(req: NextRequest) {
   const session = await requireLiveUser();
   if (!session) return NextResponse.json(UNAUTHORIZED, { status: 401 });
-  let body: { name?: string } = {};
+  let body: { name?: string; template?: string } = {};
   try {
     body = await req.json();
   } catch {
@@ -54,7 +57,12 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
-  const name = (body.name || "").trim() || "Новый сыщик";
+  const tpl = body.template ? COC_TEMPLATES.find((t) => t.id === body.template) : null;
+  if (body.template && !tpl) {
+    return NextResponse.json({ error: "Неизвестный шаблон сыщика" }, { status: 400 });
+  }
+  const name = (body.name || tpl?.name || "").trim() || "Новый сыщик";
+  const dataStr = tpl ? JSON.stringify(buildTemplateSheet(tpl.id) || {}) : "{}";
   // новое дело кладём в конец архива
   const maxOrder = await db.cocSheet.aggregate({
     where: { userId: session.user.id },
@@ -64,7 +72,7 @@ export async function POST(req: NextRequest) {
     data: {
       userId: session.user.id,
       name,
-      data: "{}",
+      data: dataStr,
       sortOrder: (maxOrder._max.sortOrder ?? 0) + 1,
     },
     select: { id: true, name: true, createdAt: true, updatedAt: true },

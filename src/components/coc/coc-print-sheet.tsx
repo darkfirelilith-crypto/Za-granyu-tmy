@@ -226,6 +226,41 @@ export function CocPrintSheet({ data, derived }: { data: CocSheetData; derived: 
         </section>
       )}
 
+      {/* Подпись Хранителя и круглая печать архива */}
+      <div className="coc-print-approve">
+        <div className="coc-print-sign">
+          <span className="coc-print-sign-name">Подпись Хранителя</span>
+          <span className="coc-print-sign-line" aria-hidden="true" />
+          <span className="coc-print-sign-hint">Дело заведено и сверено с архивом.</span>
+        </div>
+        <span className="coc-print-mp">М.П.</span>
+        <svg viewBox="0 0 120 120" className="coc-print-seal" aria-hidden="true">
+          <circle cx="60" cy="60" r="57" fill="none" stroke="#2f5a3c" strokeWidth="2.4" />
+          <circle cx="60" cy="60" r="47" fill="none" stroke="#2f5a3c" strokeWidth="1" />
+          <circle cx="60" cy="60" r="27" fill="none" stroke="#2f5a3c" strokeWidth="1" />
+          <defs>
+            <path id="cocSealTop" d="M 7.5,60 A 52.5,52.5 0 0 1 112.5,60" fill="none" />
+            <path id="cocSealBottom" d="M 7.5,60 A 52.5,52.5 0 0 0 112.5,60" fill="none" />
+            <path id="cocSealInner" d="M 33,60 A 27,27 0 0 0 87,60" fill="none" />
+          </defs>
+          <text fill="#2f5a3c" fontSize="8.6" fontFamily="Georgia, serif" letterSpacing="1.6">
+            <textPath href="#cocSealTop" startOffset="50%" textAnchor="middle">АРХИВ ХРАНИТЕЛЯ</textPath>
+          </text>
+          <text fill="#2f5a3c" fontSize="8" fontFamily="Georgia, serif" letterSpacing="1.6">
+            <textPath href="#cocSealBottom" startOffset="50%" textAnchor="middle">ОТДЕЛ ОСОБЫХ ДЕЛ</textPath>
+          </text>
+          <text x="9" y="63.5" fill="#2f5a3c" fontSize="7" textAnchor="middle">★</text>
+          <text x="111" y="63.5" fill="#2f5a3c" fontSize="7" textAnchor="middle">★</text>
+          {/* Око в центре */}
+          <path d="M 46,52 Q 60,38 74,52 Q 60,62 46,52 Z" fill="none" stroke="#2f5a3c" strokeWidth="1.4" />
+          <circle cx="60" cy="49.5" r="4" fill="none" stroke="#2f5a3c" strokeWidth="1.1" />
+          <circle cx="60" cy="49.5" r="1.6" fill="#2f5a3c" />
+          <text fill="#2f5a3c" fontSize="7" fontFamily="Georgia, serif" letterSpacing="0.9">
+            <textPath href="#cocSealInner" startOffset="50%" textAnchor="middle">УТВЕРЖДЕНО</textPath>
+          </text>
+        </svg>
+      </div>
+
       <footer className="coc-print-foot">
         <span>Зов Ктулху · распечатано {new Date().toLocaleDateString("ru-RU")}</span>
         <span className="coc-print-stamp">Секретно</span>

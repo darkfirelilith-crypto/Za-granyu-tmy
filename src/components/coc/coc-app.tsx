@@ -7,7 +7,8 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { ReturnPortal } from "@/components/coc/portal-transition";
 import { CocEditor } from "@/components/coc/coc-editor";
-import { MAX_SHEETS } from "@/lib/coc-data";
+import { MAX_SHEETS, OCCUPATIONS } from "@/lib/coc-data";
+import { COC_TEMPLATES } from "@/lib/coc-templates";
 import { cocFetch } from "@/lib/coc-api";
 
 interface SheetMeta {
@@ -100,12 +101,15 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
     },
   });
 
+  const [showChooser, setShowChooser] = useState(false);
+  const startCreation = () => setShowChooser(true);
+
   const createMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (templateId: string | null) =>
       cocFetch("/api/coc/sheets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify(templateId ? { template: templateId } : {}),
       }).then(async (r) => {
         if (!r.ok) throw new Error((await r.json()).error || "Ошибка");
         return r.json();
@@ -113,6 +117,7 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
     onSuccess: (sheet: SheetMeta) => {
       qc.invalidateQueries({ queryKey: ["coc-sheets"] });
       toast.success("Новое дело заведено", { description: `«${sheet.name}» ждёт своего сыщика.` });
+      setShowChooser(false);
       onOpen(sheet.id);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -232,12 +237,15 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
               Ни одного дела не заведено. Тьма терпелива — она подождёт, пока вы подпишете первый лист.
             </p>
             <button
-              onClick={() => createMutation.mutate()}
+              onClick={startCreation}
               disabled={createMutation.isPending}
               className="coc-btn coc-btn-verdigris w-full justify-center py-3 mt-2"
             >
               {createMutation.isPending ? "Заводим дело…" : "+ Завести первое дело"}
             </button>
+            <p className="coc-hint !text-[0.62rem]">
+              Чистый лист или готовый сыщик из архива — выбор за вами.
+            </p>
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -283,7 +291,7 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: list.length * 0.07 }}
-                onClick={() => createMutation.mutate()}
+                onClick={startCreation}
                 disabled={createMutation.isPending}
                 className="coc-case min-h-40 flex flex-col items-center justify-center gap-3 border-dashed"
                 style={{ borderStyle: "dashed" }}
@@ -294,7 +302,7 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
                   {createMutation.isPending ? "Заводим дело…" : "Новое дело"}
                 </span>
                 <span className="coc-hint text-center px-4">
-                  Чистый лист сыщика — судьба ещё не написана
+                  Чистый лист или готовый сыщик
                 </span>
               </motion.button>
             )}
@@ -310,6 +318,14 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
           <p className="text-center coc-hint">
             Дела можно перетаскивать — порядок сохранится в архиве.
           </p>
+        )}
+
+        {showChooser && (
+          <TemplateChooser
+            onClose={() => setShowChooser(false)}
+            onPick={(tplId) => createMutation.mutate(tplId)}
+            pending={createMutation.isPending}
+          />
         )}
 
         <footer className="pt-6 text-center space-y-3">
@@ -512,6 +528,89 @@ function CaseCard({
         <p className="coc-display text-[0.7rem] tracking-[0.25em] uppercase text-[#5f8f6e] opacity-0 group-hover:opacity-100 transition-opacity">
           Открыть досье →
         </p>
+      </div>
+    </div>
+  );
+}
+
+/** Выбор заготовки при заведении дела: чистый лист или один из готовых сыщиков. */
+function TemplateChooser({
+  onClose,
+  onPick,
+  pending,
+}: {
+  onClose: () => void;
+  onPick: (templateId: string | null) => void;
+  pending: boolean;
+}) {
+  const occName = (id: string) => OCCUPATIONS.find((o) => o.id === id)?.name || "";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start md:items-center justify-center p-3 md:p-6 overflow-y-auto coc-scroll"
+      style={{ background: "rgba(0,0,0,0.82)" }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Выбор заготовки сыщика"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="coc-panel max-w-3xl w-full p-5 md:p-6 space-y-4 coc-conflict-pop my-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-1">
+            <span className="coc-stamp">Выбор сыщика</span>
+            <h2 className="coc-display text-lg text-[#d8cbb0] mt-2 tracking-[0.1em]">
+              Кого впустить во тьму?
+            </h2>
+            <p className="coc-hint mt-1">
+              Готовые сыщики приходят с профессией, вложенными очками, оружием и прошлым.
+              Всё потом можно переписать — это лишь первый лист.
+            </p>
+          </div>
+          <button onClick={onClose} className="coc-btn coc-btn-ghost !px-2.5 !py-1.5 shrink-0" aria-label="Закрыть выбор">
+            ✕
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {/* Чистый лист */}
+          <button
+            onClick={() => onPick(null)}
+            disabled={pending}
+            className="coc-template-card coc-template-blank"
+            aria-label="Чистый лист сыщика"
+          >
+            <span className="coc-template-stamp">Без прошлого</span>
+            <span className="coc-display text-3xl text-[#5f8f6e] coc-breath">✒</span>
+            <span className="coc-template-title">Чистый лист</span>
+            <span className="coc-template-tagline">Судьба ещё не написана. Всё с нуля — от характеристик до кошелька.</span>
+          </button>
+
+          {COC_TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => onPick(t.id)}
+              disabled={pending}
+              className="coc-template-card"
+              aria-label={`Готовый сыщик: ${t.title}`}
+            >
+              <span className="coc-template-stamp">{occName(t.occupation)}</span>
+              <span className="coc-template-title">{t.title}</span>
+              <span className="coc-template-tagline">{t.tagline}</span>
+              <span className="coc-template-stats">
+                <i>возраст {t.age}</i>
+                <i>ОБР {t.characteristics.edu}</i>
+                <i>МОЩ {t.characteristics.pow}</i>
+              </span>
+              <span className="coc-template-name">«{t.name}»</span>
+            </button>
+          ))}
+        </div>
+
+        {pending && (
+          <p className="coc-display text-xs tracking-[0.3em] uppercase text-[#7fc39a] text-center coc-flicker">
+            Заводим дело…
+          </p>
+        )}
       </div>
     </div>
   );

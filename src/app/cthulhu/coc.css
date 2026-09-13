@@ -783,3 +783,156 @@ select.coc-input option { background: #141109; color: var(--coc-bone); }
   background: rgba(95, 143, 110, 0.15) !important;
   border-color: #7fc39a !important;
 }
+
+/* ============================================================
+   Раунд 5: заготовки сыщиков, счётчик патронов
+   ============================================================ */
+
+/* Карточка заготовки в выборе сыщика — папка с делом на просвет */
+.coc-template-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  text-align: left;
+  padding: 14px 14px 12px 16px;
+  border: 1px solid var(--coc-line-soft);
+  border-radius: 4px;
+  background: linear-gradient(160deg, rgba(24, 20, 12, 0.65), rgba(10, 8, 5, 0.8));
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  cursor: pointer;
+}
+.coc-template-card:hover:not(:disabled) {
+  transform: translateY(-3px);
+  border-color: rgba(95, 143, 110, 0.55);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(95, 143, 110, 0.25);
+}
+.coc-template-card:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+/* уголок-загиб бумаги */
+.coc-template-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(225deg, var(--coc-bg, #0a0805) 47%, rgba(154, 125, 62, 0.35) 50%, transparent 52%);
+  pointer-events: none;
+}
+.coc-template-stamp {
+  font-family: var(--coc-font-mono), monospace;
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--coc-verdigris);
+  border: 1px solid rgba(95, 143, 110, 0.4);
+  border-radius: 2px;
+  padding: 1.5px 6px 1px;
+  transform: rotate(-1.5deg);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.coc-template-blank .coc-template-stamp {
+  color: var(--coc-ash);
+  border-color: var(--coc-line-soft);
+}
+.coc-template-title {
+  font-family: var(--coc-font-display), serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #d8cbb0;
+}
+.coc-template-tagline {
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #a4977c;
+  font-style: italic;
+}
+.coc-template-stats {
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+  font-family: var(--coc-font-mono), monospace;
+  font-size: 0.6rem;
+  color: #9a7d3e;
+}
+.coc-template-stats i {
+  font-style: normal;
+}
+.coc-template-name {
+  font-family: var(--coc-font-mono), monospace;
+  font-size: 0.62rem;
+  color: #6e6350;
+  margin-top: auto;
+}
+
+/* Патроны: мало / пусто — обойма горит перед глазами */
+.coc-ammo-low {
+  color: #e0b45c !important;
+  border-color: rgba(154, 125, 62, 0.55) !important;
+  background: rgba(60, 44, 12, 0.35) !important;
+}
+.coc-ammo-empty {
+  color: #cf6a6a !important;
+  border-color: rgba(124, 29, 29, 0.65) !important;
+  background: rgba(60, 14, 14, 0.35) !important;
+}
+
+/* ============================================================
+   Раунд 5: подпись Хранителя и круглая печать (только печать)
+   ============================================================ */
+@media print {
+  .coc-print-approve {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 14px;
+    margin-top: 14px;
+    break-inside: avoid;
+  }
+  .coc-print-sign {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .coc-print-sign-name {
+    font-size: 8pt;
+    letter-spacing: 0.08em;
+  }
+  .coc-print-sign-line {
+    display: block;
+    width: 175px;
+    height: 20px;
+    border-bottom: 1px solid #111;
+  }
+  .coc-print-sign-hint {
+    font-size: 6.5pt;
+    color: #444;
+    font-style: italic;
+  }
+  .coc-print-mp {
+    font-size: 6.5pt;
+    color: #444;
+    letter-spacing: 0.1em;
+    margin-left: auto;
+    margin-right: 10px;
+    padding-bottom: 4px;
+  }
+  .coc-print-seal {
+    width: 106px;
+    height: 106px;
+    flex-shrink: 0;
+    transform: rotate(-8deg);
+    opacity: 0.88;
+    mix-blend-mode: multiply;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

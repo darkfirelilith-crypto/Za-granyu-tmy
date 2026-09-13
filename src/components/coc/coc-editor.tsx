@@ -308,14 +308,14 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
               </p>
             )}
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex flex-wrap items-center justify-end gap-1.5 min-w-0 sm:flex-nowrap">
             <button
               onClick={() => window.print()}
               className="coc-btn coc-btn-ghost !py-1.5 !px-2 text-xs"
               title="Распечатать досье или сохранить в PDF (Ctrl+P)"
               aria-label="Печать досье"
             >
-              🖨 Печать
+              🖨<span className="hidden min-[480px]:inline"> Печать</span>
             </button>
             <button
               onClick={exportSheet}
@@ -323,7 +323,7 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
               title="Скачать досье файлом (JSON)"
               aria-label="Экспорт досье"
             >
-              ⇩ Копия
+              ⇩<span className="hidden min-[480px]:inline"> Копия</span>
             </button>
             <input
               ref={importRef}
@@ -338,7 +338,7 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
               title="Восстановить досье из файла (текущие данные будут заменены)"
               aria-label="Импорт досье"
             >
-              ⇧ Восстановить
+              ⇧<span className="hidden min-[480px]:inline"> Восстановить</span>
             </button>
             <span
               className={`coc-save-dot ml-1 ${status === "saved" ? "saved" : status === "saving" ? "saving" : status === "error" || status === "conflict" ? "error" : ""}`}
