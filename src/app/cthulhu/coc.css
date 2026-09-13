@@ -207,10 +207,10 @@ select.coc-input option { background: #141109; color: var(--coc-bone); }
   text-shadow: 0 0 12px rgba(95, 143, 110, 0.5);
 }
 
-/* Строка навыка (режим прокачки: пометка, проф/личн/разв, итог) */
+/* Строка навыка (режим прокачки: отметки ☒ специализация / ↑ пройден, проф/личн/разв, итог) */
 .coc-skill-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px 44px 44px 44px 52px;
+  grid-template-columns: minmax(0, 1fr) 44px 44px 44px 44px 52px;
   gap: 4px;
   align-items: center;
   padding: 3px 6px;
@@ -225,7 +225,7 @@ select.coc-input option { background: #141109; color: var(--coc-bone); }
 .coc-skill-cols {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px 44px 44px 44px 52px;
+  grid-template-columns: minmax(0, 1fr) 44px 44px 44px 44px 52px;
   gap: 4px;
   padding: 2px 6px 5px;
   border-bottom: 1px solid var(--coc-line-soft);
@@ -247,6 +247,15 @@ select.coc-input option { background: #141109; color: var(--coc-bone); }
 .coc-skill-row:hover { background: rgba(216, 203, 176, 0.045); }
 .coc-skill-row.is-occ { box-shadow: inset 2px 0 0 var(--coc-brass); }
 .coc-skill-row.is-custom { box-shadow: inset 2px 0 0 var(--coc-blood); }
+/* Пометка прокачки (навык пройден — арка прокачает): зелёная кромка + тонд */
+.coc-skill-row.is-upgraded {
+  box-shadow: inset 2px 0 0 var(--coc-verdigris);
+  background: rgba(95, 143, 110, 0.05);
+}
+/* И специализация, и пройден — двойная кромка: латунь + зелень */
+.coc-skill-row.is-occ.is-upgraded {
+  box-shadow: inset 2px 0 0 var(--coc-brass), inset 4px 0 0 var(--coc-verdigris);
+}
 
 /* Имя навыка: переносится на новую строку (не режется многоточием),
    под ним — конкретика группового навыка («рисование», «немецкий») */
@@ -275,7 +284,7 @@ select.coc-input option { background: #141109; color: var(--coc-bone); }
 .coc-skill-name:hover .coc-skill-spec { color: #b3a179; }
 
 /* Строка конкретики группового навыка (режим прокачки) */
-.coc-spec-line { padding: 1px 6px 4px 24px; }
+.coc-spec-line { padding: 1px 6px 4px 7px; }
 .coc-spec-line input {
   width: 100%;
   background: rgba(0, 0, 0, 0.25);

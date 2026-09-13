@@ -35,7 +35,8 @@ export interface CocSkillState {
   occ: number;    // очки профессии
   pers: number;   // личные очки (ИНТ×2)
   improv: number; // развитие (проверки развития / стаж)
-  isOccupation: boolean; // пометка навыка (прокачивается с новой аркой; очки проф. — только в помеченные)
+  isOccupation: boolean; // специализация: очки профессии вкладываются только в такие навыки
+  upgraded?: boolean;    // пометка прокачки: навык пройден — на следующей арке будет прокачан
 }
 
 export interface CocWeapon {

@@ -648,6 +648,7 @@ export function SkillsSection({ data, mutate }: SectionProps) {
   const persSpent = personalSpent(data);
   const occLeft = occPts - occSpent;
   const persLeft = persTotal - persSpent;
+  const upCount = data.skills.filter((s) => s.upgraded).length;
 
   // порядок: колонки библиотеки, затем кастомные
   const ordered = useMemo(() => {
@@ -684,7 +685,7 @@ export function SkillsSection({ data, mutate }: SectionProps) {
             spent={occSpent}
             total={occPts}
             color="#9a7d3e"
-            hint={data.info.occupation ? "вкладываются только в помеченные ☒ навыки" : "сначала выберите род занятий во вкладке «Досье»"}
+            hint={data.info.occupation ? "вкладываются только в навыки специализации ☒" : "сначала выберите род занятий во вкладке «Досье»"}
           />
           <PointsBar
             title="Личные очки (ИНТ × 2)"
@@ -716,15 +717,15 @@ export function SkillsSection({ data, mutate }: SectionProps) {
         <span className="coc-mono text-[0.62rem] leading-relaxed text-[#8a7d64] hidden md:inline-block shrink-0">
           {leveling ? (
             <>
-              <span className="text-[#a4977c]">☒</span> — пометка
+              <span className="text-[#9a7d3e]">☒</span> — специализация: очки проф.
               <span className="text-[#4a4234] mx-1.5" aria-hidden="true">·</span>
-              очки проф. — только в помеченные
+              <span className="text-[#7fc39a]">↑</span> — пройден: прокачка на след. арке
             </>
           ) : (
             <>
               клик по <span className="text-[#a4977c]">итогу / ½ / ⅕</span> = проверка d100
               <span className="text-[#4a4234] mx-1.5" aria-hidden="true">·</span>
-              ☒ — пометка арки
+              <span className="text-[#7fc39a]">↑</span> — будет прокачан на след. арке
             </>
           )}
         </span>
@@ -737,16 +738,18 @@ export function SkillsSection({ data, mutate }: SectionProps) {
             {leveling ? "Прокачка навыков" : "Навыки сыщика"}
           </h2>
           <span className="coc-mono text-[0.62rem] text-[#6e6350] ml-auto">
-            {leveling ? `проф ${occLeft} в остатке · личн ${persLeft}` : `${visible.length} навыков`}
+            {leveling
+              ? `проф ${occLeft} в остатке · личн ${persLeft}`
+              : `${visible.length} навыков${upCount > 0 ? ` · ↑ ${upCount} на прокачку` : ""}`}
           </span>
         </div>
         <div className="p-3 pt-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-0.5">
           {/* шапка колонок текущего режима */}
           <div className="coc-skill-cols" aria-hidden="true">
             <span>Навык</span>
-            <span>☒</span>
             {leveling ? (
               <>
+                <span>☒ ↑</span>
                 <span>проф</span>
                 <span>личн</span>
                 <span>разв</span>
@@ -754,6 +757,7 @@ export function SkillsSection({ data, mutate }: SectionProps) {
               </>
             ) : (
               <>
+                <span>↑</span>
                 <span>итог</span>
                 <span>½</span>
                 <span>⅕</span>
@@ -770,31 +774,17 @@ export function SkillsSection({ data, mutate }: SectionProps) {
             const dispName = skillDisplayName(s);
             const rowKey = s.key || `custom-${s.name}`;
             const specHint = s.key ? SPEC_SKILL_HINTS[s.key] : undefined;
-            const markTitle = s.isOccupation
-              ? "Снять пометку (вложенные очки профессии сгорят)"
-              : leveling
-                ? "Пометить — очки профессии вкладываются только в помеченные"
-                : "Пометка: помеченные навыки прокачиваются с началом новой арки";
+            const toggleMark = (fn: (t: CocSkillState) => void) =>
+              mutate((d) => {
+                const t = d.skills.find((x) => (x.key || `custom-${x.name}`) === rowKey);
+                if (t) fn(t);
+              });
             return (
               <div key={rowKey} className="coc-skill-cell">
                 <div
-                  className={`coc-skill-row ${s.isOccupation ? "is-occ" : ""} ${isCustom ? "is-custom" : ""}`}
+                  className={`coc-skill-row ${s.isOccupation ? "is-occ" : ""} ${s.upgraded ? "is-upgraded" : ""} ${isCustom ? "is-custom" : ""}`}
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <button
-                      onClick={() => mutate((d) => {
-                        const t = d.skills.find((x) => (x.key || `custom-${x.name}`) === rowKey);
-                        if (t) {
-                          t.isOccupation = !t.isOccupation;
-                          if (!t.isOccupation) t.occ = 0;
-                        }
-                      })}
-                      className={`text-[0.7rem] leading-none w-4 h-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors ${s.isOccupation ? "border-[#9a7d3e] text-[#9a7d3e]" : "border-[#322a1c] text-transparent hover:border-[#9a7d3e]"}`}
-                      title={markTitle}
-                      aria-label={markTitle}
-                    >
-                      ✕
-                    </button>
                     <button
                       className="coc-skill-name"
                       onClick={() => total > 0 && rollSkillCheck(dispName, total)}
@@ -819,6 +809,30 @@ export function SkillsSection({ data, mutate }: SectionProps) {
                   </div>
                   {leveling ? (
                     <>
+                      {/* Отметки прокачки: ☒ специализация (очки проф.) · ↑ пройден (арка) */}
+                      <div className="flex items-center justify-center gap-1 min-w-0">
+                        <button
+                          onClick={() => toggleMark((t) => {
+                            t.isOccupation = !t.isOccupation;
+                            if (!t.isOccupation) t.occ = 0;
+                          })}
+                          aria-pressed={s.isOccupation}
+                          className={`text-[0.7rem] leading-none w-4 h-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors ${s.isOccupation ? "border-[#9a7d3e] text-[#9a7d3e]" : "border-[#322a1c] text-transparent hover:border-[#9a7d3e]"}`}
+                          title={s.isOccupation ? "Снять специализацию (вложенные очки профессии сгорят)" : "Специализация — очки профессии вкладываются только в такие навыки"}
+                          aria-label={`${s.name}: специализация`}
+                        >
+                          ✕
+                        </button>
+                        <button
+                          onClick={() => toggleMark((t) => { t.upgraded = !t.upgraded; })}
+                          aria-pressed={!!s.upgraded}
+                          className={`text-[0.7rem] leading-none w-4 h-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors ${s.upgraded ? "border-[#5f8f6e] text-[#7fc39a] bg-[rgba(95,143,110,0.14)]" : "border-[#322a1c] text-transparent hover:border-[#5f8f6e]"}`}
+                          title={s.upgraded ? "Снять пометку прокачки" : "Навык пройден — на следующей арке будет прокачан"}
+                          aria-label={`${s.name}: пометка прокачки`}
+                        >
+                          ↑
+                        </button>
+                      </div>
                       <input
                         type="number"
                         min={0}
@@ -830,7 +844,7 @@ export function SkillsSection({ data, mutate }: SectionProps) {
                           if (t) t.occ = Math.max(0, parseInt(e.target.value, 10) || 0);
                         })}
                         className={`coc-mini-input ${occDisabled ? "!opacity-40" : "!text-[#c0a05a]"}`}
-                        title={occDisabled ? "Сначала пометьте навык ☒" : "Очки профессии"}
+                        title={occDisabled ? "Сначала пометьте ☒ — специализация" : "Очки профессии"}
                         aria-label={`${s.name}: очки профессии`}
                       />
                       <input
@@ -869,6 +883,14 @@ export function SkillsSection({ data, mutate }: SectionProps) {
                     </>
                   ) : (
                     <>
+                      {/* В режиме просмотра метка = пометка прокачки (только чтение) */}
+                      <span
+                        className={`text-[0.7rem] leading-none w-4 h-4 shrink-0 rounded-sm border flex items-center justify-center ${s.upgraded ? "border-[#5f8f6e] text-[#7fc39a] bg-[rgba(95,143,110,0.14)]" : "border-transparent text-transparent"}`}
+                        title={s.upgraded ? "Пройден — будет прокачан на следующей арке" : undefined}
+                        aria-label={s.upgraded ? `${s.name}: пройден, будет прокачан на следующей арке` : undefined}
+                      >
+                        ↑
+                      </span>
                       <button
                         onClick={() => total > 0 && rollSkillCheck(dispName, total)}
                         className={`coc-skill-total ${total <= 0 ? "zero" : ""}`}

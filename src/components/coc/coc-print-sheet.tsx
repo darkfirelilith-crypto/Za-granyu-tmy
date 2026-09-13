@@ -124,6 +124,7 @@ export function CocPrintSheet({ data, derived }: { data: CocSheetData; derived: 
                 <div key={s.key ?? s.name} className="coc-print-skill">
                   <span className="coc-print-skill-name">
                     {s.isOccupation ? "● " : ""}
+                    {s.upgraded ? "↑ " : ""}
                     {s.name}
                     {s.spec?.trim() ? ` (${s.spec.trim()})` : ""}
                   </span>
@@ -134,7 +135,7 @@ export function CocPrintSheet({ data, derived }: { data: CocSheetData; derived: 
               );
             })}
           </div>
-          <p className="coc-print-note">● — профессиональный навык</p>
+          <p className="coc-print-note">● — навык специализации · ↑ — пройден, будет прокачан на следующей арке</p>
         </section>
       )}
 
