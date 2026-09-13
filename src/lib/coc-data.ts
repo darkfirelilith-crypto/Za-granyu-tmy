@@ -11,7 +11,8 @@ export interface CocInfo {
   sex: string;
   residence: string;
   birthplace: string;
-  portrait: string; // dataURL
+  portrait: string;      // dataURL (до 480px)
+  portraitThumb: string; // dataURL (96px) — для карточек архива
 }
 
 export interface CocCharacteristics {
@@ -89,6 +90,7 @@ export interface CocTrackers {
   mpBonus: number;
   sanCurrent: number | null;
   luckCurrent: number | null;
+  lastSanLoss: number; // последняя единовременная потеря рассудка (для безумия)
 }
 
 export interface CocSheetData {
@@ -134,6 +136,7 @@ export function createEmptySheet(name = "Новый сыщик"): CocSheetData {
       residence: "",
       birthplace: "",
       portrait: "",
+      portraitThumb: "",
     },
     characteristics: {
       str: 0, con: 0, siz: 0, dex: 0, app: 0, int: 0, pow: 0, edu: 0, luck: 0,
@@ -164,6 +167,7 @@ export function createEmptySheet(name = "Новый сыщик"): CocSheetData {
       hpCurrent: null, hpBonus: 0,
       mpCurrent: null, mpBonus: 0,
       sanCurrent: null, luckCurrent: null,
+      lastSanLoss: 0,
     },
     notes: [],
   };

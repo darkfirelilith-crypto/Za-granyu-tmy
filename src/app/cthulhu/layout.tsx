@@ -17,6 +17,7 @@ export default function CthulhuLayout({ children }: { children: React.ReactNode 
       className={`coc-root ${cocDisplay.variable} ${cocBody.variable} ${cocMono.variable}`}
     >
       {children}
+      <div className="coc-grain" aria-hidden="true" />
       <div className="coc-vignette" aria-hidden="true" />
       <UniverseFade />
       <Toaster position="bottom-center" theme="dark" />

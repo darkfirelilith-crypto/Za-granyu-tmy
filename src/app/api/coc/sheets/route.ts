@@ -3,14 +3,34 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { MAX_SHEETS } from "@/lib/coc-data";
 
-/** GET /api/coc/sheets — список листов «Зова Ктулху» текущего пользователя. */
+/** GET /api/coc/sheets — список листов «Зова Ктулху» текущего пользователя
+ *  (с миниатюрой портрета и профессией для карточек архива). */
 export async function GET() {
   const session = await requireUser();
   if (!session) return NextResponse.json({ error: "Войдите" }, { status: 401 });
-  const sheets = await db.cocSheet.findMany({
+  const rows = await db.cocSheet.findMany({
     where: { userId: session.user.id },
     orderBy: { updatedAt: "desc" },
-    select: { id: true, name: true, createdAt: true, updatedAt: true },
+    select: { id: true, name: true, createdAt: true, updatedAt: true, data: true },
+  });
+  const sheets = rows.map((r) => {
+    let portraitThumb: string | null = null;
+    let occupation: string | null = null;
+    try {
+      const d = JSON.parse(r.data || "{}");
+      portraitThumb = d?.info?.portraitThumb || null;
+      occupation = d?.info?.occupation || null;
+    } catch {
+      // битые данные не должны ломать список
+    }
+    return {
+      id: r.id,
+      name: r.name,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      portraitThumb,
+      occupation,
+    };
   });
   return NextResponse.json(sheets);
 }

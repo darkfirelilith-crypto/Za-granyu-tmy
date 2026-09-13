@@ -14,6 +14,8 @@ interface SheetMeta {
   name: string;
   createdAt: string;
   updatedAt: string;
+  portraitThumb?: string | null;
+  occupation?: string | null;
 }
 
 export function CocApp() {
@@ -150,6 +152,24 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
               <div key={i} className="coc-panel h-40 animate-pulse" />
             ))}
           </div>
+        ) : list.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="coc-panel p-10 text-center space-y-4 max-w-md mx-auto"
+          >
+            <img
+              src="/coc/eye-emblem.png"
+              alt="Око бездны"
+              className="w-24 h-24 mx-auto opacity-70 coc-breath"
+              style={{ filter: "invert(0.85) sepia(0.3)" }}
+            />
+            <h2 className="coc-display text-lg text-[#a4977c] tracking-[0.15em] uppercase">Архив пуст</h2>
+            <p className="coc-hint">
+              Ни одного дела не заведено. Тьма терпелива — она подождёт, пока вы подпишете первый лист.
+            </p>
+          </motion.div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {list.map((s, i) => (
@@ -219,29 +239,53 @@ function CaseCard({ sheet, onOpen }: { sheet: SheetMeta; onOpen: () => void }) {
   const date = new Date(sheet.updatedAt).toLocaleString("ru-RU", {
     day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
+  const openedDate = new Date(sheet.createdAt).toLocaleDateString("ru-RU", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+  });
+  const occDef = sheet.occupation
+    ? OCCUPATION_NAME[sheet.occupation] || sheet.occupation
+    : null;
 
   return (
     <div className="coc-case group" onClick={onOpen} role="button" tabIndex={0}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen()}>
       <div className="p-4 space-y-2.5">
-        <div className="flex items-start justify-between gap-2">
-          <span className="coc-stamp">Дело</span>
-          <button
-            onClick={(e) => { e.stopPropagation(); del.mutate(); }}
-            disabled={del.isPending}
-            className="opacity-0 group-hover:opacity-100 transition-opacity text-[#a83232] hover:text-[#cf6a6a] text-xs coc-mono px-1.5 py-0.5 border border-transparent hover:border-[#7c1d1d] rounded"
-            title="Уничтожить дело"
-            aria-label={`Удалить дело ${sheet.name}`}
-          >
-            {del.isPending ? "…" : "✕ сжечь"}
-          </button>
+        <div className="flex items-start gap-3">
+          {/* Миниатюра портрета */}
+          <div className="shrink-0 w-14 h-16 rounded border border-[#322a1c] overflow-hidden bg-black flex items-center justify-center">
+            {sheet.portraitThumb ? (
+              <img src={sheet.portraitThumb} alt="" className="w-full h-full object-cover" style={{ filter: "sepia(0.3)" }} />
+            ) : (
+              <span className="text-xl text-[#322a1c] select-none">☾</span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <span className="coc-stamp">Дело</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); del.mutate(); }}
+                disabled={del.isPending}
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-[#a83232] hover:text-[#cf6a6a] text-xs coc-mono px-1.5 py-0.5 border border-transparent hover:border-[#7c1d1d] rounded"
+                title="Уничтожить дело"
+                aria-label={`Удалить дело ${sheet.name}`}
+              >
+                {del.isPending ? "…" : "✕ сжечь"}
+              </button>
+            </div>
+            <h2 className="coc-display text-lg text-[#d8cbb0] leading-snug line-clamp-2 mt-1.5">
+              {sheet.name}
+            </h2>
+            {occDef && (
+              <p className="coc-mono text-[0.62rem] text-[#9a7d3e] truncate mt-0.5" title={occDef}>
+                ◈ {occDef}
+              </p>
+            )}
+          </div>
         </div>
-        <h2 className="coc-display text-lg text-[#d8cbb0] leading-snug line-clamp-2 min-h-[3rem]">
-          {sheet.name}
-        </h2>
-        <p className="coc-mono text-[0.65rem] text-[#6e6350]">
-          изм. {date}
-        </p>
+        <div className="flex items-center justify-between coc-mono text-[0.62rem] text-[#6e6350]">
+          <span>открыто {openedDate}</span>
+          <span>изм. {date.slice(0, 6)}</span>
+        </div>
         <p className="coc-display text-[0.7rem] tracking-[0.25em] uppercase text-[#5f8f6e] opacity-0 group-hover:opacity-100 transition-opacity">
           Открыть досье →
         </p>
@@ -249,3 +293,41 @@ function CaseCard({ sheet, onOpen }: { sheet: SheetMeta; onOpen: () => void }) {
     </div>
   );
 }
+
+// Краткая карта id → название профессии (без импорта полного списка с формулами)
+const OCCUPATION_NAME: Record<string, string> = {
+  acrobat: "Акробат", "actor-movie": "Актёр (кинозвезда)", "actor-theatre": "Актёр (театр)",
+  alienist: "Алиенист", alpinist: "Альпинист", antiquarian: "Антиквар", artist: "Артист",
+  archaeologist: "Археолог", architect: "Архитектор", athlete: "Атлет", bartender: "Бармен",
+  librarian: "Библиотекарь", boxer: "Боксёр / борец", drifter: "Бродяга", accountant: "Бухгалтер",
+  "driver-general": "Водитель", "driver-taxi": "Таксист", "driver-chauffeur": "Шофёр",
+  diver: "Водолаз", doctor: "Врач", "gangster-boss": "Гангстер: босс",
+  "gangster-soldier": "Гангстер: боец", "cult-leader": "Глава культа", undertaker: "Гробовщик",
+  butler: "Дворецкий", "detective-agency": "Детектив (агентство)", "detective-private": "Частный сыщик",
+  gentleman: "Джентльмен", designer: "Дизайнер", savage: "Дикарь", dilettante: "Дилетант",
+  trainer: "Дрессировщик", "journalist-invest": "Журналист-расследователь", "journalist-reporter": "Репортёр",
+  "foreign-correspondent": "Загранкорреспондент", gambler: "Игрок", engineer: "Инженер",
+  explorer: "Исследователь", stuntman: "Каскадёр", bookseller: "Книготорговец", cowboy: "Ковбой",
+  salesman: "Коммивояжер", "lab-assistant": "Лаборант", shopkeeper: "Лавочник",
+  "gangster-mistress": "Любовница гангстера", nurse: "Медсестра", mechanic: "Механик",
+  missionary: "Миссионер", "sailor-navy": "Моряк (флот)", "sailor-merchant": "Моряк (торговый)",
+  "museum-worker": "Музейный работник", musician: "Музыкант", occultist: "Оккультист",
+  clerk: "Клерк", manager: "Менеджер", officer: "Офицер", waitress: "Официантка",
+  "bounty-hunter": "Охотник за наградами", "big-game-hunter": "Охотник на крупную дичь",
+  parapsychologist: "Парапсихолог", "pilot-private": "Пилот (частный)", "pilot-aviation": "Пилот (авиация)",
+  author: "Писатель", firefighter: "Пожарный", politician: "Политик",
+  "police-detective": "Полицейский: следователь", "police-officer": "Полицейский: офицер",
+  "criminal-bootlegger": "Бутлеггер", "criminal-burglar": "Вор-взломщик", "criminal-bankrobber": "Грабитель банков",
+  "criminal-smuggler": "Контрабандист", "criminal-conman": "Мошенник", "criminal-hitman": "Наёмный убийца",
+  "criminal-fence": "Скупщик краденого", "criminal-counterfeiter": "Фальшивомонетчик", "criminal-goon": "Шпана",
+  prostitute: "Проститутка", professor: "Профессор", "union-activist": "Профсоюзный активист",
+  psychiatrist: "Психиатр", psychologist: "Психолог", "zoo-worker": "Работник зоопарка",
+  lumberjack: "Лесоруб", laborer: "Чернорабочий", miner: "Шахтёр", editor: "Редактор",
+  craftsman: "Ремесленник", orderly: "Санитар", "asylum-orderly": "Санитар лечебницы",
+  clergy: "Священнослужитель", secretary: "Секретарь", soldier: "Солдат/матрос",
+  prospector: "Старатель", student: "Студент", forensic: "Судмедэксперт", judge: "Судья",
+  "antique-dealer": "Торговец антиквариатом", tourist: "Турист", scientist: "Учёный",
+  fanatic: "Фанатик", pharmacist: "Фармацевт", "federal-agent": "Федеральный агент",
+  farmer: "Фермер", flapper: "Флэппер", photographer: "Фотограф", photojournalist: "Фотожурналист",
+  hobo: "Хобо", painter: "Художник", spy: "Шпион", lawyer: "Юрист",
+};

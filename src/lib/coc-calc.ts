@@ -209,3 +209,32 @@ export function financeSuggestion(credit: number) {
   if (c <= 98) return { pocket: "$250", cash: `$${c * 20}`, assets: `$${c * 2000}` };
   return { pocket: "$5000", cash: "$50.000", assets: "$5.000.000+" };
 }
+
+// ===== Безумие (по правилам) =====
+
+export interface InsanityInsight {
+  indefinite: boolean;   // суммарные потери ≥ 1/5 стартового рассудка
+  temporary: boolean;    // последняя единовременная потеря ≥ 5
+  indefiniteThreshold: number;
+  totalLost: number;
+}
+
+export function insanityInsight(sanStart: number, sanCurrent: number, lastSanLoss: number): InsanityInsight {
+  const start = Math.max(0, sanStart);
+  const totalLost = Math.max(0, start - Math.max(0, sanCurrent));
+  const indefiniteThreshold = Math.floor(start / 5);
+  return {
+    indefinite: start > 0 && totalLost >= indefiniteThreshold && indefiniteThreshold > 0,
+    temporary: lastSanLoss >= 5,
+    indefiniteThreshold,
+    totalLost,
+  };
+}
+
+/** Проверка развития навыка/ОБР: успех, если d100 > текущее значение. Возвращает прибавку 1d10. */
+export function improvementCheck(current: number): { roll: number; success: boolean; gain: number } {
+  const roll = rollD100();
+  const success = roll > current;
+  const gain = success ? 1 + Math.floor(Math.random() * 10) : 0;
+  return { roll, success, gain };
+}

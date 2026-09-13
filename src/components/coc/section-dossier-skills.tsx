@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import {
   CocSheetData,
   CocSkillState,
@@ -20,8 +21,10 @@ import {
   skillBase,
   skillTotal,
   rollD100,
+  insanityInsight,
+  improvementCheck,
 } from "@/lib/coc-calc";
-import { rollSkillCheck } from "@/components/coc/coc-dice";
+import { rollSkillCheck, publishRoll } from "@/components/coc/coc-dice";
 
 interface SectionProps {
   data: CocSheetData;
@@ -58,18 +61,21 @@ export function DossierSection({ data, mutate, derived }: SectionProps) {
       const img = new Image();
       img.onload = () => {
         // сжимаем до 480px по большей стороне — архив не должен пухнуть
-        const max = 480;
-        const scale = Math.min(1, max / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        ctx.drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-        mutate((d) => { d.info.portrait = dataUrl; });
+        const draw = (maxSide: number, quality: number): string => {
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return "";
+          ctx.drawImage(img, 0, 0, w, h);
+          return canvas.toDataURL("image/jpeg", quality);
+        };
+        const full = draw(480, 0.85);
+        const thumb = draw(96, 0.6);
+        mutate((d) => { d.info.portrait = full; d.info.portraitThumb = thumb; });
       };
       img.src = reader.result as string;
     };
@@ -87,15 +93,20 @@ export function DossierSection({ data, mutate, derived }: SectionProps) {
   const sanRoll = () => {
     const roll = rollD100();
     const success = roll <= sanCurrent;
+    publishRoll({ label: "Проверка Рассудка", roll, value: sanCurrent, kind: "check", level: success ? (roll === 1 ? "critical" : "regular") : roll === 100 ? "fumble" : "fail" });
     showSanityResult(roll, sanCurrent, success);
-    if (success) {
-      const loss = parseInt(sanLossSuccess.current?.value || "0", 10) || 0;
-      if (loss > 0) mutate((d) => { d.trackers.sanCurrent = Math.max(0, (d.trackers.sanCurrent ?? derived.sanStart) - loss); });
-    } else {
-      const loss = parseInt(sanLossFail.current?.value || "1", 10) || 1;
-      mutate((d) => { d.trackers.sanCurrent = Math.max(0, (d.trackers.sanCurrent ?? derived.sanStart) - loss); });
+    const applied = success
+      ? parseInt(sanLossSuccess.current?.value || "0", 10) || 0
+      : parseInt(sanLossFail.current?.value || "1", 10) || 1;
+    if (applied > 0) {
+      mutate((d) => {
+        d.trackers.sanCurrent = Math.max(0, (d.trackers.sanCurrent ?? derived.sanStart) - applied);
+        d.trackers.lastSanLoss = applied;
+      });
     }
   };
+
+  const insanity = insanityInsight(derived.sanStart, sanCurrent, trackers.lastSanLoss || 0);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -241,6 +252,7 @@ export function DossierSection({ data, mutate, derived }: SectionProps) {
               meta.id === "dex" && occ
                 ? ""
                 : meta.hint;
+            const isEdu = meta.id === "edu";
             return (
               <div key={meta.id} className="rounded border border-[#262015] bg-black/25 p-2.5 space-y-1">
                 <div className="flex items-baseline justify-between">
@@ -261,15 +273,62 @@ export function DossierSection({ data, mutate, derived }: SectionProps) {
                   className="coc-stat-input"
                   aria-label={`${meta.label} (${meta.short})`}
                 />
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <span className="coc-hint !text-[0.62rem]">{dynamicHint}</span>
-                  <button
-                    onClick={() => statCheck(meta.label, value)}
-                    className="coc-mono text-[0.65rem] text-[#5f8f6e] hover:text-[#7fc39a] px-1"
-                    title={`Проверка ${meta.label} (d100 ≤ ${value})`}
-                  >
-                    ⟳d100
-                  </button>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    {isEdu && (
+                      <button
+                        onClick={() => {
+                          if (value <= 0) return;
+                          const res = improvementCheck(value);
+                          publishRoll({ label: `Развитие ОБР`, roll: res.roll, value, kind: "check" });
+                          if (res.success) {
+                            mutate((d) => {
+                              d.characteristics.edu = Math.min(99, value + res.gain);
+                            });
+                            toast.custom(
+                              () => (
+                                <div className="coc-panel px-4 py-3 flex items-center gap-3" style={{ boxShadow: "0 14px 40px rgba(0,0,0,0.7)" }}>
+                                  <span className="coc-mono text-lg font-bold text-[#7fc39a]">{res.roll}</span>
+                                  <span className="w-px self-stretch bg-[#322a1c]" />
+                                  <span>
+                                    <span className="coc-display text-sm text-[#7fc39a]">Образование развито!</span>
+                                    <span className="coc-hint block">+{res.gain} к ОБР (d100 &gt; {value})</span>
+                                  </span>
+                                </div>
+                              ),
+                              { duration: 4200 }
+                            );
+                          } else {
+                            toast.custom(
+                              () => (
+                                <div className="coc-panel px-4 py-3 flex items-center gap-3" style={{ boxShadow: "0 14px 40px rgba(0,0,0,0.7)" }}>
+                                  <span className="coc-mono text-lg font-bold text-[#c98f6a]">{res.roll}</span>
+                                  <span className="w-px self-stretch bg-[#322a1c]" />
+                                  <span>
+                                    <span className="coc-display text-sm text-[#c98f6a]">Без улучшения</span>
+                                    <span className="coc-hint block">нужно выбросить больше {value}</span>
+                                  </span>
+                                </div>
+                              ),
+                              { duration: 3600 }
+                            );
+                          }
+                        }}
+                        className="coc-mono text-[0.65rem] text-[#9a7d3e] hover:text-[#c0a05a] px-1"
+                        title="Проверка развития ОБР: d100 больше значения → +1d10 (по возрастным правилам)"
+                      >
+                        ⟳развитие
+                      </button>
+                    )}
+                    <button
+                      onClick={() => statCheck(meta.label, value)}
+                      className="coc-mono text-[0.65rem] text-[#5f8f6e] hover:text-[#7fc39a] px-1"
+                      title={`Проверка ${meta.label} (d100 ≤ ${value})`}
+                    >
+                      ⟳d100
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -382,9 +441,23 @@ export function DossierSection({ data, mutate, derived }: SectionProps) {
                 Проверка
               </button>
             </div>
-            {sanCurrent === 0 && (
+            {derived.sanStart > 0 && sanCurrent === 0 && (
               <p className="coc-mono text-[0.68rem] text-[#a83232] animate-pulse">СЫЩИК ПОГРУЗИЛСЯ В ВЕЧНОЕ БЕЗУМИЕ</p>
             )}
+            {derived.sanStart > 0 && sanCurrent > 0 && insanity.temporary && (
+              <p className="coc-mono text-[0.62rem] text-[#c98f6a]">
+                ▲ Последняя потеря {trackers.lastSanLoss} ≥ 5 — проверка на <b>временное безумие</b> (1d10 раундов/часов)
+              </p>
+            )}
+            {derived.sanStart > 0 && insanity.indefinite && (
+              <p className="coc-mono text-[0.62rem] text-[#a83232]">
+                ▲▲ Потеряно {insanity.totalLost} ≥ {insanity.indefiniteThreshold} (⅕ старта) — риск <b>неопределившегося безумия</b>
+              </p>
+            )}
+            <div className="flex items-center justify-between coc-hint !text-[0.6rem] pt-0.5">
+              <span>потеряно всего: {insanity.totalLost}</span>
+              <span>порог неопределившегося: {insanity.indefiniteThreshold}</span>
+            </div>
           </div>
           {/* Удача текущая */}
           <div className="rounded border border-[#262015] bg-black/25 p-3 space-y-2">

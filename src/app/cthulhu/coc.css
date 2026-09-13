@@ -58,11 +58,13 @@
 
 /* Панель — старая папка с делом */
 .coc-panel {
+  position: relative;
   background: linear-gradient(160deg, var(--coc-panel-2), var(--coc-panel));
   border: 1px solid var(--coc-line);
   border-radius: 6px;
   box-shadow:
     0 1px 0 rgba(216, 203, 176, 0.04) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.4),
     0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
@@ -196,6 +198,7 @@ select.coc-input option { background: #141109; color: var(--coc-bone); }
   text-transform: uppercase;
   background: none;
   border-top: none; border-left: none; border-right: none;
+  position: relative;
 }
 .coc-tab:hover { color: var(--coc-bone); }
 .coc-tab.active {
@@ -382,6 +385,32 @@ select.coc-input option { background: #141109; color: var(--coc-bone); }
 .coc-roll-regular { color: var(--coc-bone); }
 .coc-roll-fail { color: #c98f6a; }
 .coc-roll-fumble { color: var(--coc-blood-bright); text-shadow: 0 0 14px rgba(168,50,50,0.7); }
+
+/* Плёночное зерно поверх всей страницы — кинематографичная текстура */
+.coc-grain {
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>");
+  animation: coc-grain 900ms steps(4) infinite;
+}
+
+@keyframes coc-grain {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-2%, 1.4%); }
+  50% { transform: translate(1.6%, -1.2%); }
+  75% { transform: translate(-1.2%, -1.8%); }
+  100% { transform: translate(0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coc-grain { animation: none; }
+  .coc-flicker, .coc-breath { animation: none; }
+}
 
 /* Портрет */
 .coc-portrait {

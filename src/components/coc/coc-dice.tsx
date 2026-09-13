@@ -1,12 +1,33 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { checkLevel, CHECK_LEVEL_RU, rollD100, CheckLevel } from "@/lib/coc-calc";
+
+const ROLL_EVENT = "coc-roll-made";
+
+export interface RollRecord {
+  id: number;
+  label: string;
+  roll: number;
+  value: number;
+  level?: CheckLevel;
+  kind: "check" | "dice";
+  sides?: number;
+}
+
+/** Публикация броска в общую историю (слушает панель костей). */
+export function publishRoll(rec: Omit<RollRecord, "id">) {
+  try {
+    window.dispatchEvent(new CustomEvent(ROLL_EVENT, { detail: rec }));
+  } catch {}
+}
 
 /** Бросок d100 с уровнями успеха — результат всплывает печатью судьбы. */
 export function rollSkillCheck(name: string, value: number) {
   const roll = rollD100();
   const level = checkLevel(roll, value);
+  publishRoll({ label: name, roll, value, level, kind: "check" });
   showCheckResult(name, roll, value, level);
   return { roll, level };
 }
@@ -51,10 +72,23 @@ export function showCheckResult(name: string, roll: number, value: number, level
 
 const DICE = [100, 20, 12, 10, 8, 6, 4, 3];
 
-/** Плавающая панель костей — тень прошлого всегда рядом. */
+/** Плавающая панель костей с историей бросков — тень прошлого всегда рядом. */
 export function CocDicePanel() {
+  const [history, setHistory] = useState<RollRecord[]>([]);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const rec = (e as CustomEvent).detail as Omit<RollRecord, "id">;
+      setHistory((prev) => [{ ...rec, id: Date.now() + Math.random() }, ...prev].slice(0, 12));
+    };
+    window.addEventListener(ROLL_EVENT, handler);
+    return () => window.removeEventListener(ROLL_EVENT, handler);
+  }, []);
+
   const roll = (sides: number) => {
     const value = 1 + Math.floor(Math.random() * sides);
+    publishRoll({ label: `Кость d${sides}`, roll: value, value: sides, kind: "dice", sides });
     toast.custom(
       () => (
         <div className="coc-panel px-4 py-3 flex items-center gap-3" style={{ boxShadow: "0 14px 40px rgba(0,0,0,0.7)" }}>
@@ -67,27 +101,78 @@ export function CocDicePanel() {
     );
   };
 
+  const levelColor = (level?: CheckLevel) => {
+    switch (level) {
+      case "critical": case "extreme": return "#7fc39a";
+      case "hard": return "#b9cfa4";
+      case "regular": return "#d8cbb0";
+      case "fail": return "#c98f6a";
+      case "fumble": return "#a83232";
+      default: return "#a4977c";
+    }
+  };
+
   return (
     <div
       className="fixed bottom-4 right-4 z-40 flex flex-col gap-1.5 items-end"
       aria-label="Игральные кости"
     >
-      <div className="coc-panel px-3 py-2 flex gap-1.5 flex-wrap justify-end max-w-[240px]">
-        {DICE.map((s) => (
-          <button
-            key={s}
-            onClick={() => roll(s)}
-            className="coc-mono text-xs px-2 py-1 rounded border transition-all hover:scale-105"
-            style={{
-              borderColor: "var(--coc-line)",
-              color: "var(--coc-bone-dim)",
-              background: "rgba(0,0,0,0.3)",
-            }}
-            title={`Бросить d${s}`}
-          >
-            d{s}
-          </button>
-        ))}
+      {open && history.length > 0 && (
+        <div className="coc-panel px-3 py-2 w-64 max-h-72 overflow-y-auto coc-scroll" style={{ boxShadow: "0 14px 40px rgba(0,0,0,0.7)" }}>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="coc-label">Журнал бросков</span>
+            <button onClick={() => setHistory([])} className="coc-mono text-[0.6rem] text-[#6e6350] hover:text-[#a83232]" title="Очистить журнал">
+              очистить
+            </button>
+          </div>
+          <ul className="space-y-1">
+            {history.map((r) => (
+              <li key={r.id} className="flex items-center gap-2 text-[0.7rem] border-b border-[#1d1810] pb-1 last:border-0">
+                <span className="coc-mono font-bold w-8 text-right" style={{ color: levelColor(r.level) }}>
+                  {r.roll}
+                </span>
+                <span className="coc-mono text-[0.6rem] text-[#4a4234]">
+                  {r.kind === "check" ? `/ ${r.value}` : `d${r.sides}`}
+                </span>
+                <span className="truncate flex-1 text-[#a4977c]" title={r.label}>{r.label}</span>
+                {r.level && (
+                  <span className="coc-mono text-[0.58rem] shrink-0" style={{ color: levelColor(r.level) }}>
+                    {r.level === "critical" ? "КРИТ" : r.level === "fumble" ? "КРАХ" : CHECK_LEVEL_RU[r.level].split(" ")[0].toUpperCase()}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="flex items-end gap-1.5">
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="coc-btn !p-2 !px-2.5"
+          style={{ background: "linear-gradient(to bottom, rgba(20,17,9,0.95), rgba(10,8,5,0.95))" }}
+          title={open ? "Скрыть журнал бросков" : `Журнал бросков (${history.length})`}
+          aria-label="Журнал бросков"
+        >
+          <span className="coc-mono text-xs text-[#7fc39a]">{open ? "▾" : "🕘"}</span>
+        </button>
+        <div className="coc-panel px-3 py-2 flex gap-1.5 flex-wrap justify-end max-w-[240px]">
+          {DICE.map((s) => (
+            <button
+              key={s}
+              onClick={() => roll(s)}
+              className="coc-mono text-xs px-2 py-1 rounded border transition-all hover:scale-105"
+              style={{
+                borderColor: "var(--coc-line)",
+                color: "var(--coc-bone-dim)",
+                background: "rgba(0,0,0,0.3)",
+              }}
+              title={`Бросить d${s}`}
+            >
+              d{s}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
