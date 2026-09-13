@@ -9,6 +9,8 @@ import {
   CHARACTERISTICS,
   OCCUPATIONS,
   SKILL_LIBRARY,
+  SPEC_SKILL_HINTS,
+  skillDisplayName,
   uid,
 } from "@/lib/coc-data";
 import {
@@ -227,7 +229,7 @@ export function DossierSection({ data, mutate, derived }: SectionProps) {
                 )}
                 {occ.specHint && <p className="coc-hint">Особые: {occ.specHint}</p>}
                 <p className="coc-hint">
-                  Отметьте профессиональные навыки во вкладке «Навыки» (автоотметка уже сделана) и вложите очки.
+                  Пометьте профессиональные навыки во вкладке «Навыки» (кнопка «Прокачка»; автоотметка уже сделана) и вложите очки.
                 </p>
               </div>
             )}
@@ -628,10 +630,15 @@ function showSanityResult(roll: number, san: number, success: boolean) {
 
 /* ============================================================
    ВКЛАДКА «НАВЫКИ»
-   ============================================================ */
+   Два режима:
+   • просмотр (по умолчанию) — итог навыка и авто-пороги ½ / ⅕,
+     клик по любому числу = проверка d100 с нужным порогом;
+   • «Прокачка» — распределение очков профессии / личных / развития
+     с бюджетами, конкретика групповых навыков, добавление своих. */
 
 export function SkillsSection({ data, mutate }: SectionProps) {
   const [filter, setFilter] = useState("");
+  const [leveling, setLeveling] = useState(false);
   const [newSkillName, setNewSkillName] = useState("");
   const [newSkillBase, setNewSkillBase] = useState("");
 
@@ -648,8 +655,12 @@ export function SkillsSection({ data, mutate }: SectionProps) {
     return [...data.skills].sort((a, b) => col(a) - col(b) || a.name.localeCompare(b.name, "ru"));
   }, [data.skills]);
 
+  const q = filter.trim().toLowerCase();
   const visible = ordered.filter(
-    (s) => !filter || s.name.toLowerCase().includes(filter.toLowerCase())
+    (s) =>
+      !q ||
+      s.name.toLowerCase().includes(q) ||
+      (s.spec || "").toLowerCase().includes(q)
   );
 
   const addCustom = () => {
@@ -665,25 +676,27 @@ export function SkillsSection({ data, mutate }: SectionProps) {
 
   return (
     <div className="space-y-4">
-      {/* Счётчики очков */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <PointsBar
-          title="Очки профессии"
-          spent={occSpent}
-          total={occPts}
-          color="#9a7d3e"
-          hint={data.info.occupation ? "вкладываются только в отмеченные ☐ проф. навыки" : "сначала выберите род занятий во вкладке «Досье»"}
-        />
-        <PointsBar
-          title="Личные очки (ИНТ × 2)"
-          spent={persSpent}
-          total={persTotal}
-          color="#5f8f6e"
-          hint="в любые навыки — интересы, хобби, жизненный опыт"
-        />
-      </div>
+      {/* Бюджеты очков — только в режиме прокачки */}
+      {leveling && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <PointsBar
+            title="Очки профессии"
+            spent={occSpent}
+            total={occPts}
+            color="#9a7d3e"
+            hint={data.info.occupation ? "вкладываются только в помеченные ☒ навыки" : "сначала выберите род занятий во вкладке «Досье»"}
+          />
+          <PointsBar
+            title="Личные очки (ИНТ × 2)"
+            spent={persSpent}
+            total={persTotal}
+            color="#5f8f6e"
+            hint="в любые навыки — интересы, хобби, жизненный опыт"
+          />
+        </div>
+      )}
 
-      {/* Поиск */}
+      {/* Поиск + переключатель режима прокачки */}
       <div className="coc-panel p-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <input
           className="coc-input flex-1 min-w-[180px]"
@@ -692,139 +705,242 @@ export function SkillsSection({ data, mutate }: SectionProps) {
           onChange={(e) => setFilter(e.target.value)}
           aria-label="Поиск навыка"
         />
+        <button
+          onClick={() => setLeveling((v) => !v)}
+          aria-pressed={leveling}
+          className={`coc-btn ${leveling ? "coc-btn-verdigris" : "coc-btn-ghost"} !py-2 !px-3 shrink-0`}
+          title={leveling ? "Вернуться к значениям и проверкам" : "Распределить очки профессии, личные и развитие"}
+        >
+          {leveling ? "◉ Свернуть прокачку" : "⚒ Прокачка"}
+        </button>
         <span className="coc-mono text-[0.62rem] leading-relaxed text-[#8a7d64] hidden md:inline-block shrink-0">
-          <span className="text-[#a4977c]">☐</span> — проф.
-          <span className="text-[#4a4234] mx-1.5" aria-hidden="true">·</span>
-          клик по названию или итогу = <span className="text-[#a4977c]">проверка d100</span>
-          <span className="text-[#4a4234] mx-1.5" aria-hidden="true">·</span>
-          ½ и ⅕ считаются сами
+          {leveling ? (
+            <>
+              <span className="text-[#a4977c]">☒</span> — пометка
+              <span className="text-[#4a4234] mx-1.5" aria-hidden="true">·</span>
+              очки проф. — только в помеченные
+            </>
+          ) : (
+            <>
+              клик по <span className="text-[#a4977c]">итогу / ½ / ⅕</span> = проверка d100
+              <span className="text-[#4a4234] mx-1.5" aria-hidden="true">·</span>
+              ☒ — пометка арки
+            </>
+          )}
         </span>
       </div>
 
       {/* Список навыков */}
-      <div className="coc-panel">
+      <div className={`coc-panel ${leveling ? "is-leveling" : "is-view"}`}>
         <div className="coc-panel-head">
-          <h2 className="coc-display text-sm tracking-[0.2em] uppercase text-[#a4977c]">Навыки сыщика</h2>
-          <span className="coc-mono text-[0.62rem] text-[#6e6350] ml-auto">{visible.length} навыков</span>
+          <h2 className="coc-display text-sm tracking-[0.2em] uppercase text-[#a4977c]">
+            {leveling ? "Прокачка навыков" : "Навыки сыщика"}
+          </h2>
+          <span className="coc-mono text-[0.62rem] text-[#6e6350] ml-auto">
+            {leveling ? `проф ${occLeft} в остатке · личн ${persLeft}` : `${visible.length} навыков`}
+          </span>
         </div>
-        <div className="p-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-0.5">
+        <div className="p-3 pt-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-0.5">
+          {/* шапка колонок текущего режима */}
+          <div className="coc-skill-cols" aria-hidden="true">
+            <span>Навык</span>
+            <span>☒</span>
+            {leveling ? (
+              <>
+                <span>проф</span>
+                <span>личн</span>
+                <span>разв</span>
+                <span>итог</span>
+              </>
+            ) : (
+              <>
+                <span>итог</span>
+                <span>½</span>
+                <span>⅕</span>
+              </>
+            )}
+          </div>
           {visible.map((s) => {
             const base = skillBase(s);
             const total = skillTotal(s);
+            const half = Math.floor(total / 2);
+            const fifth = Math.floor(total / 5);
             const isCustom = s.key === null;
             const occDisabled = !s.isOccupation;
+            const dispName = skillDisplayName(s);
+            const rowKey = s.key || `custom-${s.name}`;
+            const specHint = s.key ? SPEC_SKILL_HINTS[s.key] : undefined;
+            const markTitle = s.isOccupation
+              ? "Снять пометку (вложенные очки профессии сгорят)"
+              : leveling
+                ? "Пометить — очки профессии вкладываются только в помеченные"
+                : "Пометка: помеченные навыки прокачиваются с началом новой арки";
             return (
-              <div
-                key={s.key || `custom-${s.name}`}
-                className={`coc-skill-row ${s.isOccupation ? "is-occ" : ""} ${isCustom ? "is-custom" : ""}`}
-              >
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <button
-                    onClick={() => mutate((d) => {
-                      const t = d.skills.find((x) => (x.key || `custom-${x.name}`) === (s.key || `custom-${s.name}`));
-                      if (t) {
-                        t.isOccupation = !t.isOccupation;
-                        if (!t.isOccupation) t.occ = 0;
-                      }
-                    })}
-                    className={`text-[0.7rem] leading-none w-4 h-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors ${s.isOccupation ? "border-[#9a7d3e] text-[#9a7d3e]" : "border-[#322a1c] text-transparent hover:border-[#9a7d3e]"}`}
-                    title={s.isOccupation ? "Снять отметку профессии" : "Отметить как профессиональный"}
-                    aria-label={s.isOccupation ? "Снять отметку профессии" : "Отметить как профессиональный"}
-                  >
-                    ✕
-                  </button>
-                  <button
-                    className="coc-skill-name"
-                    onClick={() => total > 0 && rollSkillCheck(s.name, total)}
-                    title={`Проверка: d100 ≤ ${total} (трудн. ${Math.floor(total / 2)}, чрезв. ${Math.floor(total / 5)})`}
-                  >
-                    {s.name}
-                    <span className="text-[#4a4234]"> ({base})</span>
-                  </button>
-                  {isCustom && (
+              <div key={rowKey} className="coc-skill-cell">
+                <div
+                  className={`coc-skill-row ${s.isOccupation ? "is-occ" : ""} ${isCustom ? "is-custom" : ""}`}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <button
-                      onClick={() => mutate((d) => { d.skills = d.skills.filter((x) => x.key !== null || x.name !== s.name); })}
-                      className="text-[#a83232] hover:text-[#cf6a6a] text-xs px-1 shrink-0"
-                      title="Удалить навык"
-                      aria-label={`Удалить ${s.name}`}
+                      onClick={() => mutate((d) => {
+                        const t = d.skills.find((x) => (x.key || `custom-${x.name}`) === rowKey);
+                        if (t) {
+                          t.isOccupation = !t.isOccupation;
+                          if (!t.isOccupation) t.occ = 0;
+                        }
+                      })}
+                      className={`text-[0.7rem] leading-none w-4 h-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors ${s.isOccupation ? "border-[#9a7d3e] text-[#9a7d3e]" : "border-[#322a1c] text-transparent hover:border-[#9a7d3e]"}`}
+                      title={markTitle}
+                      aria-label={markTitle}
                     >
                       ✕
                     </button>
+                    <button
+                      className="coc-skill-name"
+                      onClick={() => total > 0 && rollSkillCheck(dispName, total)}
+                      title={`Проверка: d100 ≤ ${total} · трудная ≤ ${half} · чрезвычайная ≤ ${fifth}`}
+                    >
+                      <span className="coc-skill-name-main">
+                        {s.name}
+                        <span className="text-[#4a4234]"> ({base})</span>
+                      </span>
+                      {s.spec?.trim() && <span className="coc-skill-spec">«{s.spec.trim()}»</span>}
+                    </button>
+                    {isCustom && leveling && (
+                      <button
+                        onClick={() => mutate((d) => { d.skills = d.skills.filter((x) => x.key !== null || x.name !== s.name); })}
+                        className="text-[#a83232] hover:text-[#cf6a6a] text-xs px-1 shrink-0"
+                        title="Удалить навык"
+                        aria-label={`Удалить ${s.name}`}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  {leveling ? (
+                    <>
+                      <input
+                        type="number"
+                        min={0}
+                        value={s.occ || ""}
+                        placeholder="0"
+                        disabled={occDisabled}
+                        onChange={(e) => mutate((d) => {
+                          const t = d.skills.find((x) => (x.key || `custom-${x.name}`) === rowKey);
+                          if (t) t.occ = Math.max(0, parseInt(e.target.value, 10) || 0);
+                        })}
+                        className={`coc-mini-input ${occDisabled ? "!opacity-40" : "!text-[#c0a05a]"}`}
+                        title={occDisabled ? "Сначала пометьте навык ☒" : "Очки профессии"}
+                        aria-label={`${s.name}: очки профессии`}
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        value={s.pers || ""}
+                        placeholder="0"
+                        onChange={(e) => mutate((d) => {
+                          const t = d.skills.find((x) => (x.key || `custom-${x.name}`) === rowKey);
+                          if (t) t.pers = Math.max(0, parseInt(e.target.value, 10) || 0);
+                        })}
+                        className="coc-mini-input !text-[#7fc39a]"
+                        title="Личные очки (ИНТ×2)"
+                        aria-label={`${s.name}: личные очки`}
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        value={s.improv || ""}
+                        placeholder="0"
+                        onChange={(e) => mutate((d) => {
+                          const t = d.skills.find((x) => (x.key || `custom-${x.name}`) === rowKey);
+                          if (t) t.improv = Math.max(0, parseInt(e.target.value, 10) || 0);
+                        })}
+                        className="coc-mini-input !text-[#d8cbb0]"
+                        title="Развитие (проверки развития, стаж игры)"
+                        aria-label={`${s.name}: развитие`}
+                      />
+                      <button
+                        onClick={() => total > 0 && rollSkillCheck(dispName, total)}
+                        className={`coc-skill-total ${total <= 0 ? "zero" : ""}`}
+                        title={`Итог ${total} · проверка d100`}
+                      >
+                        {total}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => total > 0 && rollSkillCheck(dispName, total)}
+                        className={`coc-skill-total ${total <= 0 ? "zero" : ""}`}
+                        title={`Обычная проверка: d100 ≤ ${total}`}
+                        aria-label={`${dispName}: обычная проверка, порог ${total}`}
+                      >
+                        {total}
+                      </button>
+                      <button
+                        onClick={() => total > 0 && rollSkillCheck(dispName, total, "hard")}
+                        disabled={total <= 0}
+                        className="coc-skill-half"
+                        title={`Трудная проверка: d100 ≤ ${half} — обычный успех не считается`}
+                        aria-label={`${dispName}: трудная проверка, порог ${half}`}
+                      >
+                        {half}
+                      </button>
+                      <button
+                        onClick={() => total > 0 && rollSkillCheck(dispName, total, "extreme")}
+                        disabled={total <= 0}
+                        className="coc-skill-fifth"
+                        title={`Чрезвычайная проверка: d100 ≤ ${fifth}`}
+                        aria-label={`${dispName}: чрезвычайная проверка, порог ${fifth}`}
+                      >
+                        {fifth}
+                      </button>
+                    </>
                   )}
                 </div>
-                <input
-                  type="number"
-                  min={0}
-                  value={s.occ || ""}
-                  placeholder="0"
-                  disabled={occDisabled}
-                  onChange={(e) => mutate((d) => {
-                    const t = d.skills.find((x) => (x.key || `custom-${x.name}`) === (s.key || `custom-${s.name}`));
-                    if (t) t.occ = Math.max(0, parseInt(e.target.value, 10) || 0);
-                  })}
-                  className={`coc-mini-input ${occDisabled ? "!opacity-40" : "!text-[#c0a05a]"}`}
-                  title={occDisabled ? "Сначала отметьте навык профессиональным" : "Очки профессии"}
-                  aria-label={`${s.name}: очки профессии`}
-                />
-                <input
-                  type="number"
-                  min={0}
-                  value={s.pers || ""}
-                  placeholder="0"
-                  onChange={(e) => mutate((d) => {
-                    const t = d.skills.find((x) => (x.key || `custom-${x.name}`) === (s.key || `custom-${s.name}`));
-                    if (t) t.pers = Math.max(0, parseInt(e.target.value, 10) || 0);
-                  })}
-                  className="coc-mini-input !text-[#7fc39a]"
-                  title="Личные очки (ИНТ×2)"
-                  aria-label={`${s.name}: личные очки`}
-                />
-                <input
-                  type="number"
-                  min={0}
-                  value={s.improv || ""}
-                  placeholder="0"
-                  onChange={(e) => mutate((d) => {
-                    const t = d.skills.find((x) => (x.key || `custom-${x.name}`) === (s.key || `custom-${s.name}`));
-                    if (t) t.improv = Math.max(0, parseInt(e.target.value, 10) || 0);
-                  })}
-                  className="coc-mini-input !text-[#d8cbb0]"
-                  title="Развитие (проверки развития, стаж игры)"
-                  aria-label={`${s.name}: развитие`}
-                />
-                <button
-                  onClick={() => total > 0 && rollSkillCheck(s.name, total)}
-                  className={`coc-skill-total ${total <= 0 ? "zero" : ""}`}
-                  title={`Итог ${total} · проверка d100`}
-                >
-                  {total}
-                </button>
+                {/* конкретика группового навыка — только в режиме прокачки */}
+                {leveling && specHint && (
+                  <div className="coc-spec-line">
+                    <input
+                      placeholder={specHint}
+                      value={s.spec || ""}
+                      maxLength={40}
+                      onChange={(e) => mutate((d) => {
+                        const t = d.skills.find((x) => (x.key || `custom-${x.name}`) === rowKey);
+                        if (t) t.spec = e.target.value.slice(0, 40);
+                      })}
+                      aria-label={`${s.name}: конкретика навыка`}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
-        {/* Добавить кастомный навык */}
-        <div className="p-3 border-t border-[#262015] flex flex-wrap items-center gap-2">
-          <input
-            className="coc-input !w-auto flex-1 min-w-[160px]"
-            placeholder="Новый навык (например, Ядовитые зелья)"
-            value={newSkillName}
-            onChange={(e) => setNewSkillName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addCustom()}
-            aria-label="Название нового навыка"
-          />
-          <input
-            className="coc-input !w-24"
-            placeholder="база %"
-            value={newSkillBase}
-            onChange={(e) => setNewSkillBase(e.target.value)}
-            aria-label="База нового навыка"
-          />
-          <button onClick={addCustom} className="coc-btn coc-btn-verdigris !py-2">
-            + Добавить навык
-          </button>
-        </div>
+        {/* Добавить кастомный навык — только в режиме прокачки */}
+        {leveling && (
+          <div className="p-3 border-t border-[#262015] flex flex-wrap items-center gap-2">
+            <input
+              className="coc-input !w-auto flex-1 min-w-[160px]"
+              placeholder="Новый навык (например, Ядовитые зелья)"
+              value={newSkillName}
+              onChange={(e) => setNewSkillName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addCustom()}
+              aria-label="Название нового навыка"
+            />
+            <input
+              className="coc-input !w-24"
+              placeholder="база %"
+              value={newSkillBase}
+              onChange={(e) => setNewSkillBase(e.target.value)}
+              aria-label="База нового навыка"
+            />
+            <button onClick={addCustom} className="coc-btn coc-btn-verdigris !py-2">
+              + Добавить навык
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Памятка по проверкам */}

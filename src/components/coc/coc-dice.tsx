@@ -60,13 +60,34 @@ export function publishRoll(rec: Omit<RollRecord, "id">) {
 }
 
 /** Бросок d100 с уровнями успеха — результат всплывает печатью судьбы.
- *  При провале можно утрясти удачу: списываем очки, бросок улучшается. */
-export function rollSkillCheck(name: string, value: number) {
+ *  При провале можно утрясти удачу: списываем очки, бросок улучшается.
+ *  demand: «hard»/«extreme» — проверка сразу на ½ или ⅕ навыка (успех только если
+ *  бросок ≤ порога; обычный успех такой проверкой не считается). */
+export type CheckDemand = "hard" | "extreme";
+
+export function demandThreshold(value: number, demand: CheckDemand): number {
+  return demand === "hard" ? Math.floor(value / 2) : Math.floor(value / 5);
+}
+
+const DEMAND_LABEL: Record<CheckDemand, string> = {
+  hard: "ТРУДНЫЙ УСПЕХ",
+  extreme: "ЧРЕЗВЫЧАЙНЫЙ УСПЕХ",
+};
+
+export function rollSkillCheck(name: string, value: number, demand?: CheckDemand) {
   const roll = rollD100();
   const level = checkLevel(roll, value);
-  publishRoll({ label: name, roll, value, level, kind: "check" });
+  const threshold = demand ? demandThreshold(value, demand) : null;
+  const met = threshold === null || roll <= threshold;
+  publishRoll({
+    label: demand ? `${name} · ${demand === "hard" ? "трудная" : "чрезвычайная"}` : name,
+    roll,
+    value,
+    level,
+    kind: "check",
+  });
   const luck = luckProvider?.available() || 0;
-  if ((level === "fail" || level === "fumble") && luck > 0 && luckUsable(name) && luckProvider) {
+  if (!met && luck > 0 && luckUsable(name) && luckProvider) {
     toast.custom(
       () => (
         <LuckSpendToast
@@ -75,62 +96,73 @@ export function rollSkillCheck(name: string, value: number) {
           value={value}
           maxLuck={luck}
           onSpend={luckProvider!.spend}
+          demand={demand}
         />
       ),
       { duration: 15000 }
     );
   } else {
-    showCheckResult(name, roll, value, level);
+    showCheckResult(name, roll, value, level, demand);
   }
   return { roll, level };
 }
 
 const LUCK_STEPS = [1, 5, 10];
 
-/** Интерактивная печать провала: потратьте удачу — и судьба взглянет иначе. */
+/** Интерактивная печать провала: потратьте удачу — и судьба взглянет иначе.
+ *  demand: проверка на порог ½ или ⅕ — обычный успех не считается. */
 function LuckSpendToast({
   name,
   roll,
   value,
   maxLuck,
   onSpend,
+  demand,
 }: {
   name: string;
   roll: number;
   value: number;
   maxLuck: number;
   onSpend: (n: number) => void;
+  demand?: CheckDemand;
 }) {
   const [spent, setSpent] = useState(0);
   const [done, setDone] = useState(false);
   const effective = roll - spent;
   const level = checkLevel(effective, value);
-  const success = level !== "fail" && level !== "fumble";
+  const threshold = demand ? demandThreshold(value, demand) : null;
+  const met = threshold === null || effective <= threshold;
+  const success = met;
   const remaining = maxLuck - spent;
 
   const spend = (n: number) => {
     const newSpent = spent + n;
-    const newLevel = checkLevel(roll - newSpent, value);
+    const nxt = roll - newSpent;
+    const newLevel = checkLevel(nxt, value);
+    const newMet = threshold === null || nxt <= threshold;
     setSpent(newSpent);
     onSpend(n);
-    if (newLevel !== "fail" && newLevel !== "fumble") {
+    if (newMet) {
       setDone(true);
       publishRoll({
         label: `${name} · удача −${newSpent}`,
-        roll: roll - newSpent,
+        roll: nxt,
         value,
         level: newLevel,
         kind: "check",
       });
-      toast.success(`Удача потрачена: −${newSpent} → ${CHECK_LEVEL_RU[newLevel]}`, {
-        description: `${name}: ${roll} → ${roll - newSpent} из ${value}`,
+      toast.success(`Удача потрачена: −${newSpent} → ${demand ? DEMAND_LABEL[demand] : CHECK_LEVEL_RU[newLevel]}`, {
+        description: `${name}: ${roll} → ${nxt} из ${value}`,
         duration: 6000,
       });
     }
   };
 
-  const color =
-    level === "critical" || level === "extreme"
+  const color = demand
+    ? met
+      ? "#7fc39a"
+      : "#c98f6a"
+    : level === "critical" || level === "extreme"
       ? "#7fc39a"
       : level === "hard"
         ? "#b9cfa4"
@@ -158,9 +190,11 @@ function LuckSpendToast({
         <div className="w-px self-stretch" style={{ background: "var(--coc-line)" }} />
         <div className="flex-1">
           <div className="coc-display text-sm" style={{ color }}>
-            {CHECK_LEVEL_RU[level]}
+            {demand ? (met ? DEMAND_LABEL[demand] : "ПРОВАЛ") : CHECK_LEVEL_RU[level]}
           </div>
-          <div className="coc-hint">{name}{spent > 0 ? ` · бросок был ${roll}` : ""}</div>
+          <div className="coc-hint">
+            {name}{demand ? ` · порог ≤ ${threshold}` : ""}{spent > 0 ? ` · бросок был ${roll}` : ""}
+          </div>
         </div>
       </div>
       {!success && !done && (
@@ -195,9 +229,22 @@ function LuckSpendToast({
   );
 }
 
-export function showCheckResult(name: string, roll: number, value: number, level: CheckLevel) {
-  const cls =
-    level === "critical" || level === "extreme"
+export function showCheckResult(
+  name: string,
+  roll: number,
+  value: number,
+  level: CheckLevel,
+  demand?: CheckDemand
+) {
+  const threshold = demand ? demandThreshold(value, demand) : null;
+  const met = threshold === null || roll <= threshold;
+  const cls = demand
+    ? met
+      ? level === "critical"
+        ? "#8fe0b4"
+        : "#7fc39a"
+      : "#c98f6a"
+    : level === "critical" || level === "extreme"
       ? "#7fc39a"
       : level === "hard"
         ? "#b9cfa4"
@@ -206,6 +253,7 @@ export function showCheckResult(name: string, roll: number, value: number, level
           : level === "fail"
             ? "#c98f6a"
             : "#a83232";
+  const title = demand ? (met ? DEMAND_LABEL[demand] : "ПРОВАЛ") : CHECK_LEVEL_RU[level];
   toast.custom(
     () => (
       <div
@@ -221,9 +269,11 @@ export function showCheckResult(name: string, roll: number, value: number, level
         <div className="w-px self-stretch" style={{ background: "var(--coc-line)" }} />
         <div>
           <div className="coc-display text-sm" style={{ color: cls }}>
-            {CHECK_LEVEL_RU[level]}
+            {title}
           </div>
-          <div className="coc-hint">{name}</div>
+          <div className="coc-hint">
+            {name}{demand ? ` · порог ≤ ${threshold}` : ""}
+          </div>
         </div>
       </div>
     ),

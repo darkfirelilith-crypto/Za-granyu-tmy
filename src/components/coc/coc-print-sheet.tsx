@@ -125,6 +125,7 @@ export function CocPrintSheet({ data, derived }: { data: CocSheetData; derived: 
                   <span className="coc-print-skill-name">
                     {s.isOccupation ? "● " : ""}
                     {s.name}
+                    {s.spec?.trim() ? ` (${s.spec.trim()})` : ""}
                   </span>
                   <span className="coc-print-skill-val">
                     {v} <small>(½ {half(v)} · ⅕ {fifth(v)})</small>

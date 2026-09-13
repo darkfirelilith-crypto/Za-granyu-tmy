@@ -207,7 +207,7 @@ select.coc-input option { background: #141109; color: var(--coc-bone); }
   text-shadow: 0 0 12px rgba(95, 143, 110, 0.5);
 }
 
-/* Строка навыка */
+/* Строка навыка (режим прокачки: пометка, проф/личн/разв, итог) */
 .coc-skill-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 34px 44px 44px 44px 52px;
@@ -217,21 +217,80 @@ select.coc-input option { background: #141109; color: var(--coc-bone); }
   border-radius: 4px;
   transition: background 0.15s;
 }
+/* Режим просмотра: итог + авто-пороги ½ и ⅕ */
+.coc-panel.is-view .coc-skill-row {
+  grid-template-columns: minmax(0, 1fr) 30px 52px 44px 44px;
+}
+/* Шапка колонок текущего режима */
+.coc-skill-cols {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px 44px 44px 44px 52px;
+  gap: 4px;
+  padding: 2px 6px 5px;
+  border-bottom: 1px solid var(--coc-line-soft);
+  margin-bottom: 2px;
+}
+.coc-skill-cols > span {
+  font-family: var(--coc-font-mono), monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--coc-ash);
+  text-align: center;
+}
+.coc-skill-cols > span:first-child { text-align: left; }
+.coc-panel.is-view .coc-skill-cols {
+  grid-template-columns: minmax(0, 1fr) 30px 52px 44px 44px;
+}
+
 .coc-skill-row:hover { background: rgba(216, 203, 176, 0.045); }
 .coc-skill-row.is-occ { box-shadow: inset 2px 0 0 var(--coc-brass); }
 .coc-skill-row.is-custom { box-shadow: inset 2px 0 0 var(--coc-blood); }
 
+/* Имя навыка: переносится на новую строку (не режется многоточием),
+   под ним — конкретика группового навыка («рисование», «немецкий») */
 .coc-skill-name {
   font-size: 0.8rem;
+  line-height: 1.2;
   color: var(--coc-bone);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   background: transparent; border: none; text-align: left;
   cursor: pointer; padding: 2px 0; outline: none;
   font-family: var(--coc-font-body), Georgia, serif;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
 }
+.coc-skill-name-main { overflow-wrap: anywhere; text-align: left; }
 .coc-skill-name:hover { color: var(--coc-verdigris-bright); }
+.coc-skill-spec {
+  font-size: 0.62rem;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  color: #8a7d64;
+  transition: color 0.15s;
+}
+.coc-skill-name:hover .coc-skill-spec { color: #b3a179; }
+
+/* Строка конкретики группового навыка (режим прокачки) */
+.coc-spec-line { padding: 1px 6px 4px 24px; }
+.coc-spec-line input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px dashed var(--coc-line-soft);
+  border-radius: 3px;
+  color: var(--coc-bone);
+  font-size: 0.68rem;
+  font-style: italic;
+  font-family: var(--coc-font-body), Georgia, serif;
+  padding: 2.5px 7px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.coc-spec-line input:focus { border-color: var(--coc-verdigris); border-style: solid; }
+.coc-spec-line input::placeholder { color: #55492f; }
 
 .coc-mini-input {
   width: 100%;
@@ -270,6 +329,31 @@ select.coc-input option { background: #141109; color: var(--coc-bone); }
   color: #b9e6cd;
 }
 .coc-skill-total.zero { color: var(--coc-ash); }
+
+/* Сложные проверки в режиме просмотра: ½ и ⅕ */
+.coc-skill-half,
+.coc-skill-fifth {
+  font-family: var(--coc-font-mono), monospace;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid var(--coc-line);
+  border-radius: 3px;
+  padding: 3px 2px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--coc-bone);
+  transition: all 0.15s;
+}
+.coc-skill-fifth { color: #c0a05a; }
+.coc-skill-half:hover:not(:disabled),
+.coc-skill-fifth:hover:not(:disabled) {
+  border-color: var(--coc-verdigris);
+  box-shadow: 0 0 10px rgba(95, 143, 110, 0.25);
+  color: #b9e6cd;
+}
+.coc-skill-half:disabled,
+.coc-skill-fifth:disabled { opacity: 0.35; cursor: default; }
 
 /* Подписи-метки */
 .coc-label {

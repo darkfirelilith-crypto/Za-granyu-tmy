@@ -30,11 +30,12 @@ export interface CocCharacteristics {
 export interface CocSkillState {
   key: string | null; // id из SKILL_LIBRARY или null для кастомного
   name: string;
+  spec?: string;  // конкретика группового навыка: «рисование», «немецкий»…
   base?: number; // база кастомного навыка (для библиотечных считается из правил)
   occ: number;    // очки профессии
   pers: number;   // личные очки (ИНТ×2)
   improv: number; // развитие (проверки развития / стаж)
-  isOccupation: boolean; // помечен как профессиональный
+  isOccupation: boolean; // пометка навыка (прокачивается с новой аркой; очки проф. — только в помеченные)
 }
 
 export interface CocWeapon {
@@ -190,8 +191,13 @@ export function normalizeSheet(raw: any): CocSheetData {
   const skills: CocSkillState[] = Array.isArray(raw.skills) ? raw.skills : base.skills;
   // гарантируем наличие всех библиотечных навыков
   for (const lib of SKILL_LIBRARY) {
-    if (!skills.some((s) => s.key === lib.id)) {
+    const owned = skills.find((s) => s.key === lib.id);
+    if (!owned) {
       skills.push({ key: lib.id, name: lib.name, occ: 0, pers: 0, improv: 0, isOccupation: false });
+    } else if (owned.name !== lib.name) {
+      // имя подтягиваем из библиотеки (ключ — личность; имя — только отображение),
+      // чтобы переименования вроде «Ис-во/ремесло» → «Искусство/ремесло» доезжали до старых дел
+      owned.name = lib.name;
     }
   }
   return {
@@ -253,7 +259,7 @@ export const SKILL_LIBRARY: SkillDef[] = [
   { id: "survival", name: "Выживание", base: 10, column: 1 },
   { id: "naturalWorld", name: "Естествознание", base: 10, column: 1 },
   { id: "intimidate", name: "Запугивание", base: 15, column: 1 },
-  { id: "artCraft", name: "Ис-во/ремесло", base: 5, column: 1 },
+  { id: "artCraft", name: "Искусство/ремесло", base: 5, column: 1 },
 
   { id: "history", name: "История", base: 5, column: 2 },
   { id: "fastTalk", name: "Красноречие", base: 5, column: 2 },
@@ -289,9 +295,23 @@ export const SKILL_LIBRARY: SkillDef[] = [
   { id: "track", name: "Чтение следов", base: 10, column: 4 },
   { id: "electrical", name: "Электрика", base: 10, column: 4 },
   { id: "law", name: "Юриспруденция", base: 5, column: 4 },
-  { id: "langForeign", name: "Язык, иностр.", base: 1, column: 4 },
-  { id: "langOwn", name: "Язык, родной (ОБР)", base: "langOwn", column: 4 },
+  { id: "langForeign", name: "Язык иностранный", base: 1, column: 4 },
+  { id: "langOwn", name: "Язык родной (ОБР)", base: "langOwn", column: 4 },
 ];
+
+/** Групповые навыки, у которых в режиме прокачки можно уточнить конкретику
+ *  («Искусство/ремесло — рисование», «Язык родной — немецкий»). */
+export const SPEC_SKILL_HINTS: Record<string, string> = {
+  artCraft: "рисование, шитьё, столярное дело…",
+  langOwn: "немецкий, английский…",
+  langForeign: "латынь, французский…",
+};
+
+/** Полное имя навыка для отображения и печати результата броска. */
+export function skillDisplayName(s: Pick<CocSkillState, "name" | "spec">): string {
+  const spec = s.spec?.trim();
+  return spec ? `${s.name} · ${spec}` : s.name;
+}
 
 // ===== Профессии (род занятий) из «Краткого руководства по созданию персонажа» =====
 // Формула: сегменты через « + », выбор через «(A|B)», множитель «*N».
