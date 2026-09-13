@@ -40,12 +40,14 @@ export async function GET() {
 }
 
 /** POST — создать новый лист (не более 5 на пользователя).
- *  Тело: { name?: string, template?: string } — template это id готового
- *  сыщика из COC_TEMPLATES (лист создаётся сразу заполненным). */
+ *  Тело: { name?: string, template?: string, preset?: unknown } —
+ *  template это id готового сыщика из COC_TEMPLATES или "random".
+ *  Для "random" можно передать preset — ранее сгенерированный на
+ *  /api/coc/random предпросмотр, который игрок принял («Принять судьбу»). */
 export async function POST(req: NextRequest) {
   const session = await requireLiveUser();
   if (!session) return NextResponse.json(UNAUTHORIZED, { status: 401 });
-  let body: { name?: string; template?: string } = {};
+  let body: { name?: string; template?: string; preset?: unknown } = {};
   try {
     body = await req.json();
   } catch {
@@ -64,7 +66,14 @@ export async function POST(req: NextRequest) {
   }
   let sheetData: object = {};
   if (body.template === "random") {
-    sheetData = buildRandomSheet();
+    // Принятый предпросмотр: preset — цельный CocSheetData, сгенерированный
+    // сервером минуту назад (тот же уровень доверия, что импорт JSON досье).
+    const preset = body.preset as { info?: { name?: string } } | undefined;
+    if (preset && typeof preset === "object" && preset.info && typeof preset.info === "object") {
+      sheetData = preset;
+    } else {
+      sheetData = buildRandomSheet();
+    }
   } else if (tpl) {
     sheetData = buildTemplateSheet(tpl.id) || {};
   }

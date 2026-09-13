@@ -213,9 +213,7 @@ export function showCheckResult(name: string, roll: number, value: number, level
         style={{ minWidth: 260, boxShadow: "0 14px 40px rgba(0,0,0,0.7)" }}
       >
         <div className="text-center">
-          <div className="coc-mono text-2xl font-bold" style={{ color: cls }}>
-            {roll}
-          </div>
+          <RollingNumber final={roll} className="coc-mono text-2xl font-bold" style={{ color: cls }} />
           <div className="coc-label" style={{ fontSize: "0.55rem" }}>
             из {value}
           </div>
@@ -234,6 +232,46 @@ export function showCheckResult(name: string, roll: number, value: number, level
 }
 
 const DICE = [100, 20, 12, 10, 8, 6, 4, 3];
+
+/** Число, «катящееся» коротким мельканием перед тем, как пасть на итог.
+ *  Уважает prefers-reduced-motion — там показывается сразу. */
+function RollingNumber({
+  final,
+  className,
+  style,
+  duration = 560,
+}: {
+  final: number;
+  className?: string;
+  style?: React.CSSProperties;
+  duration?: number;
+}) {
+  const prefersReduced =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const [display, setDisplay] = useState(() => (prefersReduced ? final : 0));
+
+  useEffect(() => {
+    if (prefersReduced) return;
+    const start = Date.now();
+    const iv = setInterval(() => {
+      if (Date.now() - start >= duration) {
+        setDisplay(final);
+        clearInterval(iv);
+      } else {
+        setDisplay(1 + Math.floor(Math.random() * 100));
+      }
+    }, 55);
+    return () => clearInterval(iv);
+  }, [final, duration, prefersReduced]);
+
+  return (
+    <span className={className} style={style} aria-label={String(final)}>
+      {display}
+    </span>
+  );
+}
 
 /** Плавающая панель костей с историей бросков — тень прошлого всегда рядом.
  *  Журнал переживает перезагрузку страницы (localStorage). */
@@ -263,7 +301,7 @@ export function CocDicePanel() {
         <div className="coc-panel px-4 py-3 flex items-center gap-3" style={{ boxShadow: "0 14px 40px rgba(0,0,0,0.7)" }}>
           <span className="coc-display text-xs tracking-[0.2em] uppercase text-[#a4977c]">Кость</span>
           <span className="coc-mono text-lg font-bold text-[#7fc39a]">d{sides}</span>
-          <span className="coc-mono text-xl font-bold text-[#d8cbb0]">{value}</span>
+          <RollingNumber final={value} className="coc-mono text-xl font-bold text-[#d8cbb0]" />
         </div>
       ),
       { duration: 3200 }

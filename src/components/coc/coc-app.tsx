@@ -7,8 +7,9 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { ReturnPortal } from "@/components/coc/portal-transition";
 import { CocEditor } from "@/components/coc/coc-editor";
-import { MAX_SHEETS, OCCUPATIONS } from "@/lib/coc-data";
+import { MAX_SHEETS, OCCUPATIONS, CocSheetData } from "@/lib/coc-data";
 import { COC_TEMPLATES } from "@/lib/coc-templates";
+import { deriveStats } from "@/lib/coc-calc";
 import { cocFetch } from "@/lib/coc-api";
 
 interface SheetMeta {
@@ -105,11 +106,13 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
   const startCreation = () => setShowChooser(true);
 
   const createMutation = useMutation({
-    mutationFn: (templateId: string | null) =>
+    mutationFn: ({ templateId, preset }: { templateId: string | null; preset?: unknown }) =>
       cocFetch("/api/coc/sheets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(templateId ? { template: templateId } : {}),
+        body: JSON.stringify(
+          templateId ? { template: templateId, ...(preset ? { preset } : {}) } : {}
+        ),
       }).then(async (r) => {
         if (!r.ok) throw new Error((await r.json()).error || "Ошибка");
         return r.json();
@@ -323,7 +326,7 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
         {showChooser && (
           <TemplateChooser
             onClose={() => setShowChooser(false)}
-            onPick={(tplId) => createMutation.mutate(tplId)}
+            onPick={(tplId, preset) => createMutation.mutate({ templateId: tplId, preset })}
             pending={createMutation.isPending}
           />
         )}
@@ -533,17 +536,35 @@ function CaseCard({
   );
 }
 
-/** Выбор заготовки при заведении дела: чистый лист или один из готовых сыщиков. */
+/** Выбор заготовки при заведении дела: чистый лист, готовый сыщик или судьба
+ *  с предпросмотром («Пусть тьма решит» — можно перебросить до записи в архив). */
 function TemplateChooser({
   onClose,
   onPick,
   pending,
 }: {
   onClose: () => void;
-  onPick: (templateId: string | null) => void;
+  onPick: (templateId: string | null, preset?: unknown) => void;
   pending: boolean;
 }) {
   const occName = (id: string) => OCCUPATIONS.find((o) => o.id === id)?.name || "";
+  // undefined — предпросмотр не запрашивался; null — кости катятся; object — решение тьмы
+  const [fate, setFate] = useState<CocSheetData | null | undefined>(undefined);
+  const [fateError, setFateError] = useState<string | null>(null);
+
+  const castFate = async () => {
+    setFate(null);
+    setFateError(null);
+    try {
+      const res = await cocFetch("/api/coc/random", { method: "POST" });
+      if (!res.ok) throw new Error((await res.json()).error || "Кости упали ребром");
+      const json = await res.json();
+      setFate(json.data as CocSheetData);
+    } catch (e) {
+      setFate(undefined);
+      setFateError(e instanceof Error ? e.message : "Кости упали ребром");
+    }
+  };
 
   return (
     <div
@@ -571,60 +592,97 @@ function TemplateChooser({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {/* Пусть тьма решит — случайный сыщик */}
-          <button
-            onClick={() => onPick("random")}
-            disabled={pending}
-            className="coc-template-card coc-template-random sm:col-span-2 lg:col-span-3"
-            aria-label="Случайный сыщик — пусть тьма решит"
-          >
-            <span className="coc-template-stamp coc-stamp-ruby">Судьба бросает кости</span>
+        {fate === undefined && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Пусть тьма решит — случайный сыщик с предпросмотром */}
+            <button
+              onClick={castFate}
+              disabled={pending}
+              className="coc-template-card coc-template-random sm:col-span-2 lg:col-span-3"
+              aria-label="Случайный сыщик — пусть тьма решит"
+            >
+              <span className="coc-template-stamp coc-stamp-ruby">Судьба бросает кости</span>
+              <span className="coc-random-dice" aria-hidden="true">
+                <i className="die die-a">⚄</i>
+                <i className="die die-b">⚅</i>
+                <i className="eye">𓂀</i>
+              </span>
+              <span className="coc-template-title">Пусть тьма решит</span>
+              <span className="coc-template-tagline">
+                Тьма бросит 3d6×5 за каждую характеристику, выберет профессию, вложит очки,
+                выдаст оружие и прошлое. Вы увидите её решение до записи в архив.
+              </span>
+            </button>
+
+            {/* Чистый лист */}
+            <button
+              onClick={() => onPick(null)}
+              disabled={pending}
+              className="coc-template-card coc-template-blank"
+              aria-label="Чистый лист сыщика"
+            >
+              <span className="coc-template-stamp">Без прошлого</span>
+              <svg viewBox="0 0 44 52" className="w-9 h-11 coc-breath" aria-hidden="true">
+                <path
+                  d="M6 4 H30 L38 12 V48 H6 Z"
+                  fill="rgba(0,0,0,0.35)" stroke="#5f8f6e" strokeWidth="1.4" strokeLinejoin="round"
+                />
+                <path d="M30 4 L30 12 L38 12" fill="none" stroke="#5f8f6e" strokeWidth="1.2" />
+                <line x1="11" y1="20" x2="33" y2="20" stroke="#3d5c48" strokeWidth="1.4" />
+                <line x1="11" y1="27" x2="33" y2="27" stroke="#3d5c48" strokeWidth="1.4" />
+                <line x1="11" y1="34" x2="26" y2="34" stroke="#3d5c48" strokeWidth="1.4" />
+              </svg>
+              <span className="coc-template-title">Чистый лист</span>
+              <span className="coc-template-tagline">Судьба ещё не написана. Всё с нуля — от характеристик до кошелька.</span>
+            </button>
+
+            {COC_TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => onPick(t.id)}
+                disabled={pending}
+                className="coc-template-card"
+                aria-label={`Готовый сыщик: ${t.title}`}
+              >
+                <span className="coc-template-stamp">{occName(t.occupation)}</span>
+                <span className="coc-template-title">{t.title}</span>
+                <span className="coc-template-tagline">{t.tagline}</span>
+                <span className="coc-template-stats">
+                  <i>возраст {t.age}</i>
+                  <i>ОБР {t.characteristics.edu}</i>
+                  <i>МОЩ {t.characteristics.pow}</i>
+                </span>
+                <span className="coc-template-name">«{t.name}»</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {fate === null && (
+          <div className="py-14 text-center space-y-4" role="status" aria-live="polite">
             <span className="coc-random-dice" aria-hidden="true">
               <i className="die die-a">⚄</i>
               <i className="die die-b">⚅</i>
               <i className="eye">𓂀</i>
             </span>
-            <span className="coc-template-title">Пусть тьма решит</span>
-            <span className="coc-template-tagline">
-              Тьма бросит 3d6×5 за каждую характеристику, выберет профессию, вложит очки,
-              выдаст оружие и прошлое. Согласны ли вы с её решением?
-            </span>
-          </button>
+            <p className="coc-display text-sm tracking-[0.35em] uppercase text-[#7fc39a] coc-flicker">
+              Кости катятся во тьме…
+            </p>
+          </div>
+        )}
 
-          {/* Чистый лист */}
-          <button
-            onClick={() => onPick(null)}
-            disabled={pending}
-            className="coc-template-card coc-template-blank"
-            aria-label="Чистый лист сыщика"
-          >
-            <span className="coc-template-stamp">Без прошлого</span>
-            <span className="coc-display text-3xl text-[#5f8f6e] coc-breath">✒</span>
-            <span className="coc-template-title">Чистый лист</span>
-            <span className="coc-template-tagline">Судьба ещё не написана. Всё с нуля — от характеристик до кошелька.</span>
-          </button>
+        {fateError && (
+          <p className="coc-mono text-xs text-[#a83232] text-center" role="alert">{fateError}</p>
+        )}
 
-          {COC_TEMPLATES.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => onPick(t.id)}
-              disabled={pending}
-              className="coc-template-card"
-              aria-label={`Готовый сыщик: ${t.title}`}
-            >
-              <span className="coc-template-stamp">{occName(t.occupation)}</span>
-              <span className="coc-template-title">{t.title}</span>
-              <span className="coc-template-tagline">{t.tagline}</span>
-              <span className="coc-template-stats">
-                <i>возраст {t.age}</i>
-                <i>ОБР {t.characteristics.edu}</i>
-                <i>МОЩ {t.characteristics.pow}</i>
-              </span>
-              <span className="coc-template-name">«{t.name}»</span>
-            </button>
-          ))}
-        </div>
+        {fate && <FatePreview
+          data={fate}
+          occName={occName(fate.info.occupation || "")}
+          pending={pending}
+          onReroll={castFate}
+          onAccept={() => onPick("random", fate)}
+          onBack={() => { setFate(undefined); setFateError(null); }}
+        />}
 
         {pending && (
           <p className="coc-display text-xs tracking-[0.3em] uppercase text-[#7fc39a] text-center coc-flicker">
@@ -633,6 +691,124 @@ function TemplateChooser({
         )}
       </div>
     </div>
+  );
+}
+
+/** Предпросмотр решения судьбы: увидеть сыщика до записи в архив —
+ *  принять, перебросить или отпустить. */
+function FatePreview({
+  data,
+  occName,
+  pending,
+  onReroll,
+  onAccept,
+  onBack,
+}: {
+  data: CocSheetData;
+  occName: string;
+  pending: boolean;
+  onReroll: () => void;
+  onAccept: () => void;
+  onBack: () => void;
+}) {
+  const c = data.characteristics;
+  const d = deriveStats(data);
+  const stats: { label: string; value: number; hint: string }[] = [
+    { label: "СИЛ", value: c.str, hint: "Сила" },
+    { label: "ВЫН", value: c.con, hint: "Выносливость" },
+    { label: "ТЕЛ", value: c.siz, hint: "Телосложение" },
+    { label: "ЛВК", value: c.dex, hint: "Ловкость" },
+    { label: "НАР", value: c.app, hint: "Внешность" },
+    { label: "ИНТ", value: c.int, hint: "Интеллект" },
+    { label: "МОЩ", value: c.pow, hint: "Сила воли" },
+    { label: "ОБР", value: c.edu, hint: "Образование" },
+    { label: "Удача", value: c.luck, hint: "Удача" },
+  ];
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="coc-fate-panel space-y-4"
+      aria-live="polite"
+    >
+      <div className="text-center space-y-1.5">
+        <span className="coc-stamp coc-stamp-ruby">Решение судьбы</span>
+        <h3 className="coc-display text-2xl text-[#d8cbb0] tracking-[0.08em]">{data.info.name}</h3>
+        <p className="coc-mono text-[0.68rem] text-[#9a7d3e]">
+          ◈ {occName}
+          {data.info.age ? ` · ${data.info.age} лет` : ""}
+          {data.info.sex ? ` · ${data.info.sex}` : ""}
+          {data.info.residence ? ` · ${data.info.residence}` : ""}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-5 sm:grid-cols-9 gap-1.5">
+        {stats.map((s) => (
+          <div key={s.label} className="coc-fate-stat" title={s.hint}>
+            <span className="coc-label !text-[0.52rem]">{s.label}</span>
+            <span className="coc-mono text-base font-bold text-[#d8cbb0]">{s.value}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 coc-mono text-[0.62rem] text-[#a4977c]">
+        <span>ПЗ <b className="text-[#7fc39a]">{d.hpMax}</b></span>
+        <span>ПМ <b className="text-[#7fc39a]">{d.mpMax}</b></span>
+        <span>Рассудок <b className="text-[#c98f6a]">{d.sanStart}</b></span>
+        <span>Скорость <b className="text-[#d8cbb0]">{d.mov}</b></span>
+        <span>БкУ <b className="text-[#d8cbb0]">{d.db}</b></span>
+        <span>Комплекция <b className="text-[#d8cbb0]">{d.build}</b></span>
+      </div>
+
+      {data.weapons.length > 0 && (
+        <div className="coc-fate-row">
+          <span className="coc-label shrink-0">Арсенал</span>
+          <span className="coc-mono text-[0.65rem] text-[#a4977c]">
+            {data.weapons.map((w) => `${w.name} (${w.damage})`).join(" · ")}
+          </span>
+        </div>
+      )}
+
+      {data.bio?.description && (
+        <div className="coc-fate-row">
+          <span className="coc-label shrink-0">Прошлое</span>
+          <span className="text-[0.68rem] italic leading-relaxed text-[#a4977c]">
+            {data.bio.description}
+          </span>
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 pt-1">
+        <button
+          onClick={onReroll}
+          disabled={pending}
+          className="coc-btn coc-btn-ghost !py-2 !px-4 justify-center"
+          title="Тьма бросит кости заново"
+        >
+          ⟲ Перебросить судьбу
+        </button>
+        <button
+          onClick={onAccept}
+          disabled={pending}
+          className="coc-btn coc-btn-verdigris !py-2 !px-5 justify-center"
+          title="Записать этого сыщика в архив"
+        >
+          ✓ Принять судьбу
+        </button>
+        <button
+          onClick={onBack}
+          disabled={pending}
+          className="coc-btn coc-btn-ghost !py-2 !px-4 justify-center"
+          title="Вернуться к выбору"
+        >
+          ✕ Отпустить
+        </button>
+      </div>
+      <p className="coc-hint text-center !text-[0.6rem]">
+        Переброс не записывается в архив — судьбу можно трогать, пока не сказано «да».
+      </p>
+    </motion.div>
   );
 }
 

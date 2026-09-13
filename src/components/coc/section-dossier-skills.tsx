@@ -684,16 +684,20 @@ export function SkillsSection({ data, mutate }: SectionProps) {
       </div>
 
       {/* Поиск */}
-      <div className="coc-panel p-3 flex items-center gap-3">
+      <div className="coc-panel p-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <input
-          className="coc-input flex-1"
+          className="coc-input flex-1 min-w-[180px]"
           placeholder="Поиск навыка…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           aria-label="Поиск навыка"
         />
-        <span className="coc-mono text-[0.65rem] text-[#4a4234] hidden md:inline">
-          ☐ — проф. · клик по названию или итогу = проверка d100 · ½ и ⅕ считаются сами
+        <span className="coc-mono text-[0.62rem] leading-relaxed text-[#8a7d64] hidden md:inline-block shrink-0">
+          <span className="text-[#a4977c]">☐</span> — проф.
+          <span className="text-[#4a4234] mx-1.5" aria-hidden="true">·</span>
+          клик по названию или итогу = <span className="text-[#a4977c]">проверка d100</span>
+          <span className="text-[#4a4234] mx-1.5" aria-hidden="true">·</span>
+          ½ и ⅕ считаются сами
         </span>
       </div>
 
