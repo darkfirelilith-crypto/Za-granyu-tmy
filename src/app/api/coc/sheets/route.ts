@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireLiveUser } from "@/lib/session";
 import { MAX_SHEETS } from "@/lib/coc-data";
 import { COC_TEMPLATES, buildTemplateSheet } from "@/lib/coc-templates";
+import { buildRandomSheet } from "@/lib/coc-random";
 
 const UNAUTHORIZED = { error: "Сессия недействительна — войдите заново" };
 
@@ -58,11 +59,21 @@ export async function POST(req: NextRequest) {
     );
   }
   const tpl = body.template ? COC_TEMPLATES.find((t) => t.id === body.template) : null;
-  if (body.template && !tpl) {
+  if (body.template && body.template !== "random" && !tpl) {
     return NextResponse.json({ error: "Неизвестный шаблон сыщика" }, { status: 400 });
   }
-  const name = (body.name || tpl?.name || "").trim() || "Новый сыщик";
-  const dataStr = tpl ? JSON.stringify(buildTemplateSheet(tpl.id) || {}) : "{}";
+  let sheetData: object = {};
+  if (body.template === "random") {
+    sheetData = buildRandomSheet();
+  } else if (tpl) {
+    sheetData = buildTemplateSheet(tpl.id) || {};
+  }
+  const generatedName =
+    body.template === "random"
+      ? (sheetData as { info?: { name?: string } })?.info?.name
+      : tpl?.name;
+  const name = (body.name || generatedName || "").trim() || "Новый сыщик";
+  const dataStr = JSON.stringify(sheetData);
   // новое дело кладём в конец архива
   const maxOrder = await db.cocSheet.aggregate({
     where: { userId: session.user.id },

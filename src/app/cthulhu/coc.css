@@ -873,6 +873,132 @@ select.coc-input option { background: #141109; color: var(--coc-bone); }
   margin-top: auto;
 }
 
+/* ============================================================
+   Раунд 6: «Пусть тьма решит» — карточка случайного сыщика
+   ============================================================ */
+
+/* Штамп рубиновой печатью — судьба не торгуется */
+.coc-stamp-ruby {
+  color: #cf6a6a !important;
+  border-color: rgba(160, 52, 52, 0.6) !important;
+  background: rgba(60, 14, 14, 0.25);
+}
+
+/* Карточка случайного сыщика: во всю ширину, с тлением бездны */
+.coc-template-card.coc-template-random {
+  align-items: center;
+  text-align: center;
+  padding: 18px 20px 16px;
+  border-color: rgba(160, 52, 52, 0.38);
+  background:
+    radial-gradient(ellipse 55% 90% at 50% 115%, rgba(120, 26, 26, 0.28), transparent 65%),
+    radial-gradient(ellipse 40% 70% at 50% -20%, rgba(95, 143, 110, 0.14), transparent 60%),
+    linear-gradient(160deg, rgba(26, 16, 12, 0.72), rgba(10, 8, 5, 0.85));
+  overflow: hidden;
+}
+.coc-template-card.coc-template-random::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(160, 52, 52, 0.22);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.coc-template-card.coc-template-random:hover:not(:disabled) {
+  border-color: rgba(207, 106, 106, 0.65);
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.6),
+    0 0 22px rgba(140, 32, 32, 0.22),
+    0 0 0 1px rgba(207, 106, 106, 0.25);
+}
+.coc-template-card.coc-template-random .coc-template-title {
+  color: #d9a5a0;
+  letter-spacing: 0.16em;
+}
+.coc-template-card.coc-template-random .coc-template-tagline {
+  max-width: 560px;
+  color: #b39c86;
+}
+
+/* Кости и око: кости падают, око смотрит (медленный ритуал) */
+.coc-random-dice {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 74px;
+  height: 46px;
+  margin-top: 2px;
+}
+.coc-random-dice .die {
+  position: absolute;
+  font-style: normal;
+  font-size: 1.7rem;
+  line-height: 1;
+  color: #b8a075;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  opacity: 0.9;
+}
+.coc-random-dice .die-a {
+  left: 8px;
+  top: 2px;
+  animation: coc-die-tumble-a 5.6s ease-in-out infinite;
+  transform-origin: 50% 60%;
+}
+.coc-random-dice .die-b {
+  right: 8px;
+  bottom: 2px;
+  animation: coc-die-tumble-b 7.3s ease-in-out infinite;
+  transform-origin: 50% 40%;
+}
+.coc-random-dice .eye {
+  font-style: normal;
+  font-size: 1.05rem;
+  color: #7fc39a;
+  opacity: 0.85;
+  text-shadow: 0 0 12px rgba(95, 143, 110, 0.65);
+  animation: coc-eye-blink 6.4s ease-in-out infinite;
+}
+@keyframes coc-die-tumble-a {
+  0%, 18% { transform: rotate(0deg) translateY(0); }
+  22%, 30% { transform: rotate(-160deg) translateY(-6px); }
+  34%, 62% { transform: rotate(-360deg) translateY(0); }
+  100% { transform: rotate(-360deg) translateY(0); }
+}
+@keyframes coc-die-tumble-b {
+  0%, 30% { transform: rotate(0deg) translateY(0); }
+  34%, 42% { transform: rotate(150deg) translateY(-5px); }
+  46%, 74% { transform: rotate(360deg) translateY(0); }
+  100% { transform: rotate(360deg) translateY(0); }
+}
+@keyframes coc-eye-blink {
+  0%, 88%, 100% { opacity: 0.85; transform: scaleY(1); }
+  92% { opacity: 0.15; transform: scaleY(0.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coc-random-dice .die,
+  .coc-random-dice .eye {
+    animation: none;
+  }
+}
+
+/* ============================================================
+   Раунд 6: подсказка прокрутки вкладок на узких экранах
+   Градиентные кромки появляются только там, где есть продолжение.
+   ============================================================ */
+.coc-tabs-bar.fade-right:not(.fade-left) {
+  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%);
+}
+.coc-tabs-bar.fade-left:not(.fade-right) {
+  mask-image: linear-gradient(to right, transparent 0, #000 18px, #000 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 18px, #000 100%);
+}
+.coc-tabs-bar.fade-left.fade-right {
+  mask-image: linear-gradient(to right, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+}
+
 /* Патроны: мало / пусто — обойма горит перед глазами */
 .coc-ammo-low {
   color: #e0b45c !important;

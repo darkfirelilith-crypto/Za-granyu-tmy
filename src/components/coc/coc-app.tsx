@@ -572,6 +572,26 @@ function TemplateChooser({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {/* Пусть тьма решит — случайный сыщик */}
+          <button
+            onClick={() => onPick("random")}
+            disabled={pending}
+            className="coc-template-card coc-template-random sm:col-span-2 lg:col-span-3"
+            aria-label="Случайный сыщик — пусть тьма решит"
+          >
+            <span className="coc-template-stamp coc-stamp-ruby">Судьба бросает кости</span>
+            <span className="coc-random-dice" aria-hidden="true">
+              <i className="die die-a">⚄</i>
+              <i className="die die-b">⚅</i>
+              <i className="eye">𓂀</i>
+            </span>
+            <span className="coc-template-title">Пусть тьма решит</span>
+            <span className="coc-template-tagline">
+              Тьма бросит 3d6×5 за каждую характеристику, выберет профессию, вложит очки,
+              выдаст оружие и прошлое. Согласны ли вы с её решением?
+            </span>
+          </button>
+
           {/* Чистый лист */}
           <button
             onClick={() => onPick(null)}

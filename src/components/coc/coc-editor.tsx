@@ -49,6 +49,27 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
   const [tab, setTab] = useState<TabId>("dossier");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [conflict, setConflict] = useState<ConflictInfo | null>(null);
+  // Подсказка прокрутки вкладок на узких экранах: тени-градиенты по краям
+  const tabsBarRef = useRef<HTMLDivElement>(null);
+  const [tabFadeLeft, setTabFadeLeft] = useState(false);
+  const [tabFadeRight, setTabFadeRight] = useState(false);
+  const updateTabFades = useCallback(() => {
+    const el = tabsBarRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setTabFadeLeft(el.scrollLeft > 4 && max > 0);
+    setTabFadeRight(el.scrollLeft < max - 4 && max > 0);
+  }, []);
+  useEffect(() => {
+    updateTabFades();
+    // при изменении размера окна и смене вкладок состояние могло измениться
+    window.addEventListener("resize", updateTabFades);
+    const t = setTimeout(updateTabFades, 350);
+    return () => {
+      window.removeEventListener("resize", updateTabFades);
+      clearTimeout(t);
+    };
+  }, [updateTabFades, tab, data]);
   const snapshotRef = useRef<string>("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const statusRef = useRef<SaveStatus>("idle");
@@ -364,7 +385,12 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
 
         {/* Вкладки */}
         <nav className="coc-panel !rounded-md overflow-hidden" aria-label="Разделы досье">
-          <div className="flex overflow-x-auto coc-scroll" role="tablist">
+          <div
+            ref={tabsBarRef}
+            onScroll={updateTabFades}
+            className={`flex overflow-x-auto coc-scroll coc-tabs-bar ${tabFadeLeft ? "fade-left" : ""} ${tabFadeRight ? "fade-right" : ""}`}
+            role="tablist"
+          >
             {TABS.map((t) => (
               <button
                 key={t.id}
