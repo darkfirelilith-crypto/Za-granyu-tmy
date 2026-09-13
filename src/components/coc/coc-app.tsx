@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ReturnPortal } from "@/components/coc/portal-transition";
 import { CocEditor } from "@/components/coc/coc-editor";
 import { MAX_SHEETS } from "@/lib/coc-data";
+import { cocFetch } from "@/lib/coc-api";
 
 interface SheetMeta {
   id: string;
@@ -87,17 +88,20 @@ function CocGate() {
   );
 }
 
-/** Архив дел: до 5 листов на игрока. */
+/** Архив дел: до 5 листов на игрока, ручной порядок (перетаскивание). */
 function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (id: string) => void; onClose: () => void }) {
   const qc = useQueryClient();
   const { data: sheets, isLoading } = useQuery<SheetMeta[]>({
     queryKey: ["coc-sheets"],
-    queryFn: () => fetch("/api/coc/sheets").then((r) => r.json()),
+    queryFn: async () => {
+      const res = await cocFetch("/api/coc/sheets");
+      return res.json();
+    },
   });
 
   const createMutation = useMutation({
     mutationFn: () =>
-      fetch("/api/coc/sheets", {
+      cocFetch("/api/coc/sheets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
@@ -113,8 +117,56 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // ===== Ручной порядок дел (drag-and-drop + кнопки ↑↓) =====
+  const dragIdRef = useRef<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
+  const reorderMutation = useMutation({
+    mutationFn: (ids: string[]) =>
+      cocFetch("/api/coc/sheets/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      }).then(async (r) => {
+        if (!r.ok) throw new Error((await r.json()).error || "Ошибка");
+        return r.json();
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["coc-sheets"] }),
+    onError: (e: Error) => {
+      toast.error("Порядок не сохранился", { description: e.message });
+      qc.invalidateQueries({ queryKey: ["coc-sheets"] });
+    },
+  });
+
+  const move = (ids: string[], from: number, to: number): string[] => {
+    const next = [...ids];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    return next;
+  };
+
+  const applyOrder = (ids: string[]) => {
+    // оптимистично переставляем локально, затем сохраняем
+    qc.setQueryData<SheetMeta[]>(["coc-sheets"], (prev) => {
+      if (!prev) return prev;
+      const map = new Map(prev.map((s) => [s.id, s]));
+      return ids.map((id) => map.get(id)).filter(Boolean) as SheetMeta[];
+    });
+    reorderMutation.mutate(ids);
+  };
+
   const list = Array.isArray(sheets) ? sheets : [];
   const full = list.length >= MAX_SHEETS;
+  const ids = list.map((s) => s.id);
+
+  const handleDrop = (targetId: string) => {
+    const from = ids.indexOf(dragIdRef.current || "");
+    const to = ids.indexOf(targetId);
+    setOverId(null);
+    dragIdRef.current = null;
+    if (from < 0 || to < 0 || from === to) return;
+    applyOrder(move(ids, from, to));
+  };
 
   if (openId) return <CocEditor key={openId} sheetId={openId} onBack={onClose} />;
 
@@ -169,6 +221,13 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
             <p className="coc-hint">
               Ни одного дела не заведено. Тьма терпелива — она подождёт, пока вы подпишете первый лист.
             </p>
+            <button
+              onClick={() => createMutation.mutate()}
+              disabled={createMutation.isPending}
+              className="coc-btn coc-btn-verdigris w-full justify-center py-3 mt-2"
+            >
+              {createMutation.isPending ? "Заводим дело…" : "+ Завести первое дело"}
+            </button>
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -179,7 +238,34 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: i * 0.07 }}
               >
-                <CaseCard sheet={s} onOpen={() => onOpen(s.id)} />
+                <CaseCard
+                  sheet={s}
+                  index={i + 1}
+                  onOpen={() => onOpen(s.id)}
+                  draggable
+                  isOver={overId === s.id}
+                  onDragStart={() => {
+                    dragIdRef.current = s.id;
+                  }}
+                  onDragEnd={() => {
+                    dragIdRef.current = null;
+                    setOverId(null);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setOverId((prev) => (prev === s.id ? prev : s.id));
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    handleDrop(s.id);
+                  }}
+                  onMove={(dir) => {
+                    const from = ids.indexOf(s.id);
+                    const to = from + dir;
+                    if (from < 0 || to < 0 || to >= ids.length) return;
+                    applyOrder(move(ids, from, to));
+                  }}
+                />
               </motion.div>
             ))}
             {!full && (
@@ -210,6 +296,11 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
             Архив полон: {list.length} из {MAX_SHEETS} дел. Чтобы завести новое — закройте одно из старых.
           </p>
         )}
+        {list.length > 1 && !full && (
+          <p className="text-center coc-hint">
+            Дела можно перетаскивать — порядок сохранится в архиве.
+          </p>
+        )}
 
         <footer className="pt-6 text-center space-y-3">
           <ReturnPortal className="coc-btn mx-auto">
@@ -224,16 +315,38 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
   );
 }
 
-/** Карточка дела. */
-function CaseCard({ sheet, onOpen }: { sheet: SheetMeta; onOpen: () => void }) {
+/** Карточка дела (перетаскиваемая, с номером и кнопками порядка). */
+function CaseCard({
+  sheet,
+  index,
+  onOpen,
+  draggable,
+  isOver,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDrop,
+  onMove,
+}: {
+  sheet: SheetMeta;
+  index: number;
+  onOpen: () => void;
+  draggable?: boolean;
+  isOver?: boolean;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  onMove?: (dir: -1 | 1) => void;
+}) {
   const qc = useQueryClient();
   const del = useMutation({
-    mutationFn: () => fetch(`/api/coc/sheets/${sheet.id}`, { method: "DELETE" }).then((r) => r.json()),
+    mutationFn: () => cocFetch(`/api/coc/sheets/${sheet.id}`, { method: "DELETE" }).then((r) => r.json()),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["coc-sheets"] });
       toast.success("Дело уничтожено", { description: `«${sheet.name}» предано огню.` });
     },
-    onError: () => toast.error("Не удалось уничтожить дело"),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const date = new Date(sheet.updatedAt).toLocaleString("ru-RU", {
@@ -247,8 +360,22 @@ function CaseCard({ sheet, onOpen }: { sheet: SheetMeta; onOpen: () => void }) {
     : null;
 
   return (
-    <div className="coc-case group" onClick={onOpen} role="button" tabIndex={0}
-      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen()}>
+    <div
+      className={`coc-case group ${isOver ? "coc-case-over" : ""}`}
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      draggable={draggable}
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", sheet.id);
+        onDragStart?.();
+      }}
+      onDragEnd={() => onDragEnd?.()}
+      onDragOver={(e) => onDragOver?.(e)}
+      onDrop={(e) => onDrop?.(e)}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen()}
+    >
       <div className="p-4 space-y-2.5">
         <div className="flex items-start gap-3">
           {/* Миниатюра портрета */}
@@ -261,16 +388,38 @@ function CaseCard({ sheet, onOpen }: { sheet: SheetMeta; onOpen: () => void }) {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <span className="coc-stamp">Дело</span>
-              <button
-                onClick={(e) => { e.stopPropagation(); del.mutate(); }}
-                disabled={del.isPending}
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-[#a83232] hover:text-[#cf6a6a] text-xs coc-mono px-1.5 py-0.5 border border-transparent hover:border-[#7c1d1d] rounded"
-                title="Уничтожить дело"
-                aria-label={`Удалить дело ${sheet.name}`}
-              >
-                {del.isPending ? "…" : "✕ сжечь"}
-              </button>
+              <span className="coc-stamp">Дело № {index}</span>
+              <div className="flex items-center gap-1">
+                {onMove && (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onMove(-1); }}
+                      className="coc-move-btn"
+                      title="Поднять дело выше"
+                      aria-label={`Поднять дело ${sheet.name} выше`}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onMove(1); }}
+                      className="coc-move-btn"
+                      title="Опустить дело ниже"
+                      aria-label={`Опустить дело ${sheet.name} ниже`}
+                    >
+                      ↓
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); del.mutate(); }}
+                  disabled={del.isPending}
+                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-[#a83232] hover:text-[#cf6a6a] text-xs coc-mono px-1.5 py-0.5 border border-transparent hover:border-[#7c1d1d] rounded"
+                  title="Уничтожить дело"
+                  aria-label={`Удалить дело ${sheet.name}`}
+                >
+                  {del.isPending ? "…" : "✕ сжечь"}
+                </button>
+              </div>
             </div>
             <h2 className="coc-display text-lg text-[#d8cbb0] leading-snug line-clamp-2 mt-1.5">
               {sheet.name}

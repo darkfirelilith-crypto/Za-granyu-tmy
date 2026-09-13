@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/session";
+import { requireLiveUser } from "@/lib/session";
 import { MAX_SHEETS } from "@/lib/coc-data";
 
+const UNAUTHORIZED = { error: "Сессия недействительна — войдите заново" };
+
 /** GET /api/coc/sheets — список листов «Зова Ктулху» текущего пользователя
- *  (с миниатюрой портрета и профессией для карточек архива). */
+ *  (с миниатюрой портрета, профессией и ручным порядком сортировки для карточек архива). */
 export async function GET() {
-  const session = await requireUser();
-  if (!session) return NextResponse.json({ error: "Войдите" }, { status: 401 });
+  const session = await requireLiveUser();
+  if (!session) return NextResponse.json(UNAUTHORIZED, { status: 401 });
   const rows = await db.cocSheet.findMany({
     where: { userId: session.user.id },
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
     select: { id: true, name: true, createdAt: true, updatedAt: true, data: true },
   });
   const sheets = rows.map((r) => {
@@ -37,8 +39,8 @@ export async function GET() {
 
 /** POST — создать новый лист (не более 5 на пользователя). */
 export async function POST(req: NextRequest) {
-  const session = await requireUser();
-  if (!session) return NextResponse.json({ error: "Войдите" }, { status: 401 });
+  const session = await requireLiveUser();
+  if (!session) return NextResponse.json(UNAUTHORIZED, { status: 401 });
   let body: { name?: string } = {};
   try {
     body = await req.json();
@@ -53,8 +55,18 @@ export async function POST(req: NextRequest) {
     );
   }
   const name = (body.name || "").trim() || "Новый сыщик";
+  // новое дело кладём в конец архива
+  const maxOrder = await db.cocSheet.aggregate({
+    where: { userId: session.user.id },
+    _max: { sortOrder: true },
+  });
   const sheet = await db.cocSheet.create({
-    data: { userId: session.user.id, name, data: "{}" },
+    data: {
+      userId: session.user.id,
+      name,
+      data: "{}",
+      sortOrder: (maxOrder._max.sortOrder ?? 0) + 1,
+    },
     select: { id: true, name: true, createdAt: true, updatedAt: true },
   });
   return NextResponse.json(sheet, { status: 201 });

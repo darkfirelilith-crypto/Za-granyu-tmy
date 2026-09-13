@@ -34,6 +34,7 @@ model CocSheet {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String   @default("Новый сыщик")
   data      String   @default("{}") // JSON-снапшот всего листа персонажа
+  sortOrder Int      @default(0)    // ручной порядок дел в архиве (перетаскивание)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

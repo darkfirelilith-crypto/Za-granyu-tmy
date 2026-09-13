@@ -18,6 +18,21 @@ export async function requireUser() {
   return session;
 }
 
+/** Сессия, подтверждённая наличием пользователя в БД.
+ *  Защита от «устаревших» JWT: NextAuth stateless — сессия может остаться
+ *  валидной после удаления пользователя. Такие запросы должны получать 401,
+ *  чтобы клиент перелогинился, а не падал с FK-ошибкой 500. */
+export async function requireLiveUser() {
+  const session = await getSession();
+  if (!session?.user) return null;
+  const exists = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true },
+  });
+  if (!exists) return null;
+  return session;
+}
+
 export async function getCurrentCharacter(userId: string) {
   return db.character.findUnique({
     where: { userId },

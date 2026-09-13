@@ -64,6 +64,14 @@ export interface CocNote {
   createdAt: string;
 }
 
+/** Запись в журнале потерь рассудка. */
+export interface CocSanLogEntry {
+  id: string;
+  date: string;   // ISO-строка
+  loss: number;   // сколько потеряно
+  context: string; // источник (например "0/1" или заметка)
+}
+
 export interface CocFinance {
   pocket: string;
   cash: string;
@@ -105,6 +113,7 @@ export interface CocSheetData {
   bio: CocBio;
   trackers: CocTrackers;
   notes: CocNote[];
+  sanLog?: CocSanLogEntry[]; // журнал потерь рассудка (опционально — старые листы без него)
 }
 
 export const MAX_SHEETS = 5;
@@ -170,6 +179,7 @@ export function createEmptySheet(name = "Новый сыщик"): CocSheetData {
       lastSanLoss: 0,
     },
     notes: [],
+    sanLog: [],
   };
 }
 
@@ -196,6 +206,7 @@ export function normalizeSheet(raw: any): CocSheetData {
     bio: { ...base.bio, ...(raw.bio || {}) },
     trackers: { ...base.trackers, ...(raw.trackers || {}) },
     notes: Array.isArray(raw.notes) ? raw.notes : [],
+    sanLog: Array.isArray(raw.sanLog) ? raw.sanLog : [],
   };
 }
 

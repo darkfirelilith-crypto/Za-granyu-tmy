@@ -13,7 +13,9 @@ import { DossierSection, SkillsSection } from "@/components/coc/section-dossier-
 import { CombatSection, BioSection, GearSection, NotesSection } from "@/components/coc/section-misc";
 import { CocDicePanel } from "@/components/coc/coc-dice";
 import { ReturnPortal } from "@/components/coc/portal-transition";
+import { CocPrintSheet } from "@/components/coc/coc-print-sheet";
 import { OCCUPATIONS } from "@/lib/coc-data";
+import { cocFetch } from "@/lib/coc-api";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -32,7 +34,7 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
   const qc = useQueryClient();
   const { data: raw, isLoading, isError } = useQuery<any>({
     queryKey: ["coc-sheet", sheetId],
-    queryFn: () => fetch(`/api/coc/sheets/${sheetId}`).then(async (r) => {
+    queryFn: () => cocFetch(`/api/coc/sheets/${sheetId}`).then(async (r) => {
       if (!r.ok) throw new Error("Лист не найден");
       return r.json();
     }),
@@ -61,7 +63,7 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
     async (payload: CocSheetData, name: string) => {
       setStatus("saving");
       try {
-        const res = await fetch(`/api/coc/sheets/${sheetId}`, {
+        const res = await cocFetch(`/api/coc/sheets/${sheetId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name, data: payload }),
@@ -179,7 +181,7 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
   }
 
   const deleteSheet = async () => {
-    const res = await fetch(`/api/coc/sheets/${sheetId}`, { method: "DELETE" });
+    const res = await cocFetch(`/api/coc/sheets/${sheetId}`, { method: "DELETE" });
     if (res.ok) {
       qc.invalidateQueries({ queryKey: ["coc-sheets"] });
       toast.success("Дело уничтожено");
@@ -193,6 +195,7 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
 
   return (
     <main className="relative z-10 min-h-screen pb-24">
+      <div className="coc-screen">
       <div className="max-w-7xl mx-auto px-3 md:px-6 py-6 md:py-8 space-y-4">
         {/* Шапка досье */}
         <motion.header
@@ -223,6 +226,14 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
             )}
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => window.print()}
+              className="coc-btn coc-btn-ghost !py-1.5 !px-2 text-xs"
+              title="Распечатать досье или сохранить в PDF (Ctrl+P)"
+              aria-label="Печать досье"
+            >
+              🖨 Печать
+            </button>
             <button
               onClick={exportSheet}
               className="coc-btn coc-btn-ghost !py-1.5 !px-2 text-xs"
@@ -299,6 +310,12 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
       </div>
 
       <CocDicePanel />
+      </div>
+
+      {/* Печатная версия досье — видна только при печати / сохранении в PDF */}
+      <div className="coc-print-only" aria-hidden="true">
+        <CocPrintSheet data={data} derived={derived} />
+      </div>
     </main>
   );
 }

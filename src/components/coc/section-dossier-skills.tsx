@@ -102,6 +102,14 @@ export function DossierSection({ data, mutate, derived }: SectionProps) {
       mutate((d) => {
         d.trackers.sanCurrent = Math.max(0, (d.trackers.sanCurrent ?? derived.sanStart) - applied);
         d.trackers.lastSanLoss = applied;
+        // журнал потерь рассудка — тьма запоминает каждый шрам разума
+        const entry = {
+          id: uid(),
+          date: new Date().toISOString(),
+          loss: applied,
+          context: `${roll} против ${sanCurrent} — ${success ? "успех" : "провал"}`,
+        };
+        d.sanLog = [entry, ...(d.sanLog || [])].slice(0, 30);
       });
     }
   };
@@ -458,6 +466,35 @@ export function DossierSection({ data, mutate, derived }: SectionProps) {
               <span>потеряно всего: {insanity.totalLost}</span>
               <span>порог неопределившегося: {insanity.indefiniteThreshold}</span>
             </div>
+            {/* Журнал потерь рассудка */}
+            {(data.sanLog?.length ?? 0) > 0 && (
+              <details className="coc-sanlog mt-1">
+                <summary className="coc-mono text-[0.62rem] text-[#cf8a8a] cursor-pointer select-none">
+                  журнал потерь ({data.sanLog!.length})
+                </summary>
+                <ul className="mt-1.5 space-y-1 max-h-40 overflow-y-auto coc-scroll pr-1">
+                  {data.sanLog!.slice(0, 12).map((e) => (
+                    <li key={e.id} className="flex items-center gap-2 coc-mono text-[0.6rem] border-b border-[#1d1810] pb-1 last:border-0">
+                      <span className="text-[#a83232] font-bold">−{e.loss}</span>
+                      <span className="text-[#6e6350] shrink-0">
+                        {new Date(e.date).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                      <span className="truncate text-[#a4977c]" title={e.context}>{e.context}</span>
+                    </li>
+                  ))}
+                </ul>
+                {data.sanLog!.length > 12 && (
+                  <p className="coc-mono text-[0.55rem] text-[#4a4234] mt-1">…и ещё {data.sanLog!.length - 12} записей</p>
+                )}
+                <button
+                  onClick={() => mutate((d) => { d.sanLog = []; })}
+                  className="coc-mono text-[0.58rem] text-[#6e6350] hover:text-[#a83232] mt-1.5"
+                  title="Очистить журнал потерь"
+                >
+                  очистить журнал
+                </button>
+              </details>
+            )}
           </div>
           {/* Удача текущая */}
           <div className="rounded border border-[#262015] bg-black/25 p-3 space-y-2">

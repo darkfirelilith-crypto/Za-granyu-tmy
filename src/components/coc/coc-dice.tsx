@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { checkLevel, CHECK_LEVEL_RU, rollD100, CheckLevel } from "@/lib/coc-calc";
 
 const ROLL_EVENT = "coc-roll-made";
+const HISTORY_KEY = "coc-roll-history";
 
 export interface RollRecord {
   id: number;
@@ -14,6 +15,23 @@ export interface RollRecord {
   level?: CheckLevel;
   kind: "check" | "dice";
   sides?: number;
+}
+
+function loadHistory(): RollRecord[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.slice(0, 12) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(list: RollRecord[]) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 12)));
+  } catch {}
 }
 
 /** Публикация броска в общую историю (слушает панель костей). */
@@ -72,15 +90,21 @@ export function showCheckResult(name: string, roll: number, value: number, level
 
 const DICE = [100, 20, 12, 10, 8, 6, 4, 3];
 
-/** Плавающая панель костей с историей бросков — тень прошлого всегда рядом. */
+/** Плавающая панель костей с историей бросков — тень прошлого всегда рядом.
+ *  Журнал переживает перезагрузку страницы (localStorage). */
 export function CocDicePanel() {
   const [history, setHistory] = useState<RollRecord[]>([]);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    setHistory(loadHistory());
     const handler = (e: Event) => {
       const rec = (e as CustomEvent).detail as Omit<RollRecord, "id">;
-      setHistory((prev) => [{ ...rec, id: Date.now() + Math.random() }, ...prev].slice(0, 12));
+      setHistory((prev) => {
+        const next = [{ ...rec, id: Date.now() + Math.random() }, ...prev].slice(0, 12);
+        saveHistory(next);
+        return next;
+      });
     };
     window.addEventListener(ROLL_EVENT, handler);
     return () => window.removeEventListener(ROLL_EVENT, handler);
@@ -114,14 +138,21 @@ export function CocDicePanel() {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-40 flex flex-col gap-1.5 items-end"
+      className="coc-dice-panel fixed bottom-4 right-4 z-40 flex flex-col gap-1.5 items-end"
       aria-label="Игральные кости"
     >
       {open && history.length > 0 && (
         <div className="coc-panel px-3 py-2 w-64 max-h-72 overflow-y-auto coc-scroll" style={{ boxShadow: "0 14px 40px rgba(0,0,0,0.7)" }}>
           <div className="flex items-center justify-between mb-1.5">
             <span className="coc-label">Журнал бросков</span>
-            <button onClick={() => setHistory([])} className="coc-mono text-[0.6rem] text-[#6e6350] hover:text-[#a83232]" title="Очистить журнал">
+            <button
+              onClick={() => {
+                setHistory([]);
+                saveHistory([]);
+              }}
+              className="coc-mono text-[0.6rem] text-[#6e6350] hover:text-[#a83232]"
+              title="Очистить журнал"
+            >
               очистить
             </button>
           </div>

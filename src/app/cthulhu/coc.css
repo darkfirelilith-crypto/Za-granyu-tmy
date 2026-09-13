@@ -440,3 +440,230 @@ select.coc-input option { background: #141109; color: var(--coc-bone); }
 }
 .coc-root [data-sonner-toast] [data-title] { color: var(--coc-bone) !important; }
 .coc-root [data-sonner-toast] [data-description] { color: var(--coc-bone-dim) !important; }
+
+/* ============================================================
+   ПЕЧАТЬ ДОСЬЕ (🖨 / Ctrl+P / Сохранить в PDF)
+   Экран: печатный бланк скрыт. Печать: скрыт весь экранный UI,
+   показывается машинописный бланк 1920-х (чёрным по белому).
+   ============================================================ */
+.coc-print-only { display: none; }
+
+@media print {
+  @page {
+    margin: 14mm 12mm;
+    size: A4;
+  }
+  html, body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  .coc-root {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  /* убираем экранную вселенную целиком */
+  .coc-screen,
+  .coc-grain,
+  .coc-vignette,
+  .coc-dice-panel,
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+  .coc-root * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+  .coc-print-only {
+    display: block !important;
+  }
+
+  /* --- Машинописный бланк --- */
+  .coc-print-doc {
+    color: #111;
+    font-family: var(--coc-font-mono), "Courier New", monospace;
+    font-size: 10.5pt;
+    line-height: 1.4;
+  }
+  .coc-print-head {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    border-bottom: 2.5px double #111;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+  .coc-print-over {
+    font-size: 7.5pt;
+    letter-spacing: 0.35em;
+    margin: 0 0 4px;
+  }
+  .coc-print-title {
+    font-family: var(--coc-font-display), Georgia, serif;
+    font-size: 20pt;
+    letter-spacing: 0.14em;
+    margin: 0 0 2px;
+    text-transform: uppercase;
+  }
+  .coc-print-name {
+    font-size: 14pt;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  .coc-print-line { font-size: 9pt; margin: 1px 0; }
+  .coc-print-portrait {
+    width: 30mm;
+    height: 38mm;
+    object-fit: cover;
+    border: 1px solid #111;
+  }
+  .coc-print-section { margin-bottom: 13px; }
+  .coc-print-h2 {
+    font-family: var(--coc-font-display), Georgia, serif;
+    font-size: 10.5pt;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #111;
+    padding-bottom: 2px;
+    margin: 0 0 7px;
+  }
+  .coc-print-grid-9 {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+  }
+  .coc-print-grid-der {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+  }
+  .coc-print-cell {
+    border: 1px solid #111;
+    padding: 4px 6px;
+    text-align: center;
+  }
+  .coc-print-cell-label {
+    display: block;
+    font-size: 6.8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .coc-print-cell-value {
+    display: block;
+    font-size: 13pt;
+    font-weight: 700;
+  }
+  .coc-print-cell-value small { font-size: 7.5pt; font-weight: 400; }
+  .coc-print-cell-sub {
+    display: block;
+    font-size: 6.8pt;
+    color: #444;
+  }
+  .coc-print-skills {
+    column-count: 2;
+    column-gap: 22px;
+  }
+  .coc-print-skill {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px dotted #777;
+    padding: 1.5px 0;
+    break-inside: avoid;
+  }
+  .coc-print-skill-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .coc-print-skill-val { font-weight: 700; white-space: nowrap; }
+  .coc-print-skill-val small { font-weight: 400; font-size: 7pt; color: #444; }
+  .coc-print-note { font-size: 7.5pt; color: #444; margin-top: 4px; }
+  .coc-print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.8pt;
+  }
+  .coc-print-table th, .coc-print-table td {
+    border: 1px solid #111;
+    padding: 2.5px 5px;
+    text-align: left;
+  }
+  .coc-print-table th {
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: #eee;
+  }
+  .coc-print-bio {
+    font-size: 9pt;
+    margin: 2px 0;
+    text-align: justify;
+  }
+  .coc-print-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #111;
+    margin-top: 16px;
+    padding-top: 6px;
+    font-size: 7.5pt;
+    letter-spacing: 0.12em;
+  }
+  .coc-print-stamp {
+    border: 1.5px solid #8a1a1a;
+    color: #8a1a1a;
+    padding: 2px 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    transform: rotate(-4deg);
+  }
+}
+
+/* ============================================================
+   ПОРЯДОК ДЕЛ: кнопки-стрелки и подсветка при перетаскивании
+   ============================================================ */
+.coc-move-btn {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--coc-font-mono), monospace;
+  font-size: 0.62rem;
+  color: var(--coc-ash);
+  border: 1px solid var(--coc-line-soft);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transition: opacity 0.18s, color 0.18s, border-color 0.18s, transform 0.12s;
+}
+.coc-case:hover .coc-move-btn,
+.coc-move-btn:focus-visible {
+  opacity: 1;
+}
+.coc-move-btn:hover {
+  color: var(--coc-verdigris-bright);
+  border-color: var(--coc-verdigris);
+  transform: translateY(-1px);
+}
+.coc-move-btn:first-of-type:hover { transform: translateY(-1px); }
+
+/* Карточка-цель под перетаскиваемой */
+.coc-case-over {
+  border-color: var(--coc-verdigris) !important;
+  box-shadow: 0 0 0 1px var(--coc-verdigris), 0 0 22px rgba(95, 143, 110, 0.35) !important;
+}
+.coc-case[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* Журнал потерь рассудка */
+.coc-sanlog {
+  border-top: 1px dashed rgba(124, 29, 29, 0.4);
+  padding-top: 5px;
+}
+.coc-sanlog summary::-webkit-details-marker { display: none; }
+.coc-sanlog summary::before {
+  content: "▸ ";
+  color: var(--coc-blood-bright);
+}
+.coc-sanlog[open] summary::before { content: "▾ "; }

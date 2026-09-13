@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/session";
+import { requireLiveUser } from "@/lib/session";
+
+const UNAUTHORIZED = { error: "Сессия недействительна — войдите заново" };
 
 /** GET — получить один лист с полными данными. */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireUser();
-  if (!session) return NextResponse.json({ error: "Войдите" }, { status: 401 });
+  const session = await requireLiveUser();
+  if (!session) return NextResponse.json(UNAUTHORIZED, { status: 401 });
   const { id } = await params;
   const sheet = await db.cocSheet.findUnique({ where: { id } });
   if (!sheet) return NextResponse.json({ error: "Лист не найден" }, { status: 404 });
@@ -23,8 +25,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 /** PUT — сохранить данные листа (name + data). */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireUser();
-  if (!session) return NextResponse.json({ error: "Войдите" }, { status: 401 });
+  const session = await requireLiveUser();
+  if (!session) return NextResponse.json(UNAUTHORIZED, { status: 401 });
   const { id } = await params;
   let body: { name?: string; data?: unknown };
   try {
@@ -54,8 +56,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 /** DELETE — удалить лист. */
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireUser();
-  if (!session) return NextResponse.json({ error: "Войдите" }, { status: 401 });
+  const session = await requireLiveUser();
+  if (!session) return NextResponse.json(UNAUTHORIZED, { status: 401 });
   const { id } = await params;
   const sheet = await db.cocSheet.findUnique({ where: { id } });
   if (!sheet) return NextResponse.json({ error: "Лист не найден" }, { status: 404 });
