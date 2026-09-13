@@ -95,7 +95,7 @@ export function CombatSection({ data, mutate, derived }: SectionProps) {
           <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="text-left">
-                {["Оружие", "Навык", "Обычн.", "Трудн.", "Чрезв.", "Урон", "Дальн.", "Атаки", "Патроны", "Неиспр.", ""].map((h) => (
+                {["Оружие", "Навык", "Обычн.", "Трудн.", "Чрезв.", "Урон", "Дальн.", "Атаки", "Патроны", "Неиспр.", "Бросок"].map((h) => (
                   <th key={h} className="coc-label !text-[0.58rem] pb-2 px-1 font-normal">{h}</th>
                 ))}
               </tr>
@@ -160,7 +160,18 @@ export function CombatSection({ data, mutate, derived }: SectionProps) {
                       <input className="coc-input !py-1 text-xs" value={w.malfunction} onChange={(e) => upd((x) => { x.malfunction = e.target.value; })} placeholder="—" aria-label="Неисправность" />
                     </td>
                     <td className="px-1 py-1.5">
-                      <button onClick={() => mutate((d) => { d.weapons = d.weapons.filter((x) => x.id !== w.id); })} className="text-[#a83232] hover:text-[#cf6a6a] px-1" title="Убрать оружие" aria-label={`Убрать ${w.name || "оружие"}`}>✕</button>
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          onClick={() => reg > 0 && rollSkillCheck(w.name || "Оружие", reg)}
+                          disabled={reg <= 0}
+                          className="coc-mono text-[0.7rem] px-1 py-0.5 rounded border border-transparent hover:border-[#2e4a3a] text-[#5f8f6e] hover:text-[#7fc39a] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          title={reg > 0 ? `Проверка навыка (${reg})` : "Сначала задайте навык или уровень"}
+                          aria-label={`Проверка навыка для ${w.name || "оружия"}`}
+                        >
+                          🎲
+                        </button>
+                        <button onClick={() => mutate((d) => { d.weapons = d.weapons.filter((x) => x.id !== w.id); })} className="text-[#a83232] hover:text-[#cf6a6a] px-1" title="Убрать оружие" aria-label={`Убрать ${w.name || "оружие"}`}>✕</button>
+                      </div>
                     </td>
                   </tr>
                 );

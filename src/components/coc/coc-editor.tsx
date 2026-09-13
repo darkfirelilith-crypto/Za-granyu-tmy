@@ -11,13 +11,18 @@ import {
 import { deriveStats, setSkillContext } from "@/lib/coc-calc";
 import { DossierSection, SkillsSection } from "@/components/coc/section-dossier-skills";
 import { CombatSection, BioSection, GearSection, NotesSection } from "@/components/coc/section-misc";
-import { CocDicePanel } from "@/components/coc/coc-dice";
+import { CocDicePanel, setLuckProvider } from "@/components/coc/coc-dice";
 import { ReturnPortal } from "@/components/coc/portal-transition";
 import { CocPrintSheet } from "@/components/coc/coc-print-sheet";
 import { OCCUPATIONS } from "@/lib/coc-data";
 import { cocFetch } from "@/lib/coc-api";
 
-type SaveStatus = "idle" | "saving" | "saved" | "error";
+type SaveStatus = "idle" | "saving" | "saved" | "error" | "conflict";
+
+interface ConflictInfo {
+  serverUpdatedAt: string;
+  serverData: CocSheetData;
+}
 
 const TABS = [
   { id: "dossier", label: "Досье" },
@@ -43,11 +48,15 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
   const [data, setData] = useState<CocSheetData | null>(null);
   const [tab, setTab] = useState<TabId>("dossier");
   const [status, setStatus] = useState<SaveStatus>("idle");
+  const [conflict, setConflict] = useState<ConflictInfo | null>(null);
   const snapshotRef = useRef<string>("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const statusRef = useRef<SaveStatus>("idle");
+  const conflictRef = useRef<ConflictInfo | null>(null);
+  const syncedAtRef = useRef<string | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
   statusRef.current = status;
+  conflictRef.current = conflict;
 
   // Инициализация данных после загрузки
   useEffect(() => {
@@ -55,23 +64,43 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
       const normalized = normalizeSheet(raw.data);
       setData(normalized);
       snapshotRef.current = JSON.stringify(normalized);
+      syncedAtRef.current = raw.updatedAt || null;
       setStatus("idle");
     }
   }, [raw, data]);
 
   const save = useCallback(
-    async (payload: CocSheetData, name: string) => {
+    async (payload: CocSheetData, name: string, opts?: { force?: boolean }) => {
+      // Пока открыт диалог конфликта — автосохранение молчит (решает игрок)
+      if (conflictRef.current && !opts?.force) return;
       setStatus("saving");
       try {
         const res = await cocFetch(`/api/coc/sheets/${sheetId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, data: payload }),
+          body: JSON.stringify({
+            name,
+            data: payload,
+            baseUpdatedAt: syncedAtRef.current || undefined,
+            force: opts?.force || undefined,
+          }),
         });
+        if (res.status === 409) {
+          const j = await res.json().catch(() => ({}));
+          if (timerRef.current) clearTimeout(timerRef.current);
+          setConflict({
+            serverUpdatedAt: j.serverUpdatedAt || new Date().toISOString(),
+            serverData: normalizeSheet(j.serverData || {}),
+          });
+          setStatus("conflict");
+          return;
+        }
         if (!res.ok) {
           const j = await res.json().catch(() => ({}));
           throw new Error(j.error || "Ошибка сохранения");
         }
+        const saved = await res.json().catch(() => ({}));
+        if (saved.updatedAt) syncedAtRef.current = saved.updatedAt;
         setStatus("saved");
         snapshotRef.current = JSON.stringify(payload);
         qc.invalidateQueries({ queryKey: ["coc-sheets"] });
@@ -82,6 +111,27 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
     },
     [sheetId, qc]
   );
+
+  // Разрешение конфликта: взять версию из архива (локальные правки исчезнут)
+  const resolveConflictTakeServer = () => {
+    if (!conflict) return;
+    const normalized = normalizeSheet(conflict.serverData);
+    setData(normalized);
+    snapshotRef.current = JSON.stringify(normalized);
+    syncedAtRef.current = conflict.serverUpdatedAt;
+    setConflict(null);
+    setStatus("saved");
+    toast.success("Версия из архива загружена", { description: "Ваши несохранённые правки исчезли." });
+  };
+
+  // Разрешение конфликта: всё равно записать свою версию (перезапись чужой)
+  const resolveConflictForce = () => {
+    if (!conflict || !data) return;
+    syncedAtRef.current = conflict.serverUpdatedAt; // база теперь серверная версия
+    const name = data.info.name || "Безымянный сыщик";
+    setConflict(null);
+    save(data, name, { force: true });
+  };
 
   // Автосохранение с дебаунсом
   const scheduleSave = useCallback(
@@ -106,6 +156,18 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
     },
     [scheduleSave]
   );
+
+  // Поставщик удачи: панель бросков знает, сколько удачи на руках и как её списать
+  useEffect(() => {
+    setLuckProvider({
+      available: () => (data ? Math.max(0, data.trackers.luckCurrent ?? data.characteristics.luck) : 0),
+      spend: (n) =>
+        mutate((d) => {
+          d.trackers.luckCurrent = Math.max(0, (d.trackers.luckCurrent ?? d.characteristics.luck) - n);
+        }),
+    });
+    return () => setLuckProvider(null);
+  }, [data, mutate]);
 
   // Предупреждение при уходе во время сохранения
   useEffect(() => {
@@ -195,6 +257,27 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
 
   return (
     <main className="relative z-10 min-h-screen pb-24">
+      {conflict && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.82)" }} role="alertdialog" aria-label="Конфликт версий досье">
+          <div className="coc-panel max-w-md w-full p-6 space-y-4 coc-conflict-pop">
+            <span className="coc-stamp">Конфликт версий</span>
+            <h2 className="coc-display text-lg text-[#d8cbb0]">Дело изменено в другом окне</h2>
+            <p className="text-sm leading-relaxed text-[#a4977c]">
+              Пока вы заполняли лист, копия в архиве была обновлена — возможно, это открыта вторая вкладка.
+              Что сделать с вашей версией?
+            </p>
+            <div className="space-y-2 pt-1">
+              <button onClick={resolveConflictTakeServer} className="coc-btn coc-btn-verdigris w-full justify-center py-2.5">
+                Взять версию из архива
+              </button>
+              <button onClick={resolveConflictForce} className="coc-btn w-full justify-center py-2.5">
+                Записать мою версию (перезапишет архив)
+              </button>
+            </div>
+            <p className="coc-hint">Архивная версия сохранена от {new Date(conflict.serverUpdatedAt).toLocaleString("ru-RU")}.</p>
+          </div>
+        </div>
+      )}
       <div className="coc-screen">
       <div className="max-w-7xl mx-auto px-3 md:px-6 py-6 md:py-8 space-y-4">
         {/* Шапка досье */}
@@ -258,11 +341,22 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
               ⇧ Восстановить
             </button>
             <span
-              className={`coc-save-dot ml-1 ${status === "saved" ? "saved" : status === "saving" ? "saving" : status === "error" ? "error" : ""}`}
+              className={`coc-save-dot ml-1 ${status === "saved" ? "saved" : status === "saving" ? "saving" : status === "error" || status === "conflict" ? "error" : ""}`}
               title={status}
             />
-            <span className="coc-mono text-[0.65rem] text-[#6e6350] hidden sm:inline">
-              {status === "saving" ? "запись…" : status === "saved" ? "записано" : status === "error" ? "ошибка!" : "архив"}
+            <span
+              key={status}
+              className={`coc-save-stamp hidden sm:inline ${status === "saved" ? "is-saved" : status === "error" || status === "conflict" ? "is-error" : ""}`}
+            >
+              {status === "saving"
+                ? "запись…"
+                : status === "saved"
+                  ? "ЗАПИСАНО"
+                  : status === "conflict"
+                    ? "КОНФЛИКТ!"
+                    : status === "error"
+                      ? "ОШИБКА!"
+                      : "АРХИВ"}
             </span>
             <DeleteButton onDelete={deleteSheet} />
           </div>

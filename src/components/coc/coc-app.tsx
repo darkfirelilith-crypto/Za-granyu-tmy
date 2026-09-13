@@ -91,6 +91,7 @@ function CocGate() {
 /** Архив дел: до 5 листов на игрока, ручной порядок (перетаскивание). */
 function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (id: string) => void; onClose: () => void }) {
   const qc = useQueryClient();
+  const [showHelp, setShowHelp] = useState(false);
   const { data: sheets, isLoading } = useQuery<SheetMeta[]>({
     queryKey: ["coc-sheets"],
     queryFn: async () => {
@@ -195,6 +196,15 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
             Досье сыщиков. Заполняйте лист — тьма запомнит каждое слово.
             В архиве помещается до {MAX_SHEETS} дел.
           </p>
+          <button
+            onClick={() => setShowHelp((v) => !v)}
+            aria-expanded={showHelp}
+            aria-controls="coc-help-panel"
+            className="coc-btn coc-btn-ghost !py-1.5 !px-3 text-xs mx-auto"
+          >
+            {showHelp ? "▲ Скрыть наставления" : "◈ Как заполнить дело?"}
+          </button>
+          {showHelp && <CocHelpPanel />}
         </motion.header>
 
         {/* Кассы с делами */}
@@ -312,6 +322,70 @@ function CocHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
         </footer>
       </div>
     </main>
+  );
+}
+
+/** Краткие наставления для нового сыщика — как заполнить лист по правилам 7e. */
+function CocHelpPanel() {
+  const steps: { n: string; title: string; text: string }[] = [
+    {
+      n: "I",
+      title: "Заведите дело",
+      text: "Кнопка «Новое дело» — всего до 5 досье на игрока. Лист сохраняется сам после каждой правки.",
+    },
+    {
+      n: "II",
+      title: "Досье: характеристики и профессия",
+      text: "Впишите СИЛ, ВЫН, ТЕЛ, ЛВК, НАР, ИНТ, МОЩ, ОБР (классика: 3d6×5) и Удачу (3d6×5). ПЗ, ПМ, Рассудок, Скорость, Бонус к урону и Комплекция посчитаются сами. Затем выберите род занятий — очки профессии и нужные навыки отметятся автоматически.",
+    },
+    {
+      n: "III",
+      title: "Навыки: вложите очки",
+      text: "Очки профессии — только в отмеченные ☐ навыки; личные (ИНТ×2) — в любые. Клик по итогу = проверка d100 с уровнями ½ и ⅕. Провал можно исправить удачей: −1/−5/−10 прямо в печати результата.",
+    },
+    {
+      n: "IV",
+      title: "Остальные вкладки",
+      text: "«Бой» — оружие с авторасчётом уровней и броском 🎲; «Биография» — 10 полей предыстории; «Имущество» — деньги и рюкзак (автозаполнение по Средствам); «Заметки» — журнал расследования.",
+    },
+    {
+      n: "V",
+      title: "Портрет и печать",
+      text: "Вклейте портрет в «Досье» (до 5 дел — фото сожмётся само). Перед игрой жмите «🖨 Печать» — Хранитель получит машинописный бланк 1920-х. Журнал бросков прячется за 🕘.",
+    },
+  ];
+  return (
+    <motion.div
+      id="coc-help-panel"
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45 }}
+      className="coc-panel p-5 md:p-6 max-w-2xl mx-auto text-left space-y-3"
+    >
+      <h2 className="coc-display text-sm tracking-[0.25em] uppercase text-[#a4977c] text-center">
+        Наставления архива
+      </h2>
+      <ol className="space-y-3">
+        {steps.map((s) => (
+          <li key={s.n} className="flex gap-3 items-start">
+            <span
+              className="coc-display shrink-0 w-8 h-8 flex items-center justify-center rounded-full border text-[#9a7d3e] text-xs"
+              style={{ borderColor: "#322a1c", background: "rgba(0,0,0,0.3)" }}
+              aria-hidden
+            >
+              {s.n}
+            </span>
+            <div>
+              <p className="coc-display text-xs tracking-[0.15em] uppercase text-[#c0a05a]">{s.title}</p>
+              <p className="text-xs leading-relaxed text-[#a4977c] mt-0.5">{s.text}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <p className="coc-hint text-center pt-1">
+        Проверки Рассудка и Удачи не улучшаются удачей — таков закон.
+      </p>
+    </motion.div>
   );
 }
 

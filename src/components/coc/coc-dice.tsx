@@ -7,6 +7,24 @@ import { checkLevel, CHECK_LEVEL_RU, rollD100, CheckLevel } from "@/lib/coc-calc
 const ROLL_EVENT = "coc-roll-made";
 const HISTORY_KEY = "coc-roll-history";
 
+/* ===== Поставщик удачи =====
+ * Редактор листа регистрирует, сколько удачи на руках и как её списать.
+ * Панель бросков читает это при провале — правила 7e позволяют улучшать
+ * проваленный бросок, тратя удачу (кроме проверок Рассудка и самой Удачи). */
+interface LuckProvider {
+  available: () => number;
+  spend: (n: number) => void;
+}
+let luckProvider: LuckProvider | null = null;
+export function setLuckProvider(p: LuckProvider | null) {
+  luckProvider = p;
+}
+
+function luckUsable(label: string): boolean {
+  const t = label.toLowerCase();
+  return !t.includes("рассудк") && !t.includes("удач");
+}
+
 export interface RollRecord {
   id: number;
   label: string;
@@ -41,13 +59,140 @@ export function publishRoll(rec: Omit<RollRecord, "id">) {
   } catch {}
 }
 
-/** Бросок d100 с уровнями успеха — результат всплывает печатью судьбы. */
+/** Бросок d100 с уровнями успеха — результат всплывает печатью судьбы.
+ *  При провале можно утрясти удачу: списываем очки, бросок улучшается. */
 export function rollSkillCheck(name: string, value: number) {
   const roll = rollD100();
   const level = checkLevel(roll, value);
   publishRoll({ label: name, roll, value, level, kind: "check" });
-  showCheckResult(name, roll, value, level);
+  const luck = luckProvider?.available() || 0;
+  if ((level === "fail" || level === "fumble") && luck > 0 && luckUsable(name) && luckProvider) {
+    toast.custom(
+      () => (
+        <LuckSpendToast
+          name={name}
+          roll={roll}
+          value={value}
+          maxLuck={luck}
+          onSpend={luckProvider!.spend}
+        />
+      ),
+      { duration: 15000 }
+    );
+  } else {
+    showCheckResult(name, roll, value, level);
+  }
   return { roll, level };
+}
+
+const LUCK_STEPS = [1, 5, 10];
+
+/** Интерактивная печать провала: потратьте удачу — и судьба взглянет иначе. */
+function LuckSpendToast({
+  name,
+  roll,
+  value,
+  maxLuck,
+  onSpend,
+}: {
+  name: string;
+  roll: number;
+  value: number;
+  maxLuck: number;
+  onSpend: (n: number) => void;
+}) {
+  const [spent, setSpent] = useState(0);
+  const [done, setDone] = useState(false);
+  const effective = roll - spent;
+  const level = checkLevel(effective, value);
+  const success = level !== "fail" && level !== "fumble";
+  const remaining = maxLuck - spent;
+
+  const spend = (n: number) => {
+    const newSpent = spent + n;
+    const newLevel = checkLevel(roll - newSpent, value);
+    setSpent(newSpent);
+    onSpend(n);
+    if (newLevel !== "fail" && newLevel !== "fumble") {
+      setDone(true);
+      publishRoll({
+        label: `${name} · удача −${newSpent}`,
+        roll: roll - newSpent,
+        value,
+        level: newLevel,
+        kind: "check",
+      });
+      toast.success(`Удача потрачена: −${newSpent} → ${CHECK_LEVEL_RU[newLevel]}`, {
+        description: `${name}: ${roll} → ${roll - newSpent} из ${value}`,
+        duration: 6000,
+      });
+    }
+  };
+
+  const color =
+    level === "critical" || level === "extreme"
+      ? "#7fc39a"
+      : level === "hard"
+        ? "#b9cfa4"
+        : level === "regular"
+          ? "#d8cbb0"
+          : level === "fail"
+            ? "#c98f6a"
+            : "#a83232";
+
+  return (
+    <div
+      className="coc-panel px-4 py-3 space-y-2.5"
+      style={{ minWidth: 300, boxShadow: "0 14px 40px rgba(0,0,0,0.75)" }}
+      aria-label="Проверка с попыткой потратить удачу"
+    >
+      <div className="flex items-center gap-4">
+        <div className="text-center">
+          <div className="coc-mono text-2xl font-bold" style={{ color }}>
+            {effective}
+          </div>
+          <div className="coc-label" style={{ fontSize: "0.55rem" }}>
+            из {value}
+          </div>
+        </div>
+        <div className="w-px self-stretch" style={{ background: "var(--coc-line)" }} />
+        <div className="flex-1">
+          <div className="coc-display text-sm" style={{ color }}>
+            {CHECK_LEVEL_RU[level]}
+          </div>
+          <div className="coc-hint">{name}{spent > 0 ? ` · бросок был ${roll}` : ""}</div>
+        </div>
+      </div>
+      {!success && !done && (
+        <div className="flex items-center gap-1.5 pt-0.5">
+          <span className="coc-mono text-[0.6rem] text-[#7fc39a] uppercase tracking-widest shrink-0">
+            Удача ({remaining}):
+          </span>
+          {LUCK_STEPS.filter((n) => n <= remaining).map((n) => (
+            <button
+              key={n}
+              onClick={() => spend(n)}
+              className="coc-luck-btn text-[0.62rem] px-1.5 py-1 rounded border transition-all hover:scale-105"
+              style={{
+                borderColor: "#2e4a3a",
+                color: "#7fc39a",
+                background: "rgba(0,0,0,0.35)",
+              }}
+              title={`Потратить ${n} удачи: бросок ${roll - spent} → ${roll - spent - n}`}
+            >
+              −{n}
+            </button>
+          ))}
+          <span className="coc-hint !text-[0.58rem] ml-auto">успех за удачу</span>
+        </div>
+      )}
+      {(success || done) && (
+        <p className="coc-hint !text-[0.6rem]">
+          {spent > 0 ? `Списано удачи: ${spent}. Записано в журнал бросков.` : ""}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function showCheckResult(name: string, roll: number, value: number, level: CheckLevel) {

@@ -667,3 +667,119 @@ select.coc-input option { background: #141109; color: var(--coc-bone); }
   color: var(--coc-blood-bright);
 }
 .coc-sanlog[open] summary::before { content: "▾ "; }
+
+/* ============================================================
+   Раунд 4: детали и мелочи ремесла
+   ============================================================ */
+
+/* Уголки-держатели фотографии — как в деле сыщика */
+.coc-portrait::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, #171310 48%, transparent 48%) top left / 13px 13px no-repeat,
+    linear-gradient(45deg, #171310 48%, transparent 48%) top right / 13px 13px no-repeat,
+    linear-gradient(-45deg, #171310 48%, transparent 48%) bottom right / 13px 13px no-repeat,
+    linear-gradient(225deg, #171310 48%, transparent 48%) bottom left / 13px 13px no-repeat;
+  opacity: 0.9;
+}
+/* лёгкая потёртость фотобумаги */
+.coc-portrait::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(160deg, rgba(255, 244, 214, 0.06), transparent 35%, rgba(0, 0, 0, 0.28));
+  mix-blend-mode: overlay;
+}
+
+/* Печать статуса сохранения — штамп канцелярии архива */
+.coc-save-stamp {
+  font-family: var(--coc-font-mono), monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 2px 7px 1px;
+  border: 1px solid var(--coc-line);
+  border-radius: 3px;
+  color: var(--coc-ash);
+  opacity: 0.75;
+  animation: coc-stamp-in 0.28s ease-out;
+  transform: rotate(-1.2deg);
+  user-select: none;
+}
+.coc-save-stamp.is-saved {
+  color: var(--coc-verdigris);
+  border-color: rgba(95, 143, 110, 0.55);
+  text-shadow: 0 0 8px rgba(95, 143, 110, 0.4);
+  opacity: 0.95;
+}
+.coc-save-stamp.is-error {
+  color: var(--coc-blood-bright);
+  border-color: var(--coc-blood);
+  text-shadow: 0 0 8px rgba(168, 50, 50, 0.45);
+  opacity: 1;
+}
+@keyframes coc-stamp-in {
+  0% { transform: rotate(-4deg) scale(1.45); opacity: 0; filter: blur(1px); }
+  60% { transform: rotate(-1.2deg) scale(0.96); opacity: 1; filter: blur(0); }
+  100% { transform: rotate(-1.2deg) scale(1); opacity: 1; }
+}
+
+/* Появление диалога конфликта версий */
+.coc-conflict-pop {
+  animation: coc-conflict-in 0.3s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+@keyframes coc-conflict-in {
+  from { transform: translateY(14px) scale(0.96); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Подшитый корешок у карточки дела: строчка стежков слева */
+.coc-case::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(154, 125, 62, 0.45) 0 3px,
+    transparent 3px 13px
+  );
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 1;
+}
+.coc-case > div { padding-left: 18px; }
+
+/* Фокус с клавиатуры — виден на всех интерактивных элементах архива */
+.coc-btn:focus-visible,
+.coc-input:focus-visible,
+.coc-mini-input:focus-visible,
+.coc-stat-input:focus-visible,
+.coc-tab:focus-visible,
+.coc-case:focus-visible,
+.coc-move-btn:focus-visible {
+  outline: 2px solid rgba(95, 143, 110, 0.75);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px rgba(95, 143, 110, 0.12);
+}
+.coc-skill-row:focus-within {
+  background: rgba(95, 143, 110, 0.05);
+}
+
+/* Кнопки траты удачи в печати результата */
+.coc-luck-btn {
+  font-family: var(--coc-font-mono), monospace;
+}
+.coc-luck-btn:hover {
+  background: rgba(95, 143, 110, 0.15) !important;
+  border-color: #7fc39a !important;
+}
