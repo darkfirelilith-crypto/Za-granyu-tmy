@@ -99,6 +99,10 @@ export function CocPrintSheet({ data, derived }: { data: CocSheetData; derived: 
             <span className="coc-print-cell-value">{data.trackers.luckCurrent ?? Math.max(0, Math.floor(Number(c.luck) || 0))}</span>
           </div>
           <div className="coc-print-cell">
+            <span className="coc-print-cell-label">Вдохновение</span>
+            <span className="coc-print-cell-value">{data.trackers.inspiration ?? 0}</span>
+          </div>
+          <div className="coc-print-cell">
             <span className="coc-print-cell-label">Скорость</span>
             <span className="coc-print-cell-value">{derived.mov}</span>
           </div>
@@ -195,7 +199,7 @@ export function CocPrintSheet({ data, derived }: { data: CocSheetData; derived: 
               <b>Рюкзак:</b>{" "}
               {data.gear
                 .filter((g) => g.name?.trim())
-                .map((g) => `${g.name}${g.qty && g.qty !== "1" ? ` ×${g.qty}` : ""}`)
+                .map((g) => `${g.name}${g.qty && g.qty !== "1" ? ` ×${g.qty}` : ""}${g.note?.trim() ? ` (${g.note.trim()})` : ""}`)
                 .join(" · ")}
             </p>
           )}

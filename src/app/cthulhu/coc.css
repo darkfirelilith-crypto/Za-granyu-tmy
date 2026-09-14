@@ -102,6 +102,14 @@
 
 textarea.coc-input { resize: vertical; min-height: 60px; line-height: 1.5; font-family: var(--coc-font-body), Georgia, serif; }
 
+/* Авторасширяющаяся textarea: текст растягивает поле, а не прокручивается внутри */
+textarea.coc-autogrow {
+  resize: none;
+  overflow: hidden;
+  min-height: 0;
+  max-height: none;
+}
+
 select.coc-input { appearance: none; cursor: pointer; }
 select.coc-input option { background: #141109; color: var(--coc-bone); }
 

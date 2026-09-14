@@ -101,6 +101,7 @@ export interface CocTrackers {
   sanCurrent: number | null;
   luckCurrent: number | null;
   lastSanLoss: number; // последняя единовременная потеря рассудка (для безумия)
+  inspiration?: number; // счётчик Вдохновений — ведёт сам сыщик (крит. успех 01 даёт ✦)
 }
 
 export interface CocSheetData {
@@ -179,6 +180,7 @@ export function createEmptySheet(name = "Новый сыщик"): CocSheetData {
       mpCurrent: null, mpBonus: 0,
       sanCurrent: null, luckCurrent: null,
       lastSanLoss: 0,
+      inspiration: 0,
     },
     notes: [],
     sanLog: [],

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   CocSheetData,
@@ -16,6 +16,56 @@ interface SectionProps {
   data: CocSheetData;
   mutate: (fn: (draft: CocSheetData) => void) => void;
   derived: DerivedStats;
+}
+
+/* ============================================================
+   Авторасширяющаяся textarea: текст растягивает поле,
+   а не прокручивается внутри него.
+   ============================================================ */
+
+export function AutoTextarea({
+  value,
+  onChange,
+  className = "",
+  placeholder,
+  ariaLabel,
+  minHeight = 96,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  className?: string;
+  placeholder?: string;
+  ariaLabel?: string;
+  minHeight?: number;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const resize = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "0px"; // сброс — чтобы scrollHeight пересчитался от содержимого
+    el.style.height = `${Math.max(minHeight, el.scrollHeight)}px`;
+  };
+
+  useLayoutEffect(resize, [value]);
+
+  useEffect(() => {
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+
+  return (
+    <textarea
+      ref={ref}
+      className={`coc-input coc-autogrow ${className}`}
+      style={{ height: minHeight }}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      rows={1}
+    />
+  );
 }
 
 /* ============================================================
@@ -280,18 +330,17 @@ export function BioSection({ data, mutate }: Omit<SectionProps, "derived">) {
     <div className="coc-panel">
       <div className="coc-panel-head">
         <h2 className="coc-display text-sm tracking-[0.2em] uppercase text-[#a4977c]">Биография</h2>
-        <span className="coc-hint ml-auto hidden sm:inline">предыстория, что делает сыщика живым</span>
+        <span className="coc-hint ml-auto hidden sm:inline">предыстория, что делает сыщика живым · поля растут под текст</span>
       </div>
       <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         {BIO_FIELDS.map((f) => (
           <div key={f.key} className="space-y-1">
             <label className="coc-label">{f.label}</label>
-            <textarea
-              className="coc-input min-h-[96px]"
+            <AutoTextarea
               value={data.bio[f.key]}
-              onChange={(e) => mutate((d) => { d.bio[f.key] = e.target.value; })}
+              onChange={(v) => mutate((d) => { d.bio[f.key] = v; })}
               placeholder={f.hint}
-              aria-label={f.label}
+              ariaLabel={f.label}
             />
           </div>
         ))}
@@ -309,6 +358,9 @@ export function GearSection({ data, mutate, derived }: SectionProps) {
   const creditValue = creditSkill ? skillTotal(creditSkill) : skillBase({ key: "creditRating", name: "", occ: 0, pers: 0, improv: 0, isOccupation: false });
   const fin = financeByCredit(creditValue);
   const [newItem, setNewItem] = useState({ name: "", qty: "1", note: "" });
+  // какие карточки развернуты (заметка видна) — состояние только интерфейса
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const toggleExpanded = (id: string) => setExpanded((p) => ({ ...p, [id]: !p[id] }));
 
   const addItem = () => {
     const name = newItem.name.trim();
@@ -377,43 +429,81 @@ export function GearSection({ data, mutate, derived }: SectionProps) {
           {data.gear.length === 0 ? (
             <p className="text-center py-6 coc-hint">Рюкзак пуст. Даже фонаря нет. Мрачное начало.</p>
           ) : (
-            <ul className="space-y-1.5 max-h-96 overflow-y-auto coc-scroll pr-1">
-              {data.gear.map((g) => (
-                <li key={g.id} className="rounded border border-[#262015] bg-black/20 p-2 grid grid-cols-[auto_56px_minmax(0,1fr)_auto] gap-2 items-center">
-                  <span className="text-[#5f8f6e] text-xs select-none">◈</span>
-                  <input
-                    className="coc-mini-input !text-left"
-                    value={g.qty}
-                    onChange={(e) => mutate((d) => { const t = d.gear.find((x) => x.id === g.id); if (t) t.qty = e.target.value; })}
-                    aria-label={`Количество: ${g.name}`}
-                  />
-                  <div className="min-w-0">
-                    <input
-                      className="coc-input !py-1 !border-transparent !bg-transparent text-sm"
-                      value={g.name}
-                      onChange={(e) => mutate((d) => { const t = d.gear.find((x) => x.id === g.id); if (t) t.name = e.target.value; })}
-                      aria-label="Название предмета"
-                    />
-                    <input
-                      className="coc-input !py-0.5 !border-transparent !bg-transparent text-xs text-[#a4977c]"
-                      value={g.note}
-                      placeholder="заметка…"
-                      onChange={(e) => mutate((d) => { const t = d.gear.find((x) => x.id === g.id); if (t) t.note = e.target.value; })}
-                      aria-label={`Заметка: ${g.name}`}
-                    />
-                  </div>
-                  <button
-                    onClick={() => mutate((d) => { d.gear = d.gear.filter((x) => x.id !== g.id); })}
-                    className="text-[#a83232] hover:text-[#cf6a6a] px-1"
-                    title="Выбросить"
-                    aria-label={`Убрать ${g.name}`}
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-96 overflow-y-auto coc-scroll pr-1 items-start">
+              {data.gear.map((g) => {
+                const hasNote = !!(g.note && g.note.trim());
+                const isOpen = !!expanded[g.id];
+                return (
+                  <li
+                    key={g.id}
+                    className={`rounded border p-2 transition-colors ${
+                      isOpen
+                        ? "border-[#5f8f6e]/40 bg-[#5f8f6e]/[0.04]"
+                        : hasNote
+                          ? "border-[#9a7d3e]/35 bg-black/20"
+                          : "border-[#262015] bg-black/20"
+                    }`}
                   >
-                    ✕
-                  </button>
-                </li>
-              ))}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[#5f8f6e] text-xs select-none shrink-0" title="Предмет">◈</span>
+                      <input
+                        className="coc-mini-input !text-left !w-11 shrink-0"
+                        value={g.qty}
+                        onChange={(e) => mutate((d) => { const t = d.gear.find((x) => x.id === g.id); if (t) t.qty = e.target.value; })}
+                        aria-label={`Количество: ${g.name}`}
+                        title="Количество"
+                      />
+                      <input
+                        className="coc-input !py-1 !border-transparent !bg-transparent text-sm min-w-0 flex-1"
+                        value={g.name}
+                        onChange={(e) => mutate((d) => { const t = d.gear.find((x) => x.id === g.id); if (t) t.name = e.target.value; })}
+                        aria-label="Название предмета"
+                        placeholder="Название…"
+                      />
+                      <button
+                        onClick={() => toggleExpanded(g.id)}
+                        className={`shrink-0 coc-mono text-[0.68rem] px-1.5 py-1 rounded border transition-colors ${
+                          hasNote
+                            ? isOpen
+                              ? "text-[#7fc39a] border-[#2e4a3a] bg-[#5f8f6e]/10"
+                              : "text-[#c0a05a] border-[#9a7d3e]/40 hover:border-[#9a7d3e] hover:text-[#d8b46a]"
+                            : "text-[#4a4234] border-[#262015] hover:text-[#5f8f6e] hover:border-[#2e4a3a]"
+                        }`}
+                        title={hasNote ? (isOpen ? "Свернуть заметку" : `Развернуть заметку: ${g.note}`) : "Добавить заметку"}
+                        aria-label={hasNote ? (isOpen ? `Свернуть заметку: ${g.name}` : `Развернуть заметку: ${g.name}`) : `Добавить заметку: ${g.name}`}
+                        aria-expanded={hasNote ? isOpen : undefined}
+                      >
+                        {hasNote ? (isOpen ? "✎ ▴" : "✎ ▾") : "+ ✎"}
+                      </button>
+                      <button
+                        onClick={() => mutate((d) => { d.gear = d.gear.filter((x) => x.id !== g.id); })}
+                        className="text-[#a83232] hover:text-[#cf6a6a] px-1 shrink-0"
+                        title="Выбросить"
+                        aria-label={`Убрать ${g.name}`}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    {isOpen && (
+                      <div className="mt-1.5 pl-5">
+                        <AutoTextarea
+                          value={g.note || ""}
+                          onChange={(v) => mutate((d) => { const t = d.gear.find((x) => x.id === g.id); if (t) t.note = v; })}
+                          placeholder="заметка: где лежит, зачем нужно, сколько зарядов…"
+                          ariaLabel={`Заметка: ${g.name}`}
+                          minHeight={44}
+                          className="!text-xs !py-1.5 italic"
+                        />
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
+          <p className="coc-hint mt-2">
+            ✎ — заметка: разверните карточку, чтобы прочитать или дописать · на широком экране карточки стоят в две колонки.
+          </p>
         </div>
 
         <div className="p-3 border-t border-[#262015] flex flex-wrap items-center gap-2">
@@ -483,12 +573,12 @@ export function NotesSection({ data, mutate }: Omit<SectionProps, "derived">) {
             onChange={(e) => setDraft((p) => ({ ...p, title: e.target.value }))}
             aria-label="Заголовок заметки"
           />
-          <textarea
-            className="coc-input min-h-[140px]"
-            placeholder="Что выяснилось этой ночью…"
+          <AutoTextarea
             value={draft.content}
-            onChange={(e) => setDraft((p) => ({ ...p, content: e.target.value }))}
-            aria-label="Текст заметки"
+            onChange={(v) => setDraft((p) => ({ ...p, content: v }))}
+            placeholder="Что выяснилось этой ночью…"
+            ariaLabel="Текст заметки"
+            minHeight={140}
           />
           <button onClick={addNote} className="coc-btn coc-btn-verdigris w-full">
             Сделать запись в журнале
@@ -527,11 +617,12 @@ export function NotesSection({ data, mutate }: Omit<SectionProps, "derived">) {
                   ✕
                 </button>
               </div>
-              <textarea
-                className="coc-input !border-[#262015] min-h-[110px] leading-relaxed"
+              <AutoTextarea
                 value={n.content}
-                onChange={(e) => mutate((d) => { const t = d.notes.find((x) => x.id === n.id); if (t) t.content = e.target.value; })}
-                aria-label="Текст записи"
+                onChange={(v) => mutate((d) => { const t = d.notes.find((x) => x.id === n.id); if (t) t.content = v; })}
+                ariaLabel="Текст записи"
+                minHeight={110}
+                className="!border-[#262015] leading-relaxed"
               />
             </article>
           ))

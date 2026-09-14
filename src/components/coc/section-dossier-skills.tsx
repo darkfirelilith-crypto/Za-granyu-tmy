@@ -48,6 +48,7 @@ export function DossierSection({ data, mutate, derived }: SectionProps) {
   const luckCurrent = trackers.luckCurrent ?? c.luck;
   const hpCurrent = trackers.hpCurrent ?? hpMax;
   const mpCurrent = trackers.mpCurrent ?? mpMax;
+  const inspiration = trackers.inspiration ?? 0;
 
   const occ = OCCUPATIONS.find((o) => o.id === info.occupation);
   const occPts = occupationPoints(data);
@@ -518,6 +519,59 @@ export function DossierSection({ data, mutate, derived }: SectionProps) {
                 Проверить d100
               </button>
             </div>
+          </div>
+
+          {/* Вдохновение — счётчик, который ведёт сам сыщик */}
+          <div className="rounded border border-[#9a7d3e]/30 bg-[#9a7d3e]/5 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="coc-display text-xs tracking-[0.15em] text-[#c0a05a]">Вдохновение</span>
+              <span className="coc-hint">значение ведёт сам сыщик</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => mutate((d) => { d.trackers.inspiration = Math.max(0, (d.trackers.inspiration ?? 0) - 1); })}
+                className="coc-mono w-8 h-8 shrink-0 rounded border border-[#262015] text-[#9a7d3e] hover:text-[#d8b46a] hover:border-[#9a7d3e]/50 transition-colors"
+                title="Потратить Вдохновение (−1)"
+                aria-label="Потратить Вдохновение"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                min={0}
+                max={99}
+                value={trackers.inspiration ?? 0}
+                onChange={(e) => mutate((d) => { d.trackers.inspiration = clamp99(e.target.value); })}
+                className="coc-stat-input !text-[#c0a05a] !w-16 text-center"
+                aria-label="Счётчик Вдохновений"
+                title="Впишите своё значение"
+              />
+              <button
+                onClick={() => mutate((d) => { d.trackers.inspiration = Math.min(99, (d.trackers.inspiration ?? 0) + 1); })}
+                className="coc-mono w-8 h-8 shrink-0 rounded border border-[#262015] text-[#9a7d3e] hover:text-[#d8b46a] hover:border-[#9a7d3e]/50 transition-colors"
+                title="Записать Вдохновение (+1)"
+                aria-label="Записать Вдохновение"
+              >
+                +
+              </button>
+              <div className="flex-1 flex flex-wrap items-center gap-1 justify-end select-none min-w-0" aria-hidden="true">
+                {inspiration > 0 ? (
+                  <>
+                    {Array.from({ length: Math.min(inspiration, 8) }).map((_, i) => (
+                      <span key={i} className="text-[#c0a05a] text-xs leading-none" style={{ textShadow: "0 0 8px rgba(192,160,90,0.5)" }}>✦</span>
+                    ))}
+                    {inspiration > 8 && (
+                      <span className="coc-mono text-[0.62rem] text-[#9a7d3e]">×{inspiration}</span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-[#322a1c] text-xs leading-none">✧</span>
+                )}
+              </div>
+            </div>
+            <p className="coc-hint !text-[0.6rem]">
+              Впишите вручную: критический успех (01) при проверке даёт ✦ — потратьте Вдохновение на повторный бросок.
+            </p>
           </div>
 
           {/* Производные боевые */}
