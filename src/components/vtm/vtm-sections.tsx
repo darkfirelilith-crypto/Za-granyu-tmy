@@ -563,6 +563,11 @@ export function DossierSection({
                 {derived.bpRow.feedingPenalty !== "—" ? ` · кормление: ${derived.bpRow.feedingPenalty}` : ""}
               </p>
             </div>
+
+            <div className="vtm-divider text-[0.6rem]"><span>🖋</span></div>
+
+            {/* Опыт и журнал */}
+            <XpBlock data={data} mutate={mutate} />
           </div>
         </div>
 
@@ -916,6 +921,101 @@ function CustomSkills({
         />
         <button className="vtm-btn shrink-0" onClick={add} disabled={!name.trim()}>+ Добавить</button>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// ОПЫТ: свободный/вложенный + журнал изменений
+// ============================================================
+
+/** Маленькая кнопка управления опытом (вне рендера — по правилам хуков). */
+function XpBtn({ children, onClick, title, disabled }: { children: React.ReactNode; onClick: () => void; title: string; disabled?: boolean }) {
+  return (
+    <button
+      className="vtm-btn vtm-btn-ghost !py-0.5 !px-1.5 !text-[0.6rem] font-bold"
+      onClick={onClick}
+      title={title}
+      disabled={disabled}
+    >
+      {children}
+    </button>
+  );
+}
+
+function XpBlock({
+  data,
+  mutate,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (draft: VtmSheetData) => void) => void;
+}) {
+  const logXp = (d: VtmSheetData, text: string) => {
+    d.xpLog = [
+      { id: `xp-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e5).toString(36)}`, text, ts: new Date().toISOString() },
+      ...d.xpLog,
+    ].slice(0, 40);
+  };
+
+  const gain = (n: number) =>
+    mutate((d) => {
+      d.trackers.xp = Math.max(0, d.trackers.xp + n);
+      logXp(d, `+${n} опыт — свободно ${d.trackers.xp}`);
+    });
+
+  const refund = (n: number) =>
+    mutate((d) => {
+      d.trackers.xp = Math.max(0, d.trackers.xp - n);
+      logXp(d, `−${n} свободного опыта (возврат/ошибка) — свободно ${d.trackers.xp}`);
+    });
+
+  const spend = (n: number) =>
+    mutate((d) => {
+      if (d.trackers.xp < n) return;
+      d.trackers.xp -= n;
+      d.trackers.xpSpent += n;
+      logXp(d, `потрачено ${n} опыта — впишите покупку в Заметки · свободно ${d.trackers.xp}, вложено ${d.trackers.xpSpent}`);
+    });
+
+  const unspend = (n: number) =>
+    mutate((d) => {
+      d.trackers.xpSpent = Math.max(0, d.trackers.xpSpent - n);
+      d.trackers.xp += n;
+      logXp(d, `возврат ${n} опыта из вложенного — свободно ${d.trackers.xp}, вложено ${d.trackers.xpSpent}`);
+    });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+        <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Опыт</span>
+        <span className="vtm-hint !text-[0.6rem]">
+          свободно <b className="text-[#d6a840]">{data.trackers.xp}</b> · вложено <b className="text-[#a68d80]">{data.trackers.xpSpent}</b>
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-1">
+        <XpBtn onClick={() => gain(1)} title="Получен 1 опыт">+1</XpBtn>
+        <XpBtn onClick={() => gain(3)} title="Получено 3 опыта">+3</XpBtn>
+        <XpBtn onClick={() => gain(5)} title="Получено 5 опыта">+5</XpBtn>
+        <span className="text-[#3d1a20] select-none" aria-hidden>|</span>
+        <XpBtn onClick={() => spend(1)} title="Потратить 1 опыта" disabled={data.trackers.xp < 1}>−1</XpBtn>
+        <XpBtn onClick={() => spend(5)} title="Потратить 5 опыта" disabled={data.trackers.xp < 5}>−5</XpBtn>
+        <XpBtn onClick={() => spend(10)} title="Потратить 10 опыта" disabled={data.trackers.xp < 10}>−10</XpBtn>
+        <span className="text-[#3d1a20] select-none" aria-hidden>|</span>
+        <XpBtn onClick={() => refund(1)} title="Откатить 1 свободного" disabled={data.trackers.xp < 1}>↺1</XpBtn>
+        <XpBtn onClick={() => unspend(5)} title="Вернуть 5 вложенных в свободные" disabled={data.trackers.xpSpent < 5}>⌂5</XpBtn>
+      </div>
+      {data.xpLog.length > 0 && (
+        <div className="mt-2 max-h-24 overflow-y-auto vtm-scroll pr-1" aria-label="Журнал опыта">
+          {data.xpLog.slice(0, 8).map((e) => (
+            <p key={e.id} className="vtm-roll-row !text-[0.6rem]">
+              {new Date(e.ts).toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · {e.text}
+            </p>
+          ))}
+        </div>
+      )}
+      <p className="vtm-hint mt-1.5 !text-[0.6rem]">
+        Цены: характеристика 5×ур · навык 3×ур · специализация 3 · Дисциплина 6×ур · сила Дисциплины 3×ур · Человечность 2×ур.
+      </p>
     </div>
   );
 }

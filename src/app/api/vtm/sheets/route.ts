@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireLiveUser } from "@/lib/session";
-import { MAX_SHEETS } from "@/lib/vtm-data";
+import { MAX_SHEETS, normalizeSheet } from "@/lib/vtm-data";
 import { VTM_TEMPLATES, buildTemplateSheet } from "@/lib/vtm-templates";
+import { buildRandomSheet } from "@/lib/vtm-random";
 
 const UNAUTHORIZED = { error: "Сессия недействительна — войдите заново" };
 
@@ -39,12 +40,14 @@ export async function GET() {
 }
 
 /** POST — создать новый лист (не более 5 на пользователя).
- *  Тело: { name?: string, template?: string } — template это id заготовки
- *  из VTM_TEMPLATES («выброшенный из могилы» вампир) или не задан для пустого листа. */
+ *  Тело: { name?: string, template?: string, preset?: unknown } — template это id
+ *  заготовки из VTM_TEMPLATES или "random" (случайный Сородич). Для "random"
+ *  можно передать preset — ранее сгенерированный на /api/vtm/random предпросмотр,
+ *  который игрок принял («Принять кровь»). */
 export async function POST(req: NextRequest) {
   const session = await requireLiveUser();
   if (!session) return NextResponse.json(UNAUTHORIZED, { status: 401 });
-  let body: { name?: string; template?: string } = {};
+  let body: { name?: string; template?: string; preset?: unknown } = {};
   try {
     body = await req.json();
   } catch {
@@ -61,7 +64,12 @@ export async function POST(req: NextRequest) {
   const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : undefined;
   let data: unknown = undefined;
   let tplName: string | undefined = undefined;
-  if (body.template) {
+  if (body.template === "random") {
+    // принимаем решение Крови: либо присланный preset (предпросмотр), либо свежий бросок
+    const parsed = body.preset ? normalizeSheet(body.preset) : buildRandomSheet();
+    data = parsed;
+    tplName = parsed.info.name || "Случайный Сородич";
+  } else if (body.template) {
     const tpl = VTM_TEMPLATES.find((t) => t.id === body.template);
     if (!tpl) return NextResponse.json({ error: "Неизвестная заготовка" }, { status: 400 });
     data = buildTemplateSheet(tpl.id);

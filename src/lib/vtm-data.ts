@@ -109,6 +109,7 @@ export interface VtmSheetData {
   };
   trackers: VtmTrackers;
   rollLog: { id: string; text: string; ts: string }[];
+  xpLog: { id: string; text: string; ts: string }[]; // журнал опыта (получено/потрачено)
 }
 
 // ---------- Характеристики ----------
@@ -999,6 +1000,7 @@ export function emptySheet(): VtmSheetData {
       xpSpent: 0,
     },
     rollLog: [],
+    xpLog: [],
   };
 }
 
@@ -1166,6 +1168,18 @@ export function normalizeSheet(input: unknown): VtmSheetData {
       .slice(0, 60)
       .map((r: any, idx: number) => ({
         id: asString(r.id) || `roll-${idx}`,
+        text: asString(r.text),
+        ts: asString(r.ts),
+      }));
+  }
+
+  // xp log (обратная совместимость: старые листы без журнала опыта)
+  if (Array.isArray(raw.xpLog)) {
+    base.xpLog = raw.xpLog
+      .filter((r: any) => r && typeof r === "object")
+      .slice(0, 40)
+      .map((r: any, idx: number) => ({
+        id: asString(r.id) || `xp-${idx}`,
         text: asString(r.text),
         ts: asString(r.ts),
       }));

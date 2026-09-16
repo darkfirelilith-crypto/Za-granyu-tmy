@@ -75,6 +75,11 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
   const conflictRef = useRef<ConflictInfo | null>(null);
   const syncedAtRef = useRef<string | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
+  // Сериализация автосейва: пока один PUT в полёте, следующие правки копятся в
+  // pendingSaveRef и уходят ОДНИ сохранением после ответа. Иначе два параллельных
+  // PUT на медленном Neon дают ложный 409 (второй шлёт устаревший baseUpdatedAt).
+  const inFlightRef = useRef(false);
+  const pendingSaveRef = useRef<{ payload: VtmSheetData; name: string; opts?: { force?: boolean } } | null>(null);
   statusRef.current = status;
   conflictRef.current = conflict;
 
@@ -92,6 +97,12 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
   const save = useCallback(
     async (payload: VtmSheetData, name: string, opts?: { force?: boolean }) => {
       if (conflictRef.current && !opts?.force) return;
+      // Уже идёт сохранение — запоминаем последнюю версию данных, отправим после ответа
+      if (inFlightRef.current) {
+        pendingSaveRef.current = { payload, name, opts };
+        return;
+      }
+      inFlightRef.current = true;
       setStatus("saving");
       try {
         const res = await vtmFetch(`/api/vtm/sheets/${sheetId}`, {
@@ -107,6 +118,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
         if (res.status === 409) {
           const j = await res.json().catch(() => ({}));
           if (timerRef.current) clearTimeout(timerRef.current);
+          pendingSaveRef.current = null; // конфликт решает игрок — очередь сбрасываем
           setConflict({
             serverUpdatedAt: j.serverUpdatedAt || new Date().toISOString(),
             serverData: normalizeSheet(j.serverData || {}),
@@ -126,6 +138,14 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
       } catch (e: any) {
         setStatus("error");
         toast.error("Кровь не приняла запись", { description: e.message });
+      } finally {
+        inFlightRef.current = false;
+        const queued = pendingSaveRef.current;
+        pendingSaveRef.current = null;
+        if (queued) {
+          // догоняющее сохранение с последней версией данных и свежим baseUpdatedAt
+          void save(queued.payload, queued.name, queued.opts);
+        }
       }
     },
     [sheetId, qc]

@@ -514,6 +514,83 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 }
 .vtm-move-btn:hover { color: var(--vtm-gold-bright); border-color: var(--vtm-gold); }
 
+/* ---------- Карточка «Пусть Кровь решит» ---------- */
+
+.vtm-template-random {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(194, 43, 48, 0.5);
+  background:
+    radial-gradient(ellipse 60% 120% at 20% 0%, rgba(194, 43, 48, 0.14), transparent 60%),
+    radial-gradient(ellipse 60% 120% at 80% 100%, rgba(138, 26, 29, 0.18), transparent 60%),
+    linear-gradient(165deg, var(--vtm-panel-2), var(--vtm-panel));
+  padding-top: 1.4rem;
+  padding-bottom: 1.4rem;
+}
+.vtm-template-random::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(194, 43, 48, 0.25);
+  border-radius: 7px;
+  pointer-events: none;
+}
+.vtm-template-random .vtm-template-title {
+  font-size: 1.2rem;
+  color: #e8636b;
+}
+
+.vtm-random-dice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.vtm-random-dice .die { display: inline-block; }
+.vtm-random-dice .die-a { animation: vtm-tumble-a 2.6s ease-in-out infinite; }
+.vtm-random-dice .die-b { animation: vtm-tumble-b 3.1s ease-in-out infinite; }
+.vtm-random-dice .drop {
+  display: inline-block;
+  animation: vtm-drip 2.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(194, 43, 48, 0.6));
+}
+@keyframes vtm-tumble-a {
+  0%, 100% { transform: rotate(-8deg) translateY(0); }
+  50% { transform: rotate(10deg) translateY(-3px); }
+}
+@keyframes vtm-tumble-b {
+  0%, 100% { transform: rotate(6deg) translateY(0); }
+  50% { transform: rotate(-12deg) translateY(-4px); }
+}
+
+/* Панель предпросмотра решения Крови */
+.vtm-fate-panel {
+  background: linear-gradient(165deg, rgba(194, 43, 48, 0.06), transparent 40%);
+  border: 1px solid rgba(194, 43, 48, 0.3);
+  border-radius: 10px;
+  padding: 1.1rem 1rem;
+}
+.vtm-fate-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--vtm-line);
+  border-radius: 6px;
+  padding: 0.35rem 0.2rem;
+  transition: border-color 0.2s;
+}
+.vtm-fate-stat:hover { border-color: var(--vtm-blood-bright); }
+.vtm-fate-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  padding: 0.3rem 0;
+  border-bottom: 1px dashed var(--vtm-line-soft);
+}
+
 /* ---------- Карточки заготовок — саркофаги выбора ---------- */
 
 .vtm-template-card {
@@ -723,7 +800,8 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 
 /* Уважение к reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .vtm-flicker, .vtm-breath, .vtm-blood-drop, .vtm-hunger-cell.low { animation: none !important; }
+  .vtm-flicker, .vtm-breath, .vtm-blood-drop, .vtm-hunger-cell.low,
+  .vtm-random-dice .die-a, .vtm-random-dice .die-b, .vtm-random-dice .drop { animation: none !important; }
   .vtm-card, .vtm-template-card, .vtm-dice-toggle { transition: none !important; }
 }
 
@@ -797,7 +875,11 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
     text-transform: uppercase;
     border-bottom: 1px solid #111;
     padding-bottom: 2px;
+    break-inside: avoid;
+    page-break-after: avoid;
   }
+  .vtm-print-head { break-inside: avoid; }
+  .vtm-print-line, .vtm-print-item { break-inside: avoid; }
   .vtm-print-grid { display: flex; flex-wrap: wrap; gap: 4px 14px; }
   .vtm-print-item { font-size: 9pt; min-width: 130px; }
   .vtm-print-dots { letter-spacing: 2px; font-size: 10pt; }

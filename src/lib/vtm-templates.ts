@@ -77,6 +77,7 @@ export function buildTemplateSheet(templateId: string): VtmSheetData | null {
       xpSpent: 0,
     },
     rollLog: [],
+    xpLog: [],
   };
 }
 

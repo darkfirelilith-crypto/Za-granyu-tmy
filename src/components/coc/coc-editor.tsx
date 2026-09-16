@@ -76,6 +76,11 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
   const conflictRef = useRef<ConflictInfo | null>(null);
   const syncedAtRef = useRef<string | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
+  // Сериализация автосейва: пока один PUT в полёте, следующие правки копятся
+  // и уходят одним сохранением после ответа. Два параллельных PUT на медленном
+  // Neon шлют устаревший baseUpdatedAt — второй получает ложный 409.
+  const inFlightRef = useRef(false);
+  const pendingSaveRef = useRef<{ payload: CocSheetData; name: string; opts?: { force?: boolean } } | null>(null);
   statusRef.current = status;
   conflictRef.current = conflict;
 
@@ -94,6 +99,12 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
     async (payload: CocSheetData, name: string, opts?: { force?: boolean }) => {
       // Пока открыт диалог конфликта — автосохранение молчит (решает игрок)
       if (conflictRef.current && !opts?.force) return;
+      // Уже идёт сохранение — очередь: отправим последнюю версию после ответа
+      if (inFlightRef.current) {
+        pendingSaveRef.current = { payload, name, opts };
+        return;
+      }
+      inFlightRef.current = true;
       setStatus("saving");
       try {
         const res = await cocFetch(`/api/coc/sheets/${sheetId}`, {
@@ -109,6 +120,7 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
         if (res.status === 409) {
           const j = await res.json().catch(() => ({}));
           if (timerRef.current) clearTimeout(timerRef.current);
+          pendingSaveRef.current = null; // конфликт решает игрок — очередь сбрасываем
           setConflict({
             serverUpdatedAt: j.serverUpdatedAt || new Date().toISOString(),
             serverData: normalizeSheet(j.serverData || {}),
@@ -128,6 +140,11 @@ export function CocEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
       } catch (e: any) {
         setStatus("error");
         toast.error("Тьма не приняла запись", { description: e.message });
+      } finally {
+        inFlightRef.current = false;
+        const queued = pendingSaveRef.current;
+        pendingSaveRef.current = null;
+        if (queued) void save(queued.payload, queued.name, queued.opts);
       }
     },
     [sheetId, qc]

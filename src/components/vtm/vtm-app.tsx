@@ -7,7 +7,8 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { VtmReturnPortal } from "@/components/vtm/portal-transition";
 import { VtmEditor } from "@/components/vtm/vtm-editor";
-import { MAX_SHEETS, CLAN_BY_ID } from "@/lib/vtm-data";
+import { MAX_SHEETS, CLAN_BY_ID, SECT_BY_ID, PREDATOR_BY_ID, VtmSheetData, normalizeSheet } from "@/lib/vtm-data";
+import { deriveStats } from "@/lib/vtm-calc";
 import { VTM_TEMPLATES } from "@/lib/vtm-templates";
 import { vtmFetch } from "@/lib/vtm-api";
 
@@ -101,11 +102,13 @@ function VtmHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
   const startCreation = () => setShowChooser(true);
 
   const createMutation = useMutation({
-    mutationFn: ({ templateId }: { templateId: string | null }) =>
+    mutationFn: ({ templateId, preset }: { templateId: string | null; preset?: unknown }) =>
       vtmFetch("/api/vtm/sheets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(templateId ? { template: templateId } : {}),
+        body: JSON.stringify(
+          templateId ? { template: templateId, ...(preset ? { preset } : {}) } : {}
+        ),
       }).then(async (r) => {
         if (!r.ok) throw new Error((await r.json()).error || "Ошибка");
         return r.json();
@@ -314,7 +317,7 @@ function VtmHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
         {showChooser && (
           <TemplateChooser
             onClose={() => setShowChooser(false)}
-            onPick={(templateId) => createMutation.mutate({ templateId })}
+            onPick={(templateId, preset) => createMutation.mutate({ templateId, preset })}
             pending={createMutation.isPending}
           />
         )}
@@ -522,27 +525,46 @@ function SheetCard({
   );
 }
 
-/** Выбор заготовки при пробуждении: чистый лист или готовый вампир. */
+/** Выбор заготовки при пробуждении: чистый лист, готовый вампир
+ *  или решение Крови с предпросмотром («Пусть Кровь решит»). */
 function TemplateChooser({
   onClose,
   onPick,
   pending,
 }: {
   onClose: () => void;
-  onPick: (templateId: string | null) => void;
+  onPick: (templateId: string | null, preset?: unknown) => void;
   pending: boolean;
 }) {
   const clanName = (id: string) => CLAN_BY_ID.get(id)?.name || "";
+  // undefined — предпросмотр не запрашивался; null — Кровь решает; object — решение Крови
+  const [fate, setFate] = useState<VtmSheetData | null | undefined>(undefined);
+  const [fateError, setFateError] = useState<string | null>(null);
+
+  const castFate = async () => {
+    setFate(null);
+    setFateError(null);
+    try {
+      const res = await vtmFetch("/api/vtm/random", { method: "POST" });
+      if (!res.ok) throw new Error((await res.json()).error || "Кровь запнулась");
+      const json = await res.json();
+      setFate(normalizeSheet(json.data));
+    } catch (e) {
+      setFate(undefined);
+      setFateError(e instanceof Error ? e.message : "Кровь запнулась");
+    }
+  };
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start md:items-center justify-center p-3 md:p-6 overflow-y-auto vtm-scroll"
+      className="fixed inset-0 z-50 flex items-start justify-center p-3 md:p-6 overflow-y-auto vtm-scroll"
       style={{ background: "rgba(0,0,0,0.85)" }}
       role="dialog"
       aria-modal="true"
       aria-label="Выбор заготовки Сородича"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="vtm-panel max-w-3xl w-full p-5 md:p-6 space-y-4 vtm-conflict-pop my-4">
+      <div className="vtm-panel max-w-3xl w-full p-5 md:p-6 space-y-4 vtm-conflict-pop m-auto">
         <div className="flex items-start gap-3">
           <div className="flex-1">
             <span className="vtm-stamp">Выбор Сородича</span>
@@ -559,47 +581,96 @@ function TemplateChooser({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {/* Чистый лист */}
-          <button
-            onClick={() => onPick(null)}
-            disabled={pending}
-            className="vtm-template-card"
-            aria-label="Чистый лист Сородича"
-          >
-            <span className="vtm-stamp vtm-stamp-gold">Без прошлого</span>
-            <svg viewBox="0 0 44 52" className="w-9 h-11 vtm-breath" aria-hidden="true">
-              <path d="M8 4 H30 L36 10 V48 H8 Z" fill="rgba(0,0,0,0.35)" stroke="#8a1a1d" strokeWidth="1.4" strokeLinejoin="round" />
-              <path d="M30 4 L30 10 L36 10" fill="none" stroke="#8a1a1d" strokeWidth="1.2" />
-              <circle cx="22" cy="24" r="7" fill="none" stroke="#a8863d" strokeWidth="1.2" />
-              <path d="M18 20 L20 26 M22 18 L23 26 M26 20 L24 26" stroke="#a8863d" strokeWidth="1.1" fill="none" />
-              <line x1="12" y1="38" x2="32" y2="38" stroke="#3d1a20" strokeWidth="1.4" />
-              <line x1="12" y1="43" x2="26" y2="43" stroke="#3d1a20" strokeWidth="1.4" />
-            </svg>
-            <span className="vtm-template-title">Чистый лист</span>
-            <span className="vtm-template-tagline">Кровь ещё не выбрала имя. Всё с нуля — от клана до убежища.</span>
-          </button>
-
-          {VTM_TEMPLATES.map((t) => (
+        {fate === undefined && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Пусть Кровь решит — случайный Сородич с предпросмотром */}
             <button
-              key={t.id}
-              onClick={() => onPick(t.id)}
+              onClick={castFate}
+              disabled={pending}
+              className="vtm-template-card vtm-template-random sm:col-span-2 lg:col-span-3"
+              aria-label="Случайный Сородич — пусть Кровь решит"
+            >
+              <span className="vtm-template-stamp vtm-stamp">Решает Кровь</span>
+              <span className="vtm-random-dice" aria-hidden="true">
+                <i className="die die-a">⚄</i>
+                <i className="die die-b">⚅</i>
+                <i className="drop">🩸</i>
+              </span>
+              <span className="vtm-template-title">Пусть Кровь решит</span>
+              <span className="vtm-template-tagline">
+                Кровь бросит кости за каждую характеристику, выберет клан, стиль охоты,
+                вложит навыки, Дисциплины и прошлое. Ты увидишь её решение до записи в архив.
+              </span>
+            </button>
+
+            {/* Чистый лист */}
+            <button
+              onClick={() => onPick(null)}
               disabled={pending}
               className="vtm-template-card"
-              aria-label={`Готовый вампир: ${t.title}`}
+              aria-label="Чистый лист Сородича"
             >
-              <span className="vtm-stamp">{clanName(t.sheet.info.clan)}</span>
-              <span className="vtm-template-title">{t.title}</span>
-              <span className="vtm-template-tagline">{t.tagline}</span>
-              <span className="flex items-center justify-center gap-3 vtm-label text-[0.56rem] text-[#6e5a53]">
-                <i>поколение {t.sheet.info.generation}</i>
-                <i>Сила Крови {t.sheet.info.generation >= 14 ? 0 : t.sheet.info.generation >= 12 ? 1 : 2}</i>
-                <i>Чел. {t.sheet.trackers.humanity}</i>
-              </span>
-              <span className="vtm-label text-[0.62rem] text-[#d6a840]">«{t.sheet.info.name}»</span>
+              <span className="vtm-stamp vtm-stamp-gold">Без прошлого</span>
+              <svg viewBox="0 0 44 52" className="w-9 h-11 vtm-breath" aria-hidden="true">
+                <path d="M8 4 H30 L36 10 V48 H8 Z" fill="rgba(0,0,0,0.35)" stroke="#8a1a1d" strokeWidth="1.4" strokeLinejoin="round" />
+                <path d="M30 4 L30 10 L36 10" fill="none" stroke="#8a1a1d" strokeWidth="1.2" />
+                <circle cx="22" cy="24" r="7" fill="none" stroke="#a8863d" strokeWidth="1.2" />
+                <path d="M18 20 L20 26 M22 18 L23 26 M26 20 L24 26" stroke="#a8863d" strokeWidth="1.1" fill="none" />
+                <line x1="12" y1="38" x2="32" y2="38" stroke="#3d1a20" strokeWidth="1.4" />
+                <line x1="12" y1="43" x2="26" y2="43" stroke="#3d1a20" strokeWidth="1.4" />
+              </svg>
+              <span className="vtm-template-title">Чистый лист</span>
+              <span className="vtm-template-tagline">Кровь ещё не выбрала имя. Всё с нуля — от клана до убежища.</span>
             </button>
-          ))}
-        </div>
+
+            {VTM_TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => onPick(t.id)}
+                disabled={pending}
+                className="vtm-template-card"
+                aria-label={`Готовый вампир: ${t.title}`}
+              >
+                <span className="vtm-stamp">{clanName(t.sheet.info.clan)}</span>
+                <span className="vtm-template-title">{t.title}</span>
+                <span className="vtm-template-tagline">{t.tagline}</span>
+                <span className="flex items-center justify-center gap-3 vtm-label text-[0.56rem] text-[#6e5a53]">
+                  <i>поколение {t.sheet.info.generation}</i>
+                  <i>Сила Крови {t.sheet.info.generation >= 14 ? 0 : t.sheet.info.generation >= 12 ? 1 : 2}</i>
+                  <i>Чел. {t.sheet.trackers.humanity}</i>
+                </span>
+                <span className="vtm-label text-[0.62rem] text-[#d6a840]">«{t.sheet.info.name}»</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {fate === null && (
+          <div className="py-14 text-center space-y-4" role="status" aria-live="polite">
+            <span className="vtm-random-dice" aria-hidden="true">
+              <i className="die die-a">⚄</i>
+              <i className="die die-b">⚅</i>
+              <i className="drop">🩸</i>
+            </span>
+            <p className="vtm-display text-sm tracking-[0.35em] uppercase text-[#e8636b] vtm-flicker">
+              Кровь решает…
+            </p>
+          </div>
+        )}
+
+        {fateError && (
+          <p className="vtm-label text-xs text-[#e8636b] text-center" role="alert">{fateError}</p>
+        )}
+
+        {fate && (
+          <FatePreview
+            data={fate}
+            pending={pending}
+            onReroll={castFate}
+            onAccept={() => onPick("random", fate)}
+            onBack={() => { setFate(undefined); setFateError(null); }}
+          />
+        )}
 
         {pending && (
           <p className="vtm-display text-xs tracking-[0.3em] uppercase text-[#e8636b] text-center vtm-flicker">
@@ -608,5 +679,133 @@ function TemplateChooser({
         )}
       </div>
     </div>
+  );
+}
+
+/** Предпросмотр решения Крови: увидеть Сородича до записи в архив —
+ *  принять, перебросить или отпустить. */
+function FatePreview({
+  data,
+  pending,
+  onReroll,
+  onAccept,
+  onBack,
+}: {
+  data: VtmSheetData;
+  pending: boolean;
+  onReroll: () => void;
+  onAccept: () => void;
+  onBack: () => void;
+}) {
+  const c = data.attributes;
+  const d = deriveStats(data);
+  const clan = CLAN_BY_ID.get(data.info.clan);
+  const sect = SECT_BY_ID.get(data.info.sect);
+  const predator = PREDATOR_BY_ID.get(data.info.predator);
+  const stats: { label: string; value: number; hint: string }[] = [
+    { label: "СИЛ", value: c.str, hint: "Сила" },
+    { label: "ЛОВ", value: c.dex, hint: "Ловкость" },
+    { label: "ВЫН", value: c.sta, hint: "Выносливость" },
+    { label: "ОБА", value: c.cha, hint: "Обаяние" },
+    { label: "МАН", value: c.man, hint: "Манипуляция" },
+    { label: "САМ", value: c.com, hint: "Самообладание" },
+    { label: "ИНТ", value: c.int, hint: "Интеллект" },
+    { label: "СМК", value: c.wit, hint: "Смекалка" },
+    { label: "УПР", value: c.res, hint: "Упорство" },
+  ];
+  const discLine = data.disciplines
+    .map((x) => `${x.name} ${x.value}`)
+    .join(" · ");
+  const bgLine = data.advantages
+    .filter((a) => a.kind === "background")
+    .map((a) => `${a.name} ${a.rating}`)
+    .join(" · ");
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="vtm-fate-panel space-y-4"
+      aria-live="polite"
+    >
+      <div className="text-center space-y-1.5">
+        <span className="vtm-stamp">Решение Крови</span>
+        <h3 className="vtm-display text-2xl text-[#d9c7b6] tracking-[0.08em]">{data.info.name}</h3>
+        <p className="vtm-label text-[0.66rem] text-[#d6a840] flex flex-wrap items-center justify-center gap-x-2">
+          <span>⛧ {clan?.name || "—"}</span>
+          {sect && <span>· {sect.name}</span>}
+          <span>· {data.info.generation}-е пок.</span>
+          {predator && <span>· {predator.name}</span>}
+          <span>· СК {d.bp}</span>
+        </p>
+        <p className="vtm-hint !text-[0.68rem]">{data.info.concept}</p>
+      </div>
+
+      <div className="grid grid-cols-5 sm:grid-cols-9 gap-1.5">
+        {stats.map((s) => (
+          <div key={s.label} className="vtm-fate-stat" title={s.hint}>
+            <span className="vtm-label !text-[0.52rem]">{s.label}</span>
+            <span className="vtm-label text-base font-bold text-[#d9c7b6]">{s.value}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 vtm-label text-[0.62rem] text-[#a68d80]">
+        <span>Здоровье <b className="text-[#e8636b]">{d.healthMax}</b></span>
+        <span>Воля <b className="text-[#e8636b]">{d.wpMax}</b></span>
+        <span>Сила Крови <b className="text-[#a877c0]">{d.bp}</b></span>
+        <span>Человечность <b className="text-[#d6a840]">{data.trackers.humanity}/10</b></span>
+        <span>Факты <b className="text-[#d9c7b6]">{d.backgroundPoints}/7</b></span>
+      </div>
+
+      <div className="vtm-fate-row">
+        <span className="vtm-label shrink-0">Дисциплины</span>
+        <span className="vtm-label text-[0.64rem] text-[#a877c0]">{discLine}</span>
+      </div>
+      <div className="vtm-fate-row">
+        <span className="vtm-label shrink-0">Биография</span>
+        <span className="vtm-label text-[0.64rem] text-[#a68d80]">{bgLine}</span>
+      </div>
+      <div className="vtm-fate-row">
+        <span className="vtm-label shrink-0">Убежище</span>
+        <span className="text-[0.68rem] italic leading-relaxed text-[#a68d80]">{data.gear.haven}</span>
+      </div>
+      {data.info.history && (
+        <div className="vtm-fate-row">
+          <span className="vtm-label shrink-0">Прошлое</span>
+          <span className="text-[0.68rem] italic leading-relaxed text-[#a68d80]">{data.info.history}</span>
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 pt-1">
+        <button
+          onClick={onReroll}
+          disabled={pending}
+          className="vtm-btn vtm-btn-ghost !py-2 !px-4 justify-center"
+          title="Кровь решит заново"
+        >
+          ⟲ Перебросить кровь
+        </button>
+        <button
+          onClick={onAccept}
+          disabled={pending}
+          className="vtm-btn vtm-btn-blood !py-2 !px-5 justify-center"
+          title="Записать этого Сородича в архив"
+        >
+          ✓ Принять кровь
+        </button>
+        <button
+          onClick={onBack}
+          disabled={pending}
+          className="vtm-btn vtm-btn-ghost !py-2 !px-4 justify-center"
+          title="Вернуться к выбору"
+        >
+          ✕ Отпустить
+        </button>
+      </div>
+      <p className="vtm-hint text-center !text-[0.6rem]">
+        Переброс не записывается в архив — Кровь можно трогать, пока не сказано «да».
+      </p>
+    </motion.div>
   );
 }
