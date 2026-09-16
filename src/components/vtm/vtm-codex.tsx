@@ -652,7 +652,7 @@ function V20Codex({ q }: { q: string }) {
 
 // ---------- Оборотни (W5): Гароу рядом с Маскарадом ----------
 
-function WerewolfCodex({ q }: { q: string }) {
+export function WerewolfCodex({ q }: { q: string }) {
   const match = (...parts: string[]) => !q || parts.join(" ").toLowerCase().includes(q);
   const intro = WEREWOLF_INTRO.filter((b) => match(b.title, b.body.join(" ")));
   const forms = WEREWOLF_FORMS.filter((f) => match(f.name, f.ru, f.desc));

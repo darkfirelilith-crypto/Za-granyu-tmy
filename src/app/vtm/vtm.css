@@ -2785,3 +2785,76 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 @media (prefers-reduced-motion: reduce) {
   .vtm-disc-empty-moon { animation: none; }
 }
+
+/* ============================================================
+   РАУНД 15: Лист Гароу (W5) — лунно-серебряная ветка «Маскарада».
+   Всё с vtm- префиксом; вampire-стили не тронуты.
+   ============================================================ */
+
+/* Штамп и карточки Гароу — серебро и холодная луна */
+.vtm-w5-stamp {
+  color: #c9d3e8;
+  border-color: rgba(142, 166, 201, 0.5);
+  background: rgba(74, 92, 122, 0.18);
+  text-shadow: 0 0 12px rgba(142, 166, 201, 0.35);
+}
+
+.vtm-w5-template {
+  border-color: rgba(74, 92, 122, 0.5);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(142, 166, 201, 0.08), transparent 70%),
+    rgba(0, 0, 0, 0.24);
+}
+.vtm-w5-template:hover {
+  border-color: rgba(142, 166, 201, 0.75);
+}
+
+/* Активная вкладка W5-редактора */
+.vtm-w5-tab-active {
+  background: linear-gradient(180deg, rgba(74, 92, 122, 0.4), rgba(28, 36, 52, 0.55));
+  color: #e8eefb;
+  border-bottom: 2px solid #8ea6c9;
+  text-shadow: 0 0 10px rgba(142, 166, 201, 0.45);
+}
+
+/* Витальная строка листа Гароу */
+.vtm-w5-vitals {
+  border-left: 3px solid rgba(142, 166, 201, 0.45);
+}
+
+/* Точки «луны» — серебристый вариант втм-точек */
+.vtm-dot.moon {
+  border-color: rgba(142, 166, 201, 0.55);
+}
+.vtm-dot.moon.filled {
+  background: radial-gradient(circle at 35% 30%, #e8eefb, #8ea6c9 65%, #4a5c7a);
+  border-color: #8ea6c9;
+  box-shadow: 0 0 10px rgba(142, 166, 201, 0.5);
+}
+
+/* Ячейки урона/воли */
+.vtm-w5-box {
+  width: 18px;
+  height: 22px;
+  border: 1px solid rgba(142, 166, 201, 0.45);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+}
+.vtm-w5-box:hover {
+  border-color: #8ea6c9;
+}
+
+/* Строки навыков Гароу */
+.vtm-w5-skill-row {
+  padding: 0.25rem 0.15rem;
+  border-bottom: 1px dashed rgba(74, 92, 122, 0.25);
+}
+.vtm-w5-skill-row:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 640px) {
+  .vtm-w5-box { width: 15px; height: 19px; }
+}

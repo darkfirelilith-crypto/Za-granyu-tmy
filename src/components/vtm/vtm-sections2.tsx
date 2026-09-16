@@ -19,6 +19,7 @@ import {
   THINBLOOD_FORMULAS,
   CLAN_FLAW_PRESETS,
   INCOMPATIBLE_ADVANTAGES,
+  XP_COSTS,
 } from "@/lib/vtm-data";
 import { LORESHEETS, LORESHEET_BY_ID, LORESHEET_RULES } from "@/lib/vtm-histories";
 import { POWER_SYSTEMS, DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
@@ -27,6 +28,29 @@ import { DerivedStats } from "@/lib/vtm-calc";
 // ============================================================
 // ДИСЦИПЛИНЫ
 // ============================================================
+
+/** Разбор строки амальгамы «Сокрытие 2» или «Сокрытие 2 + Величие 1» → требования. */
+function parseAmalgam(amalgam: string): { name: string; level: number }[] {
+  return amalgam
+    .split("+")
+    .map((part) => part.trim())
+    .map((part) => {
+      const m = part.match(/^(.+?)\s+(\d+)$/);
+      return m ? { name: m[1].trim(), level: parseInt(m[2], 10) } : null;
+    })
+    .filter((x): x is { name: string; level: number } => !!x);
+}
+
+/** Проверка требований амальгамы: что уже есть на листе, а чего не хватает. */
+function amalgamGaps(data: VtmSheetData, amalgam: string): string[] {
+  return parseAmalgam(amalgam)
+    .map((req) => {
+      const owned = data.disciplines.find((x) => x.name.toLowerCase() === req.name.toLowerCase());
+      if (!owned || owned.value < req.level) return `${req.name} ${req.level}`;
+      return null;
+    })
+    .filter((x): x is string => !!x);
+}
 
 export function DisciplinesSection({
   data,
@@ -276,6 +300,11 @@ export function DisciplinesSection({
                     onChange={(n) => (def ? setDisc(def.id, def.name, { value: n }) : setAt(idx, { value: n }))}
                     ariaLabel={`${state.name}: уровень ${value}`}
                   />
+                  {def && value > 0 && value < 5 && (
+                    <span className="vtm-hint !text-[0.66rem] not-italic whitespace-nowrap" title="Цена опыта за следующий уровень">
+                      ↑ опыт: {XP_COSTS.discipline(value + 1)}
+                    </span>
+                  )}
                   <span className="vtm-hint !text-[0.75rem] flex-1">
                     {def ? def.description : state.description || "Своя Дисциплина — опиши её в конструкторе."}
                   </span>
@@ -315,6 +344,8 @@ export function DisciplinesSection({
                         {Array.from({ length: value }, (_, i) => i + 1).map((lvl) => {
                           const powers = def.powers[lvl] || [];
                           const chosen = state?.powers?.[lvl] || "";
+                          const chosenDef = powers.find((p) => p.name === chosen);
+                          const gaps = chosenDef?.amalgam ? amalgamGaps(data, chosenDef.amalgam) : [];
                           return (
                             <div key={lvl} className="flex items-center gap-2 flex-wrap">
                               <span className="vtm-label text-[0.70rem] text-[#9c8072] w-8 shrink-0">{lvl} ур.</span>
@@ -334,6 +365,16 @@ export function DisciplinesSection({
                                   <option key={p.name} value={p.name}>{p.name}{p.amalgam ? ` · амальгама: ${p.amalgam}` : ""}</option>
                                 ))}
                               </select>
+                              {chosenDef && (
+                                <span className="vtm-hint !text-[0.66rem] not-italic whitespace-nowrap" title="Цена опыта за новую силу">
+                                  опыт: {XP_COSTS.disciplinePower(lvl)}
+                                </span>
+                              )}
+                              {gaps.length > 0 && (
+                                <span className="vtm-req vtm-label !text-[0.68rem] w-full" role="note">
+                                  ⚠ амальгама: нужна {gaps.join(" + ")} — на листе их пока нет
+                                </span>
+                              )}
                             </div>
                           );
                         })}

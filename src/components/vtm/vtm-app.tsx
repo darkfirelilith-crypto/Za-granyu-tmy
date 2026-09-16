@@ -7,14 +7,19 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { VtmReturnPortal } from "@/components/vtm/portal-transition";
 import { VtmEditor } from "@/components/vtm/vtm-editor";
+import { W5Editor } from "@/components/vtm/vtm-w5-editor";
 import { MAX_SHEETS, CLAN_BY_ID, SECT_BY_ID, PREDATOR_BY_ID, RESONANCES, VtmSheetData, normalizeSheet } from "@/lib/vtm-data";
 import { deriveStats } from "@/lib/vtm-calc";
 import { VTM_TEMPLATES } from "@/lib/vtm-templates";
 import { vtmFetch } from "@/lib/vtm-api";
+import { W5_TRIBE_BY_ID, W5_AUSPICE_BY_ID } from "@/lib/vtm-w5data";
 
 interface SheetMeta {
   id: string;
   name: string;
+  kind?: string; // "werewolf" для листов Гароу
+  tribe?: string | null;
+  auspice?: string | null;
   createdAt: string;
   updatedAt: string;
   portraitThumb?: string | null;
@@ -27,6 +32,19 @@ interface SheetMeta {
   nights?: number | null;
   lastHunt?: string | null;
   feed?: { title: string; date: string }[] | null;
+}
+
+/** Врата листа: Гароу идёт в W5-редактор, Сородич — в вампирский. */
+function SheetEditorGate({ sheetId, onBack }: { sheetId: string; onBack: () => void }) {
+  const { data: raw } = useQuery<any>({
+    queryKey: ["vtm-sheet", sheetId],
+    queryFn: () => vtmFetch(`/api/vtm/sheets/${sheetId}`).then(async (r) => {
+      if (!r.ok) throw new Error("Лист не найден");
+      return r.json();
+    }),
+  });
+  if (raw?.data?.kind === "werewolf") return <W5Editor sheetId={sheetId} onBack={onBack} />;
+  return <VtmEditor sheetId={sheetId} onBack={onBack} />;
 }
 
 /** Русское склонение: 1 ночь / 2 ночи / 5 ночей. */
@@ -188,7 +206,7 @@ function VtmHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
     applyOrder(move(ids, from, to));
   };
 
-  if (openId) return <VtmEditor key={openId} sheetId={openId} onBack={onClose} />;
+  if (openId) return <SheetEditorGate sheetId={openId} onBack={onClose} />;
 
   return (
     <main className="relative z-10 min-h-screen">
@@ -486,6 +504,8 @@ function SheetCard({
           <div className="shrink-0 w-14 h-16 rounded border border-[#3d1a20] overflow-hidden bg-black flex items-center justify-center">
             {sheet.portraitThumb ? (
               <img src={sheet.portraitThumb} alt="" className="w-full h-full object-cover" style={{ filter: "saturate(0.85)" }} />
+            ) : sheet.kind === "werewolf" ? (
+              <span className="text-xl select-none" aria-hidden>🐺</span>
             ) : (
               <span className="text-xl text-[#3d1a20] select-none">🩸</span>
             )}
@@ -528,7 +548,12 @@ function SheetCard({
             <h2 className="vtm-display text-lg text-[#d9c7b6] leading-snug line-clamp-2 mt-1.5">
               {sheet.name}
             </h2>
-            {clanName && (
+            {sheet.kind === "werewolf" ? (
+              <p className="vtm-label text-[0.73rem] text-[#8ea6c9] truncate mt-0.5">
+                🐺 {sheet.tribe ? W5_TRIBE_BY_ID.get(sheet.tribe)?.name || "" : "племя не выбрано"}
+                {sheet.auspice ? ` · ${W5_AUSPICE_BY_ID.get(sheet.auspice)?.name || ""}` : ""}
+              </p>
+            ) : clanName && (
               <p className="vtm-label text-[0.73rem] text-[#a8863d] truncate mt-0.5" title={clanName}>
                 ⛧ {clanName}
                 {typeof sheet.generation === "number" && sheet.generation > 0 ? ` · ${sheet.generation}-е пок.` : ""}
@@ -684,6 +709,43 @@ function TemplateChooser({
               </svg>
               <span className="vtm-template-title">Чистый лист</span>
               <span className="vtm-template-tagline">Кровь ещё не выбрала имя. Всё с нуля — от клана до убежища.</span>
+            </button>
+
+            {/* ОБОРОТНИ (W5): чистый лист Гароу и «пусть Луна решит» */}
+            <button
+              onClick={() => onPick("werewolf-random")}
+              disabled={pending}
+              className="vtm-template-card vtm-w5-template"
+              aria-label="Случайный Гароу — пусть Луна решит"
+            >
+              <span className="vtm-stamp vtm-w5-stamp">Решает Луна</span>
+              <span className="vtm-random-dice" aria-hidden="true">
+                <i className="die die-a">🐺</i>
+                <i className="die die-b">🌕</i>
+                <i className="drop">🐾</i>
+              </span>
+              <span className="vtm-template-title">Случайный Гароу (W5)</span>
+              <span className="vtm-template-tagline">
+                Луна бросит кости характеристик, выберет племя и ауспицию, вложит навыки, Дары и Обряды.
+              </span>
+            </button>
+            <button
+              onClick={() => onPick("werewolf-blank")}
+              disabled={pending}
+              className="vtm-template-card vtm-w5-template"
+              aria-label="Чистый лист Гароу (W5)"
+            >
+              <span className="vtm-stamp vtm-w5-stamp">Без прошлого</span>
+              <svg viewBox="0 0 44 52" className="w-9 h-11 vtm-breath" aria-hidden="true">
+                <path d="M8 4 H30 L36 10 V48 H8 Z" fill="rgba(0,0,0,0.35)" stroke="#4a5c7a" strokeWidth="1.4" strokeLinejoin="round" />
+                <path d="M30 4 L30 10 L36 10" fill="none" stroke="#4a5c7a" strokeWidth="1.2" />
+                <circle cx="22" cy="24" r="7" fill="none" stroke="#8ea6c9" strokeWidth="1.2" />
+                <path d="M14 24 A8 8 0 0 1 30 24" fill="none" stroke="#8ea6c9" strokeWidth="1.1" />
+                <line x1="12" y1="38" x2="32" y2="38" stroke="#2b3446" strokeWidth="1.4" />
+                <line x1="12" y1="43" x2="26" y2="43" stroke="#2b3446" strokeWidth="1.4" />
+              </svg>
+              <span className="vtm-template-title">Чистый лист Гароу (W5)</span>
+              <span className="vtm-template-tagline">Волк ещё не выбрал стаю. Всё с нуля — от племени до Даров.</span>
             </button>
 
             {VTM_TEMPLATES.map((t) => (

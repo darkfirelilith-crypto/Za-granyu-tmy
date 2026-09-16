@@ -4,6 +4,7 @@ import { requireLiveUser } from "@/lib/session";
 import { MAX_SHEETS, normalizeSheet } from "@/lib/vtm-data";
 import { VTM_TEMPLATES, buildTemplateSheet } from "@/lib/vtm-templates";
 import { buildRandomSheet } from "@/lib/vtm-random";
+import { buildRandomWerewolf, emptyW5Sheet } from "@/lib/vtm-w5data";
 
 const UNAUTHORIZED = { error: "Сессия недействительна — войдите заново" };
 
@@ -29,8 +30,17 @@ export async function GET() {
     let nights: number | null = null;
     let lastHunt: string | null = null;
     let feed: { title: string; date: string }[] = [];
+    let kind: string | null = null;
+    let tribe: string | null = null;
+    let auspice: string | null = null;
     try {
       const d = JSON.parse(r.data || "{}");
+      kind = typeof d?.kind === "string" ? d.kind : null;
+      if (kind === "werewolf") {
+        tribe = typeof d?.info?.tribe === "string" ? d.info.tribe : null;
+        auspice = typeof d?.info?.auspice === "string" ? d.info.auspice : null;
+        xp = typeof d?.trackers?.xp === "number" ? d.trackers.xp : 0;
+      }
       portraitThumb = d?.info?.portraitThumb || null;
       clan = d?.info?.clan || null;
       predator = d?.info?.predator || null;
@@ -61,6 +71,9 @@ export async function GET() {
     return {
       id: r.id,
       name: r.name,
+      kind,
+      tribe,
+      auspice,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
       portraitThumb,
@@ -108,6 +121,15 @@ export async function POST(req: NextRequest) {
     const parsed = body.preset ? normalizeSheet(body.preset) : buildRandomSheet();
     data = parsed;
     tplName = parsed.info.name || "Случайный Сородич";
+  } else if (body.template === "werewolf-random") {
+    // Луна решает: случайный Гароу (W5)
+    const parsed = buildRandomWerewolf();
+    data = parsed;
+    tplName = parsed.info.name || "Случайный Гароу";
+  } else if (body.template === "werewolf-blank") {
+    // чистый лист Гароу (W5)
+    data = emptyW5Sheet();
+    tplName = "Безымянный Гароу";
   } else if (body.template) {
     const tpl = VTM_TEMPLATES.find((t) => t.id === body.template);
     if (!tpl) return NextResponse.json({ error: "Неизвестная заготовка" }, { status: 400 });
