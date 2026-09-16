@@ -26,6 +26,7 @@ interface SheetMeta {
   xp?: number | null;
   nights?: number | null;
   lastHunt?: string | null;
+  feed?: { title: string; date: string }[] | null;
 }
 
 /** Русское склонение: 1 ночь / 2 ночи / 5 ночей. */
@@ -458,6 +459,9 @@ function SheetCard({
   const predatorName = sheet.predator ? PREDATOR_BY_ID.get(sheet.predator)?.name : null;
   const resonance = sheet.resonanceKind ? RESONANCES.find((r) => r.id === sheet.resonanceKind) : null;
   const nights = sheet.nights || 0;
+  const feed = (sheet.feed || []).slice(0, 3);
+  // «Новая охота» в ленте выглядит как ритуал: особая стрелка
+  const feedIcon = (t: string) => (t === "Новая охота" ? "🌙" : "🖋");
 
   return (
     <div
@@ -551,6 +555,25 @@ function SheetCard({
             {nights > 0 && <span title="Прожито «новых охот»">🌙 {nightsLabel(nights)}</span>}
             {sheet.lastHunt && <span title="Последняя новая охота">Последняя: {sheet.lastHunt}</span>}
             {(sheet.xp || 0) > 0 && <span title="Свободный опыт">опыт {sheet.xp}</span>}
+          </div>
+        )}
+        {feed.length > 0 && (
+          <div className="vtm-card-feed" aria-label="Хроника ночей — последние записи журнала">
+            <span className="vtm-cf-head" aria-hidden>
+              ХРОНИКА НОЧЕЙ
+              <i className="vtm-cf-thread" />
+            </span>
+            <ul>
+              {feed.map((f, fi) => (
+                <li key={`${fi}-${f.date}`} className="vtm-cf-item" title={f.title}>
+                  <i className="vtm-cf-bullet" aria-hidden>
+                    {feedIcon(f.title)}
+                  </i>
+                  <span className="vtm-cf-title">{f.title}</span>
+                  {f.date && <span className="vtm-cf-date">{f.date}</span>}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
         <div className="flex items-center justify-between vtm-label text-[0.6rem] text-[#6e5a53]">

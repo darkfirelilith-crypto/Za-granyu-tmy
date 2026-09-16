@@ -14,6 +14,7 @@ import { VtmDicePanel, setVtmSheetHooks, vtmRollAndShow } from "@/components/vtm
 import { VtmReturnPortal } from "@/components/vtm/portal-transition";
 import { VtmPrintSheet } from "@/components/vtm/vtm-print-sheet";
 import { VtmPrintSummary } from "@/components/vtm/vtm-print-summary";
+import { buildSummaryText } from "@/lib/vtm-summary-text";
 import { vtmFetch } from "@/lib/vtm-api";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error" | "conflict";
@@ -83,6 +84,8 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
   const conflictRef = useRef<ConflictInfo | null>(null);
   const syncedAtRef = useRef<string | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
+  // были ли локальные правки с момента открытия листа (для принятия фоновой догрузки)
+  const localEditRef = useRef(false);
   // Сериализация автосейва: пока один PUT в полёте, следующие правки копятся в
   // pendingSaveRef и уходят ОДНИ сохранением после ответа. Иначе два параллельных
   // PUT на медленном Neon дают ложный 409 (второй шлёт устаревший baseUpdatedAt).
@@ -91,7 +94,12 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
   statusRef.current = status;
   conflictRef.current = conflict;
 
-  // Инициализация данных после загрузки
+  // Инициализация данных после загрузки.
+  // ВАЖНО: при повторном открытии листа useQuery сначала отдаёт КЭШИРОВАННУЮ
+  // версию (со старым updatedAt), а свежая приходит фоном. Раньше syncedAtRef
+  // навсегда оставался устаревшим — первое же сохранение получало ложный 409.
+  // Теперь, пока игрок ещё не правил лист вручную, фоновая догрузка принимает
+  // серверную версию (данные и baseUpdatedAt обновляются вместе).
   useEffect(() => {
     if (raw && !data) {
       const normalized = normalizeSheet(raw.data);
@@ -99,6 +107,16 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
       snapshotRef.current = JSON.stringify(normalized);
       syncedAtRef.current = raw.updatedAt || null;
       setStatus("idle");
+      return;
+    }
+    if (raw && data && !localEditRef.current) {
+      const normalized = normalizeSheet(raw.data);
+      const nextJson = JSON.stringify(normalized);
+      if (nextJson !== JSON.stringify(data)) {
+        setData(normalized);
+        snapshotRef.current = nextJson;
+      }
+      syncedAtRef.current = raw.updatedAt || syncedAtRef.current;
     }
   }, [raw, data]);
 
@@ -165,6 +183,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
     setData(normalized);
     snapshotRef.current = JSON.stringify(normalized);
     syncedAtRef.current = conflict.serverUpdatedAt;
+    localEditRef.current = false; // лист снова совпадает с сервером
     setConflict(null);
     setStatus("saved");
     toast.success("Версия из архива загружена", { description: "Твои несохранённые правки рассеялись в тумане." });
@@ -191,6 +210,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
 
   const mutate = useCallback(
     (fn: (draft: VtmSheetData) => void) => {
+      localEditRef.current = true;
       setData((prev) => {
         if (!prev) return prev;
         const next = structuredClone(prev);
@@ -248,6 +268,34 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
     toast.success("Лист скопирован в личный архив (JSON)");
   };
 
+  // ===== Текстовая «Сводка» в буфер обмена (для мессенджеров стола) =====
+  const [copying, setCopying] = useState(false);
+  const copySummaryText = async () => {
+    if (!data || !derived || copying) return;
+    setCopying(true);
+    try {
+      const text = buildSummaryText(data, derived);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // запасной путь для старых контекстов (http/старые вебвью)
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+      }
+      toast.success("Сводка скопирована текстом", { description: "Вставь её в чат стола — Кровь доложится сама." });
+    } catch {
+      toast.error("Не удалось скопировать сводку", { description: "Браузер не пустил к буферу обмена." });
+    } finally {
+      setCopying(false);
+    }
+  };
+
   const importSheet = (file: File | undefined) => {
     if (!file) return;
     const reader = new FileReader();
@@ -258,6 +306,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
           throw new Error("это не похоже на лист Сородича");
         }
         const normalized = normalizeSheet(parsed);
+        localEditRef.current = true; // данные заменены вручную — фоновой догрузке не верим
         setData(normalized);
         save(normalized, normalized.info.name || "Безымянный Сородич");
         toast.success("Лист восстановлен из архива", { description: "Проверь данные — ночь не прощает описок." });
@@ -390,6 +439,15 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
               aria-label="Экспорт листа"
             >
               ⇩<span className="hidden min-[480px]:inline"> Копия</span>
+            </button>
+            <button
+              onClick={copySummaryText}
+              disabled={copying}
+              className="vtm-btn vtm-btn-ghost vtm-btn-copy !py-1.5 !px-2 text-xs"
+              title="Скопировать «Сводку Сородича» текстом — вставить в чат стола"
+              aria-label="Скопировать сводку текстом"
+            >
+              ⧉<span className="hidden min-[480px]:inline"> Текст</span>
             </button>
             <input
               ref={importRef}

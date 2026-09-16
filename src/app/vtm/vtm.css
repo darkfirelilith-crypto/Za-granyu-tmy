@@ -1315,6 +1315,101 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   flex-shrink: 0;
 }
 
+/* ---------- «Хроника ночей» — мини-лента журнала на карточке архива ---------- */
+.vtm-card-feed {
+  border: 1px solid rgba(74, 42, 47, 0.4);
+  border-left: 2px solid rgba(138, 26, 29, 0.65);
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.14) 0px,
+      rgba(0, 0, 0, 0.14) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    linear-gradient(180deg, rgba(20, 6, 8, 0.45), rgba(0, 0, 0, 0.12));
+  padding: 0.34rem 0.5rem 0.4rem 0.62rem;
+}
+.vtm-cf-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  font-family: var(--vtm-font-labels), var(--vtm-font-display), Georgia, serif;
+  font-size: 0.5rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: #6e5a53;
+  margin-bottom: 0.3rem;
+}
+.vtm-cf-head .vtm-cf-thread {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, rgba(138, 26, 29, 0.55), transparent);
+}
+.vtm-card-feed ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.22rem;
+}
+.vtm-cf-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-width: 0;
+  animation: vtm-cf-in 0.5s ease both;
+}
+.vtm-cf-item:nth-child(2) { animation-delay: 0.08s; }
+.vtm-cf-item:nth-child(3) { animation-delay: 0.16s; }
+@keyframes vtm-cf-in {
+  from { opacity: 0; transform: translateX(-5px); }
+  to { opacity: 1; transform: none; }
+}
+.vtm-cf-bullet {
+  flex-shrink: 0;
+  width: 1.05em;
+  text-align: center;
+  font-size: 0.6rem;
+  line-height: 1;
+  filter: saturate(0.85);
+  transform: translateY(0.5px);
+}
+.vtm-cf-title {
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  color: #a68d80;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+.vtm-card-feed:hover .vtm-cf-title { color: #d9c7b6; }
+.vtm-cf-date {
+  flex-shrink: 0;
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  color: #4a3230;
+  white-space: nowrap;
+}
+
+/* ---------- Кнопка «⧉ Текст» — золотая жила среди призрачных кнопок ---------- */
+.vtm-btn-copy:not(:disabled) {
+  border-color: rgba(168, 134, 61, 0.5);
+  color: #d6a840;
+}
+.vtm-btn-copy:not(:disabled):hover {
+  border-color: rgba(214, 168, 64, 0.8);
+  color: #edc96a;
+  text-shadow: 0 0 10px rgba(214, 168, 64, 0.4);
+  box-shadow: 0 0 12px rgba(168, 134, 61, 0.18), inset 0 0 10px rgba(168, 134, 61, 0.06);
+}
+.vtm-btn-copy:disabled { opacity: 0.5; }
+
 /* Уважение к reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .vtm-flicker, .vtm-breath, .vtm-blood-drop, .vtm-hunger-cell.low,
@@ -1328,6 +1423,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   .vtm-pair-name, .vtm-pair-chip { transition: none !important; }
   .vtm-fate-face, .vtm-fate-face img { animation: none !important; }
   .vtm-formula-pick, .vtm-formula-pick.active, .vtm-formula-pick .vtm-formula-vial { transition: none !important; animation: none !important; }
+  .vtm-cf-item { animation: none !important; }
 }
 
 /* ---------- Печать досье ---------- */
@@ -1498,6 +1594,27 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   .vtm-sum-drive i, .vtm-sum-gear i { font-style: normal; color: #444; }
   .vtm-sum-sire { font-size: 8.5pt; margin: 8px 0 0; }
   .vtm-sum-sire i { font-style: normal; color: #444; }
+  /* Поле рассказчика: линии под рукописные пометки */
+  .vtm-sum-st {
+    margin-top: 10px;
+    padding: 4px 6px 7px;
+    border: 1px solid #999;
+    border-left: 3px solid #444;
+    break-inside: avoid;
+  }
+  .vtm-sum-st-head {
+    font-family: var(--vtm-font-labels), sans-serif;
+    font-size: 7pt;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #444;
+    margin: 0 0 3px;
+  }
+  .vtm-sum-st-line {
+    display: block;
+    height: 15px;
+    border-bottom: 1px dashed #777;
+  }
   .vtm-sum-footer {
     margin-top: 10px;
     border-top: 1px solid #111;
@@ -1521,6 +1638,10 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   .vtm-resonance-drop { width: 24px; height: 31px; }
   .vtm-pool-chip { font-size: 0.52rem; padding: 0.08em 0.4em; }
   .vtm-card-vitals { font-size: 0.53rem; gap: 0.25rem 0.45rem; }
+  .vtm-card-feed { padding: 0.28rem 0.4rem 0.32rem 0.5rem; }
+  .vtm-cf-title { font-size: 0.62rem; }
+  .vtm-cf-date { font-size: 0.46rem; }
+  .vtm-cf-head { font-size: 0.46rem; letter-spacing: 0.26em; }
   .vtm-tpl-face { width: 88px; }
   .vtm-pair-chip { font-size: 0.48rem; padding: 0.08em 0.34em; }
   .vtm-formula-vial { width: 26px; height: 30px; font-size: 0.85rem; }

@@ -171,6 +171,14 @@ export function VtmPrintSummary({ data, derived }: { data: VtmSheetData; derived
         </p>
       )}
 
+      {/* Поле рассказчика: место для рукописных пометок у стола */}
+      <div className="vtm-sum-st">
+        <p className="vtm-sum-st-head">Поле рассказчика · пометки пером</p>
+        <i className="vtm-sum-st-line" />
+        <i className="vtm-sum-st-line" />
+        <i className="vtm-sum-st-line" />
+      </div>
+
       <p className="vtm-sum-footer">
         Опыт: {data.trackers.xp} ({data.trackers.xpSpent} потрачено)
         {data.trackers.huntCount > 0 ? ` · Ночей в хронике: ${data.trackers.huntCount} · последняя охота: ${data.trackers.lastHunt || "—"}` : ""}

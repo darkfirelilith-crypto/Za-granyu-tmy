@@ -8,7 +8,8 @@ import { buildRandomSheet } from "@/lib/vtm-random";
 const UNAUTHORIZED = { error: "Сессия недействительна — войдите заново" };
 
 /** GET /api/vtm/sheets — список листов «Вампиров: Маскарад» текущего пользователя
- *  (с миниатюрой портрета, кланом, резонансом, счётчиком ночей и стилем охоты — для карточек архива). */
+ *  (с миниатюрой портрета, кланом, резонансом, счётчиком ночей, стилем охоты
+ *  и лентой «Хроника ночей» из трёх последних записей журнала — для карточек архива). */
 export async function GET() {
   const session = await requireLiveUser();
   if (!session) return NextResponse.json(UNAUTHORIZED, { status: 401 });
@@ -27,6 +28,7 @@ export async function GET() {
     let xp: number | null = null;
     let nights: number | null = null;
     let lastHunt: string | null = null;
+    let feed: { title: string; date: string }[] = [];
     try {
       const d = JSON.parse(r.data || "{}");
       portraitThumb = d?.info?.portraitThumb || null;
@@ -46,6 +48,13 @@ export async function GET() {
         (typeof d?.trackers?.lastHunt === "string" && d.trackers.lastHunt) ||
         huntEntries[0]?.date ||
         null;
+      // «Хроника ночей»: три последние записи журнала (свежие — в начале списка)
+      feed = (Array.isArray(d?.notes?.entries) ? d.notes.entries : [])
+        .slice(0, 3)
+        .map((e: { title?: unknown; date?: unknown }) => ({
+          title: typeof e?.title === "string" && e.title.trim() ? e.title.trim().slice(0, 42) : "Без заголовка",
+          date: typeof e?.date === "string" ? e.date : "",
+        }));
     } catch {
       // битые данные не должны ломать список
     }
@@ -63,6 +72,7 @@ export async function GET() {
       xp,
       nights,
       lastHunt,
+      feed,
     };
   });
   return NextResponse.json(sheets);
