@@ -13,6 +13,7 @@ import { CodexSection } from "@/components/vtm/vtm-codex";
 import { VtmDicePanel, setVtmSheetHooks, vtmRollAndShow } from "@/components/vtm/vtm-dice";
 import { VtmReturnPortal } from "@/components/vtm/portal-transition";
 import { VtmPrintSheet } from "@/components/vtm/vtm-print-sheet";
+import { VtmPrintSummary } from "@/components/vtm/vtm-print-summary";
 import { vtmFetch } from "@/lib/vtm-api";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error" | "conflict";
@@ -49,6 +50,13 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
   const [tab, setTab] = useState<TabId>("dossier");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [conflict, setConflict] = useState<ConflictInfo | null>(null);
+  // Режим печати: «лист» — полные досье; «сводка» — одна страница для стола рассказчика
+  const [printMode, setPrintMode] = useState<"sheet" | "summary">("sheet");
+  const printDoc = useCallback((mode: "sheet" | "summary") => {
+    setPrintMode(mode);
+    // даём React кадр на замену печатного документа до открытия диалога печати
+    setTimeout(() => window.print(), 60);
+  }, []);
   // Подсказка прокрутки вкладок на узких экранах
   const tabsBarRef = useRef<HTMLDivElement>(null);
   const [tabFadeLeft, setTabFadeLeft] = useState(false);
@@ -360,12 +368,20 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
           </div>
           <div className="flex flex-wrap items-center justify-end gap-1.5 min-w-0 sm:flex-nowrap">
             <button
-              onClick={() => window.print()}
-              className="vtm-btn vtm-btn-ghost !py-1.5 !px-2 text-xs"
-              title="Распечатать лист или сохранить в PDF (Ctrl+P)"
-              aria-label="Печать листа"
+              onClick={() => printDoc("sheet")}
+              className={`vtm-btn vtm-btn-ghost !py-1.5 !px-2 text-xs ${printMode === "summary" ? "!border-[#c22b30]" : ""}`}
+              title="Распечатать полный лист или сохранить в PDF (Ctrl+P)"
+              aria-label="Печать полного листа"
             >
-              🖨<span className="hidden min-[480px]:inline"> Печать</span>
+              🖨<span className="hidden min-[480px]:inline"> Лист</span>
+            </button>
+            <button
+              onClick={() => printDoc("summary")}
+              className="vtm-btn vtm-btn-ghost !py-1.5 !px-2 text-xs"
+              title="Одна страница для стола рассказчика: характеристики, навыки, Дисциплины, треки"
+              aria-label="Печать сводки Сородича"
+            >
+              ⌘<span className="hidden min-[480px]:inline"> Сводка</span>
             </button>
             <button
               onClick={exportSheet}
@@ -468,7 +484,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
 
       {/* Печатная версия листа — видна только при печати / сохранении в PDF */}
       <div className="vtm-print-only" aria-hidden="true">
-        <VtmPrintSheet data={data} derived={derived} />
+        {printMode === "summary" ? <VtmPrintSummary data={data} derived={derived} /> : <VtmPrintSheet data={data} derived={derived} />}
       </div>
     </main>
   );

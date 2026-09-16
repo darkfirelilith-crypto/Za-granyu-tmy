@@ -896,6 +896,44 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   transform: scale(1.045);
 }
 
+/* ---------- Тень Крови: портрет в предпросмотре случайного Сородича ---------- */
+
+.vtm-fate-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.35rem;
+}
+.vtm-fate-face {
+  width: 112px;
+  animation: vtm-shadow-breathe 5.5s ease-in-out infinite;
+}
+/* тень оживает сама, без наведения — это же решение Крови */
+.vtm-fate-face img {
+  animation: vtm-shadow-gaze 7s ease-in-out infinite;
+}
+.vtm-fate-face:hover {
+  border-color: rgba(194, 43, 48, 0.8);
+  box-shadow:
+    inset 0 0 0 1px rgba(214, 168, 64, 0.3),
+    inset 0 -22px 34px rgba(0, 0, 0, 0.55),
+    0 0 26px rgba(194, 43, 48, 0.4);
+}
+.vtm-fate-face:hover img {
+  filter: saturate(1) contrast(1.05) brightness(1.05);
+  transform: scale(1.05);
+}
+@keyframes vtm-shadow-breathe {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(214, 168, 64, 0.14), inset 0 -22px 34px rgba(0, 0, 0, 0.65), 0 6px 18px rgba(0, 0, 0, 0.5); }
+  50% { box-shadow: inset 0 0 0 1px rgba(214, 168, 64, 0.2), inset 0 -22px 34px rgba(0, 0, 0, 0.6), 0 6px 22px rgba(194, 43, 48, 0.22); }
+}
+@keyframes vtm-shadow-gaze {
+  0%, 100% { filter: saturate(0.72) contrast(1.06) brightness(0.92); }
+  50% { filter: saturate(0.92) contrast(1.08) brightness(1.02); }
+}
+
 /* ---------- Слабокровные: формулы алхимии (База знаний) ---------- */
 
 /* разделитель-перегонный куб */
@@ -960,6 +998,61 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   color: #7d6a63;
   border-left: 2px solid rgba(168, 119, 192, 0.3);
   padding-left: 0.55rem;
+}
+
+/* ---------- Слабокровные: выбор формул в редакторе (вкладка «Дисциплины») ---------- */
+
+.vtm-formula-pick {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(74, 42, 47, 0.7);
+  border-radius: 7px;
+  background: linear-gradient(165deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.1));
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.22s, box-shadow 0.22s, background 0.22s, transform 0.22s;
+}
+.vtm-formula-pick:hover {
+  border-color: rgba(168, 119, 192, 0.5);
+  background: linear-gradient(165deg, rgba(168, 119, 192, 0.07), rgba(0, 0, 0, 0.18));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 0 14px rgba(168, 119, 192, 0.1);
+}
+.vtm-formula-pick:focus-visible {
+  outline: 1px solid rgba(168, 119, 192, 0.65);
+  outline-offset: 2px;
+}
+.vtm-formula-pick.active {
+  border-color: rgba(168, 119, 192, 0.68);
+  background: linear-gradient(165deg, rgba(168, 119, 192, 0.13), rgba(0, 0, 0, 0.22));
+  box-shadow:
+    inset 0 0 0 1px rgba(168, 119, 192, 0.14),
+    0 0 18px rgba(168, 119, 192, 0.16),
+    0 6px 16px rgba(0, 0, 0, 0.4);
+}
+.vtm-formula-pick .vtm-formula-vial {
+  width: 26px;
+  height: 30px;
+  font-size: 0.85rem;
+  border-radius: 4px 4px 6px 6px;
+}
+.vtm-formula-pick.active .vtm-formula-vial {
+  border-color: rgba(168, 119, 192, 0.7);
+  background: linear-gradient(170deg, rgba(168, 119, 192, 0.3), rgba(0, 0, 0, 0.5));
+  animation: vtm-bubble 2.2s ease-in-out infinite;
+}
+/* заметка о варке под карточками выбранной формулы */
+.vtm-brew-note {
+  font-size: 0.64rem;
+  line-height: 1.55;
+  font-style: italic;
+  color: #8d7a72;
+  border-left: 2px solid rgba(168, 119, 192, 0.38);
+  padding: 0.15rem 0 0.15rem 0.6rem;
+  background: linear-gradient(90deg, rgba(168, 119, 192, 0.05), transparent 60%);
+  border-radius: 0 4px 4px 0;
 }
 
 /* ---------- Пара характеристика + навык: подсветка ---------- */
@@ -1233,6 +1326,8 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   .vtm-formula-vial { animation: none !important; }
   .vtm-tpl-face, .vtm-tpl-face img, .vtm-formula-card,
   .vtm-pair-name, .vtm-pair-chip { transition: none !important; }
+  .vtm-fate-face, .vtm-fate-face img { animation: none !important; }
+  .vtm-formula-pick, .vtm-formula-pick.active, .vtm-formula-pick .vtm-formula-vial { transition: none !important; animation: none !important; }
 }
 
 /* ---------- Печать досье ---------- */
@@ -1320,6 +1415,96 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
     font-size: 8pt;
     font-style: italic;
   }
+
+  /* ---------- «Сводка Сородича»: одна страница для стола рассказчика ---------- */
+  .vtm-print-sum {
+    font-size: 9.5pt;
+  }
+  .vtm-sum-head {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    border-bottom: 2.5px double #111;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    break-inside: avoid;
+  }
+  .vtm-sum-portrait {
+    width: 22mm;
+    height: 28mm;
+    object-fit: cover;
+    border: 1px solid #111;
+    flex-shrink: 0;
+  }
+  .vtm-sum-kicker {
+    font-size: 6.8pt;
+    letter-spacing: 0.3em;
+    margin: 0 0 3px;
+  }
+  .vtm-sum-name {
+    font-family: var(--vtm-font-display), Georgia, serif;
+    font-size: 16pt;
+    letter-spacing: 0.06em;
+    margin: 0 0 2px;
+  }
+  .vtm-sum-tags { font-size: 8.5pt; font-weight: 700; margin: 0 0 2px; }
+  .vtm-sum-concept { font-size: 8.5pt; font-style: italic; margin: 0; }
+  .vtm-sum-vitals {
+    margin-left: auto;
+    text-align: right;
+    font-size: 8pt;
+    line-height: 1.55;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .vtm-sum-vitals span { display: block; }
+  .vtm-sum-cols {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .vtm-sum-cols > div { flex: 1; min-width: 0; }
+  .vtm-sum-section {
+    font-family: var(--vtm-font-labels), sans-serif;
+    font-size: 8.5pt;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #111;
+    padding-bottom: 1px;
+    margin: 8px 0 4px;
+    break-after: avoid;
+  }
+  .vtm-sum-attrs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px 10px;
+  }
+  .vtm-sum-attr { font-size: 8.5pt; white-space: nowrap; }
+  .vtm-sum-attr i { font-style: normal; color: #444; }
+  .vtm-sum-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1px 10px;
+  }
+  .vtm-sum-skill { font-size: 8pt; white-space: nowrap; }
+  .vtm-sum-discs { display: grid; gap: 3px; }
+  .vtm-sum-disc { font-size: 8.5pt; margin: 0; }
+  .vtm-sum-disc b { font-weight: 700; }
+  .vtm-sum-adv { display: grid; gap: 2px; }
+  .vtm-sum-adv-item { font-size: 8pt; margin: 0; }
+  .vtm-sum-adv-item i { font-style: normal; color: #444; font-size: 7pt; letter-spacing: 0.06em; }
+  .vtm-sum-empty { font-size: 8pt; font-style: italic; color: #555; margin: 2px 0; }
+  .vtm-sum-drive p, .vtm-sum-gear p { font-size: 8.5pt; margin: 2px 0; }
+  .vtm-sum-drive i, .vtm-sum-gear i { font-style: normal; color: #444; }
+  .vtm-sum-sire { font-size: 8.5pt; margin: 8px 0 0; }
+  .vtm-sum-sire i { font-style: normal; color: #444; }
+  .vtm-sum-footer {
+    margin-top: 10px;
+    border-top: 1px solid #111;
+    padding-top: 5px;
+    font-size: 7.5pt;
+    font-style: italic;
+  }
 }
 
 /* ---------- Мобильная адаптация ---------- */
@@ -1339,4 +1524,8 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   .vtm-tpl-face { width: 88px; }
   .vtm-pair-chip { font-size: 0.48rem; padding: 0.08em 0.34em; }
   .vtm-formula-vial { width: 26px; height: 30px; font-size: 0.85rem; }
+  .vtm-fate-face { width: 82px; }
+  .vtm-fate-head { gap: 0.7rem; }
+  .vtm-formula-pick { padding: 0.45rem 0.5rem; gap: 0.45rem; }
+  .vtm-formula-pick .vtm-formula-vial { width: 23px; height: 26px; font-size: 0.75rem; }
 }

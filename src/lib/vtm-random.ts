@@ -44,6 +44,15 @@ const shuffle = <T,>(arr: T[]): T[] => {
 
 // ---------- пулы имён ----------
 
+/** Тени Крови: анонимные силуэты для случайных Сородичей —
+ *  Кровь ещё не выбрала лицо, но уже выбрала тень. */
+const SHADOW_PORTRAITS = [
+  "/vtm/portraits/shadow-veiled.jpg",
+  "/vtm/portraits/shadow-fedora.jpg",
+  "/vtm/portraits/shadow-hood.jpg",
+  "/vtm/portraits/shadow-smoke.jpg",
+];
+
 const MALE_NAMES = ["Артём", "Константин", "Родион", "Марк", "Святослав", "Игнат", "Феликс", "Захар", "Лев", "Мирон", "Тимур", "Никодим", "Аристарх", "Вадим", "Глеб", "Демьян"];
 const FEMALE_NAMES = ["Вера", "Лада", "Маргарита", "Ника", "Селена", "Аглая", "Ирина", "Ярослава", "Ева", "Серафима", "Полина", "Ксения", "Тамара", "Регина", "Алиса", "Устинья"];
 const SURNAMES = ["Волков", "Крамской", "Оболенский", "Штерн", "Черных", "Ветров", "Савельев", "Ланге", "Морозов", "Вельский", "Гронский", "Стрельцов", "Ковач", "Ярцев", "Дюмон", "Заремба"];
@@ -466,9 +475,10 @@ export function buildRandomSheet(): VtmSheetData {
     anchor3: "",
     description: "",
     history: "",
-    portrait: "",
-    portraitThumb: "",
+    portrait: pick(SHADOW_PORTRAITS),
+    portraitThumb: "", // заполнится копией портрета ниже — тень одна на оба поля
   };
+  info.portraitThumb = info.portrait;
 
   // уникализация принципов/опор
   while (info.principle2 === info.principle1) info.principle2 = pick(PRINCIPLES);

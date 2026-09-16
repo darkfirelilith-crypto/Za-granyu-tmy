@@ -15,6 +15,7 @@ import {
   CLAN_BY_ID,
   ADVANTAGE_LIBRARY,
   ADVANTAGE_BY_ID,
+  THINBLOOD_FORMULAS,
 } from "@/lib/vtm-data";
 import { DerivedStats } from "@/lib/vtm-calc";
 
@@ -115,42 +116,60 @@ export function DisciplinesSection({
                 {/* Силы по уровням */}
                 {value > 0 && (
                   <div className="space-y-1.5 pt-1">
-                    {Array.from({ length: value }, (_, i) => i + 1).map((lvl) => {
-                      const powers = def.powers[lvl] || [];
-                      const chosen = state?.powers?.[lvl] || "";
-                      return (
-                        <div key={lvl} className="flex items-center gap-2 flex-wrap">
-                          <span className="vtm-label text-[0.56rem] text-[#6e5a53] w-8 shrink-0">{lvl} ур.</span>
-                          <select
-                            className="vtm-input !py-1 !text-[0.74rem] flex-1 min-w-[160px]"
-                            value={powers.some((p) => p.name === chosen) ? chosen : ""}
-                            onChange={(e) => {
-                              mutate((d) => {
-                                const disc = d.disciplines.find((x) => x.key === def.id);
-                                if (disc) disc.powers[lvl] = e.target.value;
-                              });
-                            }}
-                            aria-label={`Сила ${lvl} уровня Дисциплины ${def.name}`}
-                          >
-                            <option value="">— выбери силу —</option>
-                            {powers.map((p) => (
-                              <option key={p.name} value={p.name}>{p.name}{p.amalgam ? ` · амальгама: ${p.amalgam}` : ""}</option>
-                            ))}
-                          </select>
-                        </div>
-                      );
-                    })}
-                    {/* Описания выбранных сил */}
-                    {state?.powers && Object.entries(state.powers).map(([lvlS, name]) => {
-                      const lvl = parseInt(lvlS, 10);
-                      const p = (def.powers[lvl] || []).find((x) => x.name === name);
-                      if (!p) return null;
-                      return (
-                        <p key={lvlS} className="vtm-hint !text-[0.64rem] pl-10 border-l border-[#3d1a20]">
-                          <b className="text-[#a68d80] not-italic">{name}:</b> {p.desc}
-                        </p>
-                      );
-                    })}
+                    {def.id === "thinblood_alchemy" ? (
+                      /* Слабокровные: формулы Алхимии карточками — с эффектами и заметками о варке */
+                      <ThinbloodFormulaPicker
+                        level={value}
+                        chosen={state?.powers || {}}
+                        onPick={(lvl, name) => {
+                          mutate((d) => {
+                            const disc = d.disciplines.find((x) => x.key === def.id);
+                            if (!disc) return;
+                            if (!disc.powers) disc.powers = {};
+                            disc.powers[lvl] = name;
+                          });
+                        }}
+                      />
+                    ) : (
+                      <>
+                        {Array.from({ length: value }, (_, i) => i + 1).map((lvl) => {
+                          const powers = def.powers[lvl] || [];
+                          const chosen = state?.powers?.[lvl] || "";
+                          return (
+                            <div key={lvl} className="flex items-center gap-2 flex-wrap">
+                              <span className="vtm-label text-[0.56rem] text-[#6e5a53] w-8 shrink-0">{lvl} ур.</span>
+                              <select
+                                className="vtm-input !py-1 !text-[0.74rem] flex-1 min-w-[160px]"
+                                value={powers.some((p) => p.name === chosen) ? chosen : ""}
+                                onChange={(e) => {
+                                  mutate((d) => {
+                                    const disc = d.disciplines.find((x) => x.key === def.id);
+                                    if (disc) disc.powers[lvl] = e.target.value;
+                                  });
+                                }}
+                                aria-label={`Сила ${lvl} уровня Дисциплины ${def.name}`}
+                              >
+                                <option value="">— выбери силу —</option>
+                                {powers.map((p) => (
+                                  <option key={p.name} value={p.name}>{p.name}{p.amalgam ? ` · амальгама: ${p.amalgam}` : ""}</option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        })}
+                        {/* Описания выбранных сил */}
+                        {state?.powers && Object.entries(state.powers).map(([lvlS, name]) => {
+                          const lvl = parseInt(lvlS, 10);
+                          const p = (def.powers[lvl] || []).find((x) => x.name === name);
+                          if (!p) return null;
+                          return (
+                            <p key={lvlS} className="vtm-hint !text-[0.64rem] pl-10 border-l border-[#3d1a20]">
+                              <b className="text-[#a68d80] not-italic">{name}:</b> {p.desc}
+                            </p>
+                          );
+                        })}
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -202,6 +221,91 @@ export function DisciplinesSection({
           <button className="vtm-btn shrink-0" onClick={addCustom} disabled={!customName.trim()}>+ Добавить</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Выбор формул Алхимии слабокровных: карточки-рецепты вместо селекта —
+ *  каждая с эффектом из книги и заметкой о варке; клик по выбранной снимает её. */
+function ThinbloodFormulaPicker({
+  level,
+  chosen,
+  onPick,
+}: {
+  level: number;
+  chosen: Record<number, string>;
+  onPick: (lvl: number, name: string) => void;
+}) {
+  const levels = Array.from({ length: level }, (_, i) => i + 1);
+  const picked = Object.entries(chosen)
+    .map(([lvlS, name]) => ({ lvl: parseInt(lvlS, 10), name }))
+    .filter((x) => x.name);
+  return (
+    <div className="space-y-2.5">
+      <p className="vtm-hint !text-[0.6rem] flex items-center gap-1.5 flex-wrap">
+        <span className="vtm-label text-[0.54rem] text-[#a877c0] uppercase tracking-[0.18em]">⚗ Книга формул</span>
+        Клик по колбе — сварить формулу этого уровня. Повторный клик — вылить.
+      </p>
+      {levels.map((lvl) => {
+        const formulas = THINBLOOD_FORMULAS.filter((f) => f.level === lvl);
+        if (!formulas.length) {
+          return (
+            <div key={lvl} className="flex items-center gap-2">
+              <span className="vtm-label text-[0.56rem] text-[#6e5a53] w-8 shrink-0">{lvl} ур.</span>
+              <span className="vtm-hint !text-[0.62rem]">Формулы этого уровня откроются, когда Алхимия поднимется до {lvl}.</span>
+            </div>
+          );
+        }
+        return (
+          <div key={lvl} className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="vtm-label text-[0.56rem] text-[#6e5a53] w-8 shrink-0">{lvl} ур.</span>
+              <span className="flex-1 h-px" style={{ background: "linear-gradient(to right, rgba(168,119,192,0.35), transparent)" }} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-2 sm:pl-4">
+              {formulas.map((f) => {
+                const active = chosen[lvl] === f.name;
+                return (
+                  <button
+                    key={f.name}
+                    type="button"
+                    onClick={() => onPick(lvl, active ? "" : f.name)}
+                    aria-pressed={active}
+                    aria-label={`Формула ${f.name}, уровень ${f.level}`}
+                    className={`vtm-formula-pick ${active ? "active" : ""}`}
+                  >
+                    <span className="vtm-formula-vial" aria-hidden>⚗</span>
+                    <span className="flex-1 min-w-0 text-left">
+                      <span className="flex items-center gap-1.5 flex-wrap">
+                        <b className="text-[0.78rem] text-[#d9c7b6] not-italic">{f.name}</b>
+                        <span className="vtm-label text-[0.52rem] text-[#a877c0]" aria-hidden>
+                          {"◆".repeat(f.level)}{"◇".repeat(5 - f.level)}
+                        </span>
+                        {active && <span className="vtm-stamp !text-[0.46rem] !py-0.5">сварена</span>}
+                      </span>
+                      <span className="block vtm-hint !text-[0.62rem] mt-0.5">{f.effect}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      {/* Заметки о варке выбранных формул — флейвор для отыгрыша */}
+      {picked.length > 0 && (
+        <div className="space-y-1.5 pt-1">
+          {picked.map(({ lvl, name }) => {
+            const f = THINBLOOD_FORMULAS.find((x) => x.level === lvl && x.name === name);
+            if (!f) return null;
+            return (
+              <p key={`${lvl}-${name}`} className="vtm-brew-note">
+                <b className="not-italic text-[#a877c0]">{name} ({lvl} ур.):</b> {f.brew}
+              </p>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -59,7 +59,12 @@ export function AuthDialog({
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, characterName }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          characterName: characterName.trim() ? characterName.trim() : undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Ошибка");
@@ -191,7 +196,7 @@ export function AuthDialog({
 
         {process.env.NODE_ENV === "development" && (
           <p className="text-center text-xs parchment-muted italic">
-            Подсказка для испытателя: Божество — deity@eldrin.world / divine123
+            Подсказка для испытателя: создайте нового героя во вкладке «Регистрация»
           </p>
         )}
       </DialogContent>

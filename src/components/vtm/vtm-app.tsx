@@ -771,23 +771,35 @@ function FatePreview({
       className="vtm-fate-panel space-y-4"
       aria-live="polite"
     >
-      <div className="text-center space-y-1.5">
-        <span className="vtm-stamp">Решение Крови</span>
-        <h3 className="vtm-display text-2xl text-[#d9c7b6] tracking-[0.08em]">{data.info.name}</h3>
-        <p className="vtm-label text-[0.66rem] text-[#d6a840] flex flex-wrap items-center justify-center gap-x-2">
-          {data.info.clan === "thinblood" ? (
-            <span title="Кровь сира разбавлена: Сила Крови 0, из клановых Дисциплин — только Алхимия слабокровных">
-              ⚱ Слабокровная
-            </span>
-          ) : (
-            <span>⛧ {clan?.name || "—"}</span>
+      <div className="vtm-fate-head">
+        {data.info.portrait && (
+          <span className="vtm-tpl-face vtm-fate-face" aria-hidden>
+            <img src={data.info.portrait} alt="" />
+          </span>
+        )}
+        <div className="text-center space-y-1.5 flex-1 min-w-[200px]">
+          <span className="vtm-stamp">Решение Крови</span>
+          <h3 className="vtm-display text-2xl text-[#d9c7b6] tracking-[0.08em]">{data.info.name}</h3>
+          <p className="vtm-label text-[0.66rem] text-[#d6a840] flex flex-wrap items-center justify-center gap-x-2">
+            {data.info.clan === "thinblood" ? (
+              <span title="Кровь сира разбавлена: Сила Крови 0, из клановых Дисциплин — только Алхимия слабокровных">
+                ⚱ Слабокровная
+              </span>
+            ) : (
+              <span>⛧ {clan?.name || "—"}</span>
+            )}
+            {sect && <span>· {sect.name}</span>}
+            <span>· {data.info.generation}-е пок.</span>
+            {predator && <span>· {predator.name}</span>}
+            <span>· СК {d.bp}</span>
+          </p>
+          <p className="vtm-hint !text-[0.68rem]">{data.info.concept}</p>
+          {data.info.portrait && (
+            <p className="vtm-label text-[0.54rem] text-[#6e5a53] uppercase tracking-[0.22em]">
+              тень Крови · лицо выберет первая ночь
+            </p>
           )}
-          {sect && <span>· {sect.name}</span>}
-          <span>· {data.info.generation}-е пок.</span>
-          {predator && <span>· {predator.name}</span>}
-          <span>· СК {d.bp}</span>
-        </p>
-        <p className="vtm-hint !text-[0.68rem]">{data.info.concept}</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-5 sm:grid-cols-9 gap-1.5">
