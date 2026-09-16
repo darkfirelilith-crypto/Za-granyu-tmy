@@ -47,7 +47,7 @@ export function VtmApp() {
         <svg viewBox="0 0 60 60" className="w-24 vtm-breath" aria-hidden="true">
           <path d="M30 4 C38 18 44 26 46 38 C47.5 45 42 52 38 52 C34 52 29 46 30 38 C31 26 29 16 30 4 Z" fill="none" stroke="#8a1a1d" strokeWidth="1.6" opacity="0.8" />
         </svg>
-        <p className="vtm-label text-sm tracking-[0.4em] uppercase text-[#6e5a53] vtm-flicker">
+        <p className="vtm-label text-sm tracking-[0.4em] uppercase text-[#9c8072] vtm-flicker">
           Ночь раскрывает глаза…
         </p>
       </main>
@@ -88,7 +88,7 @@ function VtmGate() {
           <h1 className="vtm-display text-2xl md:text-3xl text-[#d9c7b6]">
             Маскарад <span className="text-[#e8636b] vtm-flicker">запечатан</span>
           </h1>
-          <p className="text-sm leading-relaxed text-[#a68d80]">
+          <p className="text-sm leading-relaxed text-[#c4ac9d]">
             Врата откроются лишь тем, чьё имя уже внесено в списки основного мира.
             Войди там — и чернильная печать спадёт.
           </p>
@@ -200,7 +200,7 @@ function VtmHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
           transition={{ duration: 0.7 }}
           className="text-center space-y-3"
         >
-          <p className="vtm-label text-[0.68rem] tracking-[0.45em] uppercase text-[#6e5a53]">
+          <p className="vtm-label text-[0.75rem] tracking-[0.45em] uppercase text-[#9c8072]">
             Архив Крови · Отдел незарегистрированных особ
           </p>
           <h1 className="vtm-display text-3xl md:text-5xl text-[#d9c7b6] tracking-[0.1em]">
@@ -209,7 +209,7 @@ function VtmHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
           <div className="flex items-center justify-center gap-3 vtm-divider max-w-xs mx-auto">
             <span className="vtm-blood-drop text-[#c22b30]">🩸</span>
           </div>
-          <p className="text-sm italic text-[#a68d80] max-w-xl mx-auto">
+          <p className="text-sm italic text-[#c4ac9d] max-w-xl mx-auto">
             Листы персонажей по правилам 5-й редакции. Заполняй — Кровь запомнит каждое слово.
             В архиве помещается до {MAX_SHEETS} ночей.
           </p>
@@ -242,7 +242,7 @@ function VtmHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
               <path d="M30 4 C38 18 44 26 46 38 C47.5 45 42 52 38 52 C34 52 29 46 30 38 C31 26 29 16 30 4 Z" fill="none" stroke="#8a1a1d" strokeWidth="1.6" />
               <circle cx="30" cy="40" r="3" fill="#8a1a1d" />
             </svg>
-            <h2 className="vtm-display text-lg text-[#a68d80] tracking-[0.15em] uppercase">Архив пуст</h2>
+            <h2 className="vtm-display text-lg text-[#c4ac9d] tracking-[0.15em] uppercase">Архив пуст</h2>
             <p className="vtm-hint">
               Ни одной ночи не записано. Кровь терпелива — она подождёт, пока ты пробудишь первого Сородича.
             </p>
@@ -253,7 +253,7 @@ function VtmHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
             >
               {createMutation.isPending ? "Пробуждаем…" : "+ Пробудить первого Сородича"}
             </button>
-            <p className="vtm-hint !text-[0.68rem]">
+            <p className="vtm-hint !text-[0.75rem]">
               Чистый лист или готовый вампир из архива — выбор за тобой.
             </p>
           </motion.div>
@@ -308,7 +308,7 @@ function VtmHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
                 aria-label="Пробудить нового Сородича"
               >
                 <span className="vtm-display text-4xl text-[#8a1a1d] vtm-breath">+</span>
-                <span className="vtm-label text-sm tracking-[0.2em] uppercase text-[#a68d80]">
+                <span className="vtm-label text-sm tracking-[0.2em] uppercase text-[#c4ac9d]">
                   {createMutation.isPending ? "Пробуждаем…" : "Новая ночь"}
                 </span>
                 <span className="vtm-hint text-center px-4">
@@ -342,7 +342,7 @@ function VtmHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
           <VtmReturnPortal className="vtm-btn mx-auto">
             ← Вернуться в мир «За гранью тьмы»
           </VtmReturnPortal>
-          <p className="vtm-label text-[0.64rem] tracking-[0.3em] uppercase text-[#4a3230]">
+          <p className="vtm-label text-[0.72rem] tracking-[0.3em] uppercase text-[#4a3230]">
             Nobody expects the beast until it knocks
           </p>
         </footer>
@@ -388,7 +388,7 @@ function VtmHelpPanel() {
       transition={{ duration: 0.45 }}
       className="vtm-panel p-5 md:p-6 max-w-2xl mx-auto text-left space-y-3"
     >
-      <h2 className="vtm-display text-sm tracking-[0.25em] uppercase text-[#a68d80] text-center">
+      <h2 className="vtm-display text-sm tracking-[0.25em] uppercase text-[#c4ac9d] text-center">
         Наставления Крови
       </h2>
       <ol className="space-y-3">
@@ -403,7 +403,7 @@ function VtmHelpPanel() {
             </span>
             <div>
               <p className="vtm-label text-xs tracking-[0.15em] uppercase text-[#d6a840]">{s.title}</p>
-              <p className="text-xs leading-relaxed text-[#a68d80] mt-0.5">{s.text}</p>
+              <p className="text-xs leading-relaxed text-[#c4ac9d] mt-0.5">{s.text}</p>
             </div>
           </li>
         ))}
@@ -529,7 +529,7 @@ function SheetCard({
               {sheet.name}
             </h2>
             {clanName && (
-              <p className="vtm-label text-[0.66rem] text-[#a8863d] truncate mt-0.5" title={clanName}>
+              <p className="vtm-label text-[0.73rem] text-[#a8863d] truncate mt-0.5" title={clanName}>
                 ⛧ {clanName}
                 {typeof sheet.generation === "number" && sheet.generation > 0 ? ` · ${sheet.generation}-е пок.` : ""}
                 {predatorName ? ` · ${predatorName}` : ""}
@@ -576,11 +576,11 @@ function SheetCard({
             </ul>
           </div>
         )}
-        <div className="flex items-center justify-between vtm-label text-[0.66rem] text-[#6e5a53]">
+        <div className="flex items-center justify-between vtm-label text-[0.73rem] text-[#9c8072]">
           <span>пробуждён {openedDate}</span>
           <span>изм. {date.slice(0, 6)}</span>
         </div>
-        <p className="vtm-label text-[0.72rem] tracking-[0.25em] uppercase text-[#c22b30] opacity-0 group-hover:opacity-100 transition-opacity">
+        <p className="vtm-label text-[0.77rem] tracking-[0.25em] uppercase text-[#c22b30] opacity-0 group-hover:opacity-100 transition-opacity">
           Открыть лист →
         </p>
       </div>
@@ -700,12 +700,12 @@ function TemplateChooser({
                 </span>
                 <span className="vtm-template-title">{t.title}</span>
                 <span className="vtm-template-tagline">{t.tagline}</span>
-                <span className="flex items-center justify-center gap-3 vtm-label text-[0.62rem] text-[#6e5a53]">
+                <span className="flex items-center justify-center gap-3 vtm-label text-[0.70rem] text-[#9c8072]">
                   <i>поколение {t.sheet.info.generation}</i>
                   <i>Сила Крови {t.sheet.info.generation >= 14 ? 0 : t.sheet.info.generation >= 12 ? 1 : 2}</i>
                   <i>Чел. {t.sheet.trackers.humanity}</i>
                 </span>
-                <span className="vtm-label text-[0.68rem] text-[#d6a840]">«{t.sheet.info.name}»</span>
+                <span className="vtm-label text-[0.75rem] text-[#d6a840]">«{t.sheet.info.name}»</span>
               </button>
             ))}
           </div>
@@ -803,7 +803,7 @@ function FatePreview({
         <div className="text-center space-y-1.5 flex-1 min-w-[200px]">
           <span className="vtm-stamp">Решение Крови</span>
           <h3 className="vtm-display text-2xl text-[#d9c7b6] tracking-[0.08em]">{data.info.name}</h3>
-          <p className="vtm-label text-[0.72rem] text-[#d6a840] flex flex-wrap items-center justify-center gap-x-2">
+          <p className="vtm-label text-[0.77rem] text-[#d6a840] flex flex-wrap items-center justify-center gap-x-2">
             {data.info.clan === "thinblood" ? (
               <span title="Кровь сира разбавлена: Сила Крови 0, из клановых Дисциплин — только Алхимия слабокровных">
                 ⚱ Слабокровная
@@ -816,9 +816,9 @@ function FatePreview({
             {predator && <span>· {predator.name}</span>}
             <span>· СК {d.bp}</span>
           </p>
-          <p className="vtm-hint !text-[0.74rem]">{data.info.concept}</p>
+          <p className="vtm-hint !text-[0.79rem]">{data.info.concept}</p>
           {data.info.portrait && (
-            <p className="vtm-label text-[0.6rem] text-[#6e5a53] uppercase tracking-[0.22em]">
+            <p className="vtm-label text-[0.68rem] text-[#9c8072] uppercase tracking-[0.22em]">
               тень Крови · лицо выберет первая ночь
             </p>
           )}
@@ -828,13 +828,13 @@ function FatePreview({
       <div className="grid grid-cols-5 sm:grid-cols-9 gap-1.5">
         {stats.map((s) => (
           <div key={s.label} className="vtm-fate-stat" title={s.hint}>
-            <span className="vtm-label !text-[0.58rem]">{s.label}</span>
+            <span className="vtm-label !text-[0.67rem]">{s.label}</span>
             <span className="vtm-label text-base font-bold text-[#d9c7b6]">{s.value}</span>
           </div>
         ))}
       </div>
 
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 vtm-label text-[0.68rem] text-[#a68d80]">
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 vtm-label text-[0.75rem] text-[#c4ac9d]">
         <span>Здоровье <b className="text-[#e8636b]">{d.healthMax}</b></span>
         <span>Воля <b className="text-[#e8636b]">{d.wpMax}</b></span>
         <span>Сила Крови <b className="text-[#a877c0]">{d.bp}</b></span>
@@ -844,20 +844,20 @@ function FatePreview({
 
       <div className="vtm-fate-row">
         <span className="vtm-label shrink-0">Дисциплины</span>
-        <span className="vtm-label text-[0.7rem] text-[#a877c0]">{discLine}</span>
+        <span className="vtm-label text-[0.76rem] text-[#a877c0]">{discLine}</span>
       </div>
       <div className="vtm-fate-row">
         <span className="vtm-label shrink-0">Биография</span>
-        <span className="vtm-label text-[0.7rem] text-[#a68d80]">{bgLine}</span>
+        <span className="vtm-label text-[0.76rem] text-[#c4ac9d]">{bgLine}</span>
       </div>
       <div className="vtm-fate-row">
         <span className="vtm-label shrink-0">Убежище</span>
-        <span className="text-[0.74rem] italic leading-relaxed text-[#a68d80]">{data.gear.haven}</span>
+        <span className="text-[0.79rem] italic leading-relaxed text-[#c4ac9d]">{data.gear.haven}</span>
       </div>
       {data.info.history && (
         <div className="vtm-fate-row">
           <span className="vtm-label shrink-0">Прошлое</span>
-          <span className="text-[0.74rem] italic leading-relaxed text-[#a68d80]">{data.info.history}</span>
+          <span className="text-[0.79rem] italic leading-relaxed text-[#c4ac9d]">{data.info.history}</span>
         </div>
       )}
 
@@ -887,7 +887,7 @@ function FatePreview({
           ✕ Отпустить
         </button>
       </div>
-      <p className="vtm-hint text-center !text-[0.66rem]">
+      <p className="vtm-hint text-center !text-[0.73rem]">
         Переброс не записывается в архив — Кровь можно трогать, пока не сказано «да».
       </p>
     </motion.div>

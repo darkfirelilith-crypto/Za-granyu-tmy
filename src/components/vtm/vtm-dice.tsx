@@ -187,15 +187,15 @@ export function VtmDicePanel() {
             aria-label="Кости Ночи"
           >
             <div className="flex items-center justify-between">
-              <span className="vtm-label text-[0.74rem] text-[#a68d80]">Кости Ночи</span>
-              <button onClick={() => setOpen(false)} className="vtm-btn vtm-btn-ghost !px-2 !py-1 !text-[0.76rem]" aria-label="Закрыть кости">
+              <span className="vtm-label text-[0.79rem] text-[#c4ac9d]">Кости Ночи</span>
+              <button onClick={() => setOpen(false)} className="vtm-btn vtm-btn-ghost !px-2 !py-1 !text-[0.81rem]" aria-label="Закрыть кости">
                 ✕
               </button>
             </div>
 
             {last && (
               <div className="space-y-2">
-                <p className="vtm-label text-[0.68rem] text-[#a8863d]">{last.label}</p>
+                <p className="vtm-label text-[0.75rem] text-[#a8863d]">{last.label}</p>
                 <div className="flex flex-wrap gap-1.5" role="img" aria-label={describe(last)}>
                   {last.dice.map((d, i) => (
                     <span
@@ -207,7 +207,7 @@ export function VtmDicePanel() {
                     </span>
                   ))}
                 </div>
-                <p className={`vtm-label text-[0.78rem] ${last.bestial || last.messy ? "text-[#e8636b]" : last.totalSuccesses > 0 ? "text-[#9fd8b3]" : "text-[#a68d80]"}`}>
+                <p className={`vtm-label text-[0.83rem] ${last.bestial || last.messy ? "text-[#e8636b]" : last.totalSuccesses > 0 ? "text-[#9fd8b3]" : "text-[#c4ac9d]"}`}>
                   {describe(last)}
                 </p>
                 {last.bestial && (
@@ -221,8 +221,8 @@ export function VtmDicePanel() {
 
             {rouse && (
               <div className="space-y-1 border-t border-[#2b1116] pt-2">
-                <p className="vtm-label text-[0.68rem] text-[#a68d80]">Испытание Крови · {rouse.label}</p>
-                <p className={`vtm-label text-[0.78rem] ${rouse.ok ? "text-[#9fd8b3]" : "text-[#e8636b]"}`}>
+                <p className="vtm-label text-[0.75rem] text-[#c4ac9d]">Испытание Крови · {rouse.label}</p>
+                <p className={`vtm-label text-[0.83rem] ${rouse.ok ? "text-[#9fd8b3]" : "text-[#e8636b]"}`}>
                   d10 = {rouse.value} — {rouse.ok ? "УСПЕХ, Голод не растёт" : "ПРОВАЛ, Голод +1"}
                 </p>
               </div>
@@ -236,7 +236,7 @@ export function VtmDicePanel() {
 
             <div className="flex flex-wrap gap-2 pt-1">
               <button
-                className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.76rem]"
+                className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.81rem]"
                 onClick={() => {
                   // быстрое испытание Крови
                   const r = rollRouse("вручную");
@@ -248,7 +248,7 @@ export function VtmDicePanel() {
                 🩸 Испытание Крови
               </button>
               <button
-                className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.76rem]"
+                className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.81rem]"
                 onClick={() => {
                   if (hooks?.spendWillpower()) {
                     toast.success("Воля −1", { description: "Пункт воли потрачен — перебрось три кости или +1 успех." });

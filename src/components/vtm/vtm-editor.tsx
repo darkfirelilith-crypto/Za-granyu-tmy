@@ -357,7 +357,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
         <svg viewBox="0 0 60 60" className="w-24 vtm-breath" aria-hidden="true">
           <path d="M30 4 C38 18 44 26 46 38 C47.5 45 42 52 38 52 C34 52 29 46 30 38 C31 26 29 16 30 4 Z" fill="none" stroke="#8a1a1d" strokeWidth="1.6" opacity="0.8" />
         </svg>
-        <p className="vtm-label text-sm tracking-[0.4em] uppercase text-[#6e5a53] vtm-flicker">
+        <p className="vtm-label text-sm tracking-[0.4em] uppercase text-[#9c8072] vtm-flicker">
           Разворачиваем саван…
         </p>
       </main>
@@ -400,7 +400,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
           <div className="vtm-panel max-w-md w-full p-6 space-y-4 vtm-conflict-pop">
             <span className="vtm-stamp">Конфликт версий</span>
             <h2 className="vtm-display text-lg text-[#d9c7b6]">Лист изменён в другом окне</h2>
-            <p className="text-sm leading-relaxed text-[#a68d80]">
+            <p className="text-sm leading-relaxed text-[#c4ac9d]">
               Пока ты заполнял лист, копия в архиве обновилась — возможно, открыта вторая вкладка.
               Что сделать с твоей версией?
             </p>
@@ -424,7 +424,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
       />
       <VtmHelpDialog tabId={tab} open={helpOpen} onClose={() => setHelpOpen(false)} />
       <div className="vtm-screen">
-      <div className="max-w-7xl mx-auto px-3 md:px-6 py-6 md:py-8 space-y-4">
+      <div className="max-w-[96rem] mx-auto px-3 md:px-6 py-6 md:py-8 space-y-4">
         {/* Шапка листа */}
         <motion.header
           initial={{ opacity: 0, y: -12 }}
@@ -448,7 +448,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
               aria-label="Имя Сородича"
             />
             {(clanName || sectName || predatorName) && (
-              <p className="vtm-label text-[0.66rem] text-[#a8863d] mt-0.5 ml-1 flex flex-wrap gap-x-2">
+              <p className="vtm-label text-[0.73rem] text-[#a8863d] mt-0.5 ml-1 flex flex-wrap gap-x-2">
                 {clanName && <span>⛧ {clanName}</span>}
                 {sectName && <span>· {sectName}</span>}
                 {predatorName && <span>· {predatorName}</span>}

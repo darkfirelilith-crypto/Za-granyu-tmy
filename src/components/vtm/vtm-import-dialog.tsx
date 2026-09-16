@@ -103,7 +103,7 @@ export function VtmImportDialog({ open, onClose, onJsonFile, onApplyMarkdown }: 
       aria-modal="true"
       aria-label="Восстановить лист"
     >
-      <div className="vtm-import-dlg w-full max-w-xl my-4">
+      <div className="vtm-import-dlg w-full max-w-2xl my-4">
         <div className="vtm-import-head">
           <span className="vtm-stamp">Обратный путь</span>
           <h2 className="vtm-display text-lg text-[#d9c7b6] mt-2">Восстановить Сородича</h2>
@@ -175,7 +175,7 @@ export function VtmImportDialog({ open, onClose, onJsonFile, onApplyMarkdown }: 
                 spellCheck={false}
               />
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="vtm-hint !text-[0.66rem]">{mdText.length}/30000</span>
+                <span className="vtm-hint !text-[0.73rem]">{mdText.length}/30000</span>
                 <div className="flex gap-2">
                   {parsed && (
                     <button className="vtm-btn vtm-btn-ghost" onClick={() => setParsed(null)}>

@@ -242,7 +242,7 @@ export function VtmPortraitStudio({ imageDataUrl, characterName, currentPortrait
       aria-label="Портретная студия Маскарада"
       onKeyDown={onKeyDown}
     >
-      <div className="vtm-pstudio w-full max-w-lg my-auto" tabIndex={-1}>
+      <div className="vtm-pstudio w-full max-w-xl my-auto" tabIndex={-1}>
         <div className="vtm-pstudio-head">
           <span className="vtm-stamp">Портретная студия</span>
           <h2 className="vtm-display text-lg text-[#d9c7b6] mt-2">
@@ -316,8 +316,8 @@ export function VtmPortraitStudio({ imageDataUrl, characterName, currentPortrait
           {/* Зум */}
           <div className="space-y-1.5">
             <div className="flex items-baseline justify-between">
-              <span className="vtm-label text-[0.66rem] text-[#a68d80]">Приближение</span>
-              <span className="vtm-label text-[0.66rem] text-[#d6a840]">×{zoom.toFixed(2)}</span>
+              <span className="vtm-label text-[0.73rem] text-[#c4ac9d]">Приближение</span>
+              <span className="vtm-label text-[0.73rem] text-[#d6a840]">×{zoom.toFixed(2)}</span>
             </div>
             <input
               type="range"
@@ -347,7 +347,7 @@ export function VtmPortraitStudio({ imageDataUrl, characterName, currentPortrait
               ✕ Сжечь негативы
             </button>
           </div>
-          <p className="vtm-hint text-center !text-[0.66rem]">
+          <p className="vtm-hint text-center !text-[0.73rem]">
             Итог: оклад 7:9 с виньеткой · портрет 480px + миниатюра для архива
           </p>
         </div>

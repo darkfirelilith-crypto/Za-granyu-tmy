@@ -125,23 +125,23 @@ export function VtmHelpDialog({ tabId, open, onClose }: { tabId: string; open: b
       aria-modal="true"
       aria-label={`Справка: ${content.title}`}
     >
-      <div className="vtm-help-dlg w-full max-w-2xl my-4">
+      <div className="vtm-help-dlg w-full max-w-3xl my-4">
         <div className="vtm-help-head">
           <span className="vtm-stamp">Справка</span>
           <h2 className="vtm-display text-lg text-[#d9c7b6] mt-2">{content.title}</h2>
-          <p className="vtm-hint mt-1 !text-[0.8rem]">{content.intro}</p>
+          <p className="vtm-hint mt-1 !text-[0.84rem]">{content.intro}</p>
           <button onClick={onClose} className="vtm-pstudio-close" aria-label="Закрыть справку">✕</button>
         </div>
         <div className="p-4 space-y-3 max-h-[65vh] overflow-y-auto vtm-scroll">
           {content.entries.map((e) => (
             <section key={e.q} className="vtm-frame rounded-md p-3 space-y-1.5" style={{ background: "rgba(138,26,29,0.05)" }}>
-              <h3 className="vtm-label text-[0.7rem] text-[#d6a840]">{e.q}</h3>
+              <h3 className="vtm-label text-[0.76rem] text-[#d6a840]">{e.q}</h3>
               {e.a.map((p, i) => (
-                <p key={i} className="text-[0.88rem] leading-relaxed text-[#a68d80]">{p}</p>
+                <p key={i} className="text-[0.92rem] leading-relaxed text-[#c4ac9d]">{p}</p>
               ))}
             </section>
           ))}
-          <p className="vtm-hint text-center !text-[0.72rem] pt-1 pb-2">
+          <p className="vtm-hint text-center !text-[0.77rem] pt-1 pb-2">
             Полный справочник — во вкладке «База знаний». Спорные места решает Рассказчик.
           </p>
         </div>

@@ -14,8 +14,8 @@
   --vtm-line: #3d1a20;
   --vtm-line-soft: #2b1116;
   --vtm-bone: #d9c7b6;
-  --vtm-bone-dim: #a68d80;
-  --vtm-ash: #6e5a53;
+  --vtm-bone-dim: #c4ac9d;
+  --vtm-ash: #9c8072;
   --vtm-blood: #8a1a1d;
   --vtm-blood-bright: #c22b30;
   --vtm-blood-deep: #5c1014;
@@ -243,7 +243,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   background: linear-gradient(160deg, #2e2013, #1d150b);
   border-color: rgba(168, 134, 61, 0.45);
   color: #d9b877;
-  font-size: 0.66rem;
+  font-size: 0.73rem;
   letter-spacing: 0.14em;
   padding: 0.25rem 0.6rem;
   transition: all 0.25s ease;
@@ -304,19 +304,19 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   min-width: 0;
 }
 .vtm-vs-label {
-  font-size: 0.62rem;
+  font-size: 0.70rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--vtm-bone-dim);
   white-space: nowrap;
 }
 .vtm-vs-item b {
-  font-size: 0.8rem;
+  font-size: 0.84rem;
   font-family: var(--vtm-font-display), Georgia, serif;
   color: var(--vtm-bone);
   white-space: nowrap;
 }
-.vtm-vs-sep { color: #4a2a2f; font-size: 0.76rem; user-select: none; }
+.vtm-vs-sep { color: #4a2a2f; font-size: 0.81rem; user-select: none; }
 
 /* мини-треки Здоровья/Воли */
 .vtm-vs-cells { display: inline-flex; gap: 2px; }
@@ -342,7 +342,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   box-shadow: 0 0 5px rgba(194, 43, 48, 0.5);
 }
 .vtm-vs-stains {
-  font-size: 0.62rem;
+  font-size: 0.70rem;
   color: var(--vtm-ash);
   letter-spacing: 0.05em;
 }
@@ -354,7 +354,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 }
 .vtm-vs-beast {
   margin-left: auto;
-  font-size: 0.62rem;
+  font-size: 0.70rem;
   letter-spacing: 0.3em;
   color: var(--vtm-blood-bright);
   animation: vtm-flicker-anim 1.8s linear infinite;
@@ -398,7 +398,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 }
 
 .vtm-res-chip {
-  font-size: 0.62rem;
+  font-size: 0.70rem;
   letter-spacing: 0.08em;
   padding: 0.18rem 0.5rem;
   border: 1px solid var(--vtm-line);
@@ -565,7 +565,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   align-items: center;
   justify-content: center;
   transform: rotate(45deg);
-  font-size: 0.66rem;
+  font-size: 0.73rem;
   color: rgba(0,0,0,0.55);
   font-weight: 700;
 }
@@ -609,7 +609,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 .vtm-stamp {
   display: inline-block;
   font-family: var(--vtm-font-labels), sans-serif;
-  font-size: 0.64rem;
+  font-size: 0.72rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--vtm-blood-bright);
@@ -627,7 +627,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 }
 
 .vtm-hint {
-  font-size: 0.78rem;
+  font-size: 0.83rem;
   color: var(--vtm-ash);
   font-style: italic;
   line-height: 1.5;
@@ -649,7 +649,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 
 .vtm-save-stamp {
   font-family: var(--vtm-font-labels), sans-serif;
-  font-size: 0.66rem;
+  font-size: 0.73rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--vtm-ash);
@@ -730,7 +730,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   border: 1px solid var(--vtm-line);
   border-radius: 3px;
   color: var(--vtm-bone-dim);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   padding: 0.05rem 0.35rem;
   cursor: pointer;
   transition: all 0.15s;
@@ -843,7 +843,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   letter-spacing: 0.05em;
 }
 .vtm-template-tagline {
-  font-size: 0.78rem;
+  font-size: 0.83rem;
   color: var(--vtm-bone-dim);
   font-style: italic;
   line-height: 1.45;
@@ -851,7 +851,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 }
 .vtm-template-clan {
   font-family: var(--vtm-font-labels), sans-serif;
-  font-size: 0.66rem;
+  font-size: 0.73rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--vtm-blood-bright);
@@ -897,7 +897,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   left: 50%;
   bottom: 3px;
   transform: translateX(-50%);
-  font-size: 0.61rem;
+  font-size: 0.69rem;
   z-index: 2;
   filter: drop-shadow(0 0 4px rgba(194, 43, 48, 0.7));
   opacity: 0.85;
@@ -1010,7 +1010,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   50% { transform: translateY(-2px); text-shadow: 0 0 12px rgba(168, 119, 192, 0.6); }
 }
 .vtm-formula-brew {
-  font-size: 0.72rem;
+  font-size: 0.77rem;
   line-height: 1.5;
   font-style: italic;
   color: #7d6a63;
@@ -1063,7 +1063,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 }
 /* заметка о варке под карточками выбранной формулы */
 .vtm-brew-note {
-  font-size: 0.7rem;
+  font-size: 0.76rem;
   line-height: 1.55;
   font-style: italic;
   color: #8d7a72;
@@ -1077,7 +1077,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 
 /* имя парного навыка в строке характеристики — разгорается при наведении */
 .vtm-pair-name {
-  color: #8d7468;
+  color: #b39a88;
   font-style: italic;
   transition: color 0.2s, text-shadow 0.2s;
 }
@@ -1096,9 +1096,9 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   border-radius: 3px;
   background: rgba(194, 43, 48, 0.07);
   font-family: var(--vtm-font-labels), var(--vtm-font-display), Georgia, serif;
-  font-size: 0.58rem;
+  font-size: 0.67rem;
   letter-spacing: 0.1em;
-  color: #b0565e;
+  color: #c96d75;
   line-height: 1.4;
   white-space: nowrap;
   user-select: none;
@@ -1179,8 +1179,11 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 /* Строки навыков */
 .vtm-skill-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px;
-  gap: 0.5rem;
+  /* auto: колонка точек подстраивается под реальную ширину точек —
+     раньше 44px ломались (точки 5×20px + зазоры ≈ 124px) и панель
+     получала горизонтальную прокрутку */
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.15rem 0.5rem;
   align-items: center;
   padding: 0.35rem 0.5rem;
   border-radius: 5px;
@@ -1207,7 +1210,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 /* Журнал бросков */
 .vtm-roll-row {
   font-family: var(--vtm-font-labels), sans-serif;
-  font-size: 0.74rem;
+  font-size: 0.79rem;
   letter-spacing: 0.06em;
   color: var(--vtm-bone-dim);
   padding: 0.3rem 0;
@@ -1285,10 +1288,10 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   border-radius: 3px;
   background: rgba(0, 0, 0, 0.3);
   font-family: var(--vtm-font-labels), var(--vtm-font-display), Georgia, serif;
-  font-size: 0.62rem;
+  font-size: 0.70rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #b99b56;
+  color: #cbae6c;
   line-height: 1.4;
   white-space: nowrap;
   user-select: none;
@@ -1311,7 +1314,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   border-radius: 4px;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.05));
   font-family: var(--vtm-font-labels), var(--vtm-font-display), Georgia, serif;
-  font-size: 0.62rem;
+  font-size: 0.70rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--vtm-ash);
@@ -1354,10 +1357,10 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   align-items: center;
   gap: 0.45em;
   font-family: var(--vtm-font-labels), var(--vtm-font-display), Georgia, serif;
-  font-size: 0.56rem;
+  font-size: 0.66rem;
   letter-spacing: 0.34em;
   text-transform: uppercase;
-  color: #6e5a53;
+  color: #9c8072;
   margin-bottom: 0.3rem;
 }
 .vtm-cf-head .vtm-cf-thread {
@@ -1389,16 +1392,16 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   flex-shrink: 0;
   width: 1.05em;
   text-align: center;
-  font-size: 0.66rem;
+  font-size: 0.73rem;
   line-height: 1;
   filter: saturate(0.85);
   transform: translateY(0.5px);
 }
 .vtm-cf-title {
   font-family: var(--vtm-font-display), Georgia, serif;
-  font-size: 0.74rem;
+  font-size: 0.79rem;
   letter-spacing: 0.03em;
-  color: #a68d80;
+  color: #c4ac9d;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1409,7 +1412,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 .vtm-cf-date {
   flex-shrink: 0;
   font-family: var(--vtm-font-labels), sans-serif;
-  font-size: 0.56rem;
+  font-size: 0.66rem;
   letter-spacing: 0.08em;
   color: #4a3230;
   white-space: nowrap;
@@ -1444,7 +1447,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 /* ---------- Счётчик символов заметок: меркнет → янтарь → алый ---------- */
 .vtm-char-count {
   font-family: var(--vtm-font-labels), sans-serif;
-  font-size: 0.6rem;
+  font-size: 0.68rem;
   letter-spacing: 0.1em;
   color: #584741;
   transition: color 0.4s ease;
@@ -1476,7 +1479,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 }
 .vtm-ed-feed-head {
   font-family: var(--vtm-font-labels), var(--vtm-font-display), Georgia, serif;
-  font-size: 0.64rem;
+  font-size: 0.72rem;
   letter-spacing: 0.34em;
   text-transform: uppercase;
   color: #8a1a1d;
@@ -1486,7 +1489,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 .vtm-ed-feed-empty {
   font-family: var(--vtm-font-display), Georgia, serif;
   font-style: italic;
-  font-size: 0.76rem;
+  font-size: 0.81rem;
   color: #584741;
 }
 .vtm-ed-feed-list {
@@ -1523,7 +1526,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 }
 .vtm-edf-icon {
   flex-shrink: 0;
-  font-size: 0.74rem;
+  font-size: 0.79rem;
   line-height: 1;
   filter: saturate(0.8) brightness(0.95);
   transition: filter 0.3s ease, transform 0.3s ease;
@@ -1538,9 +1541,9 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 }
 .vtm-edf-title {
   font-family: var(--vtm-font-display), Georgia, serif;
-  font-size: 0.78rem;
+  font-size: 0.83rem;
   letter-spacing: 0.03em;
-  color: #a68d80;
+  color: #c4ac9d;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1551,7 +1554,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 .vtm-edf-date {
   flex-shrink: 0;
   font-family: var(--vtm-font-labels), sans-serif;
-  font-size: 0.58rem;
+  font-size: 0.67rem;
   letter-spacing: 0.08em;
   color: #4a3230;
   white-space: nowrap;
@@ -1559,7 +1562,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 .vtm-edf-more {
   font-family: var(--vtm-font-display), Georgia, serif;
   font-style: italic;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   color: #584741;
   padding-left: 0.2rem;
   white-space: nowrap;
@@ -1793,26 +1796,26 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   .vtm-humanity-cell { width: 19px; height: 19px; }
   .vtm-dot { width: 18px; height: 18px; }
   .vtm-vital-strip { padding: 0.4rem 0.6rem; gap: 0.35rem 0.45rem; }
-  .vtm-vs-label { font-size: 0.58rem; }
-  .vtm-vs-item b { font-size: 0.74rem; }
+  .vtm-vs-label { font-size: 0.67rem; }
+  .vtm-vs-item b { font-size: 0.79rem; }
   .vtm-vs-beast { margin-left: 0; width: 100%; }
   .vtm-resonance-drop { width: 24px; height: 31px; }
-  .vtm-pool-chip { font-size: 0.58rem; padding: 0.08em 0.4em; }
-  .vtm-card-vitals { font-size: 0.59rem; gap: 0.25rem 0.45rem; }
+  .vtm-pool-chip { font-size: 0.67rem; padding: 0.08em 0.4em; }
+  .vtm-card-vitals { font-size: 0.68rem; gap: 0.25rem 0.45rem; }
   .vtm-card-feed { padding: 0.28rem 0.4rem 0.32rem 0.5rem; }
   /* лента хроники в редакторе: сжимается в узкую нить */
   .vtm-ed-feed { gap: 0.4rem; padding: 0.4rem 0.5rem 0.45rem 0.6rem; }
-  .vtm-ed-feed-head { font-size: 0.56rem; letter-spacing: 0.26em; width: 100%; }
-  .vtm-edf-title { max-width: 7rem; font-size: 0.7rem; }
-  .vtm-edf-date { font-size: 0.52rem; }
-  .vtm-edf-icon { font-size: 0.66rem; }
+  .vtm-ed-feed-head { font-size: 0.66rem; letter-spacing: 0.26em; width: 100%; }
+  .vtm-edf-title { max-width: 7rem; font-size: 0.76rem; }
+  .vtm-edf-date { font-size: 0.62rem; }
+  .vtm-edf-icon { font-size: 0.73rem; }
   .vtm-edf-item { padding-right: 0.55rem; }
   .vtm-btn-md { padding-left: 0.4rem; padding-right: 0.4rem; }
-  .vtm-cf-title { font-size: 0.68rem; }
-  .vtm-cf-date { font-size: 0.52rem; }
-  .vtm-cf-head { font-size: 0.52rem; letter-spacing: 0.26em; }
+  .vtm-cf-title { font-size: 0.75rem; }
+  .vtm-cf-date { font-size: 0.62rem; }
+  .vtm-cf-head { font-size: 0.62rem; letter-spacing: 0.26em; }
   .vtm-tpl-face { width: 88px; }
-  .vtm-pair-chip { font-size: 0.6rem; padding: 0.08em 0.34em; }
+  .vtm-pair-chip { font-size: 0.68rem; padding: 0.08em 0.34em; }
   .vtm-formula-vial { width: 26px; height: 30px; font-size: 0.91rem; }
   .vtm-fate-face { width: 82px; }
   .vtm-fate-head { gap: 0.7rem; }
@@ -1868,7 +1871,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.4);
   color: var(--vtm-bone-dim);
-  font-size: 0.78rem;
+  font-size: 0.83rem;
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
@@ -1934,7 +1937,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   display: grid;
   place-items: center;
   font-family: var(--vtm-font-labels), sans-serif;
-  font-size: 0.66rem;
+  font-size: 0.73rem;
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--vtm-ash);
@@ -2017,7 +2020,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   flex: 1;
   padding: 0.65rem 0.5rem;
   font-family: var(--vtm-font-labels), sans-serif;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--vtm-bone-dim);
@@ -2063,7 +2066,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   border-radius: 6px;
   color: var(--vtm-bone);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.8rem;
+  font-size: 0.84rem;
   line-height: 1.55;
   padding: 0.6rem 0.7rem;
   outline: none;
@@ -2095,7 +2098,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 }
 .vtm-import-preview-head {
   font-family: var(--vtm-font-labels), sans-serif;
-  font-size: 0.64rem;
+  font-size: 0.72rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--vtm-gold);
@@ -2115,7 +2118,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   background: linear-gradient(to bottom, rgba(138, 26, 29, 0.22), rgba(92, 16, 20, 0.22));
   color: var(--vtm-bone);
   font-family: var(--vtm-font-labels), sans-serif;
-  font-size: 0.64rem;
+  font-size: 0.72rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   animation: vtm-chip-in 0.3s ease-out backwards;
@@ -2134,7 +2137,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   margin: 0.5rem 0 0;
   padding-left: 1rem;
   color: var(--vtm-bone-dim);
-  font-size: 0.78rem;
+  font-size: 0.83rem;
   font-style: italic;
   line-height: 1.5;
 }
@@ -2173,7 +2176,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   border-radius: 4px;
   color: var(--vtm-bone);
   font-family: var(--vtm-font-body), Georgia, serif;
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   padding: 0.38rem 1.7rem 0.38rem 1.8rem;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -2199,7 +2202,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.5);
   color: var(--vtm-bone-dim);
-  font-size: 0.61rem;
+  font-size: 0.69rem;
   cursor: pointer;
   transition: color 0.2s, background 0.2s;
 }
@@ -2217,7 +2220,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   background: rgba(0, 0, 0, 0.3);
   color: var(--vtm-bone-dim);
   font-family: var(--vtm-font-labels), sans-serif;
-  font-size: 0.62rem;
+  font-size: 0.70rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   cursor: pointer;
@@ -2246,10 +2249,10 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   .vtm-pstudio-frame { width: 218px; height: 280px; }
   .vtm-pstudio-canvas { width: 218px; height: 280px; }
   .vtm-pstudio-corner { width: 12px; height: 12px; }
-  .vtm-import-tab { font-size: 0.61rem; letter-spacing: 0.08em; padding: 0.55rem 0.35rem; }
+  .vtm-import-tab { font-size: 0.69rem; letter-spacing: 0.08em; padding: 0.55rem 0.35rem; }
   .vtm-jsearch-bar { padding: 0.5rem 0.6rem 0.5rem; }
   .vtm-jsearch-wrap { flex-basis: 100%; }
-  .vtm-jchip { padding: 0.26em 0.6em; font-size: 0.6rem; }
+  .vtm-jchip { padding: 0.26em 0.6em; font-size: 0.68rem; }
 }
 
 /* ---------- Reduced motion (раунд 9) ---------- */
@@ -2293,7 +2296,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 
 .vtm-roll-hist-title {
   font-family: var(--vtm-font-display), Georgia, serif;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--vtm-gold-bright);
@@ -2302,7 +2305,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 
 .vtm-roll-hist-caret {
   margin-left: auto;
-  font-size: 0.61rem;
+  font-size: 0.69rem;
   color: var(--vtm-ash);
   transition: color 0.2s ease;
 }
@@ -2348,7 +2351,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 .vtm-rh-badge {
   flex-shrink: 0;
   font-family: var(--vtm-font-display), Georgia, serif;
-  font-size: 0.58rem;
+  font-size: 0.67rem;
   letter-spacing: 0.1em;
   padding: 0.14em 0.45em;
   border: 1px solid;
@@ -2402,7 +2405,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 }
 
 .vtm-rh-label {
-  font-size: 0.66rem;
+  font-size: 0.73rem;
   color: var(--vtm-bone-dim);
   white-space: nowrap;
   overflow: hidden;
@@ -2410,7 +2413,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 }
 
 .vtm-rh-dice {
-  font-size: 0.6rem;
+  font-size: 0.68rem;
   color: var(--vtm-ash);
   letter-spacing: 0.04em;
   white-space: nowrap;
@@ -2426,7 +2429,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   border: 0;
   padding: 0;
   font-family: var(--vtm-font-display), Georgia, serif;
-  font-size: 0.6rem;
+  font-size: 0.68rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--vtm-ash);
@@ -2441,7 +2444,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 
 .vtm-btn-chrono {
   font-family: var(--vtm-font-display), Georgia, serif;
-  font-size: 0.62rem;
+  font-size: 0.70rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #0d0a06;
@@ -2485,7 +2488,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   justify-content: center;
   gap: 0.4rem;
   font-family: var(--vtm-font-display), Georgia, serif;
-  font-size: 0.66rem;
+  font-size: 0.73rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--vtm-bone);
@@ -2537,7 +2540,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 
 .vtm-pstudio-ref-cap {
   font-family: var(--vtm-font-display), Georgia, serif;
-  font-size: 0.64rem;
+  font-size: 0.72rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--vtm-bone-dim);
@@ -2548,9 +2551,9 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 @media (max-width: 640px) {
   .vtm-rh-label { max-width: 130px; }
   .vtm-rh-dice { max-width: 130px; }
-  .vtm-rh-badge { font-size: 0.52rem; padding: 0.1em 0.35em; }
+  .vtm-rh-badge { font-size: 0.62rem; padding: 0.1em 0.35em; }
   .vtm-roll-hist-list { max-height: 160px; }
-  .vtm-btn-chrono { font-size: 0.56rem; padding: 0.3em 0.5em; }
+  .vtm-btn-chrono { font-size: 0.66rem; padding: 0.3em 0.5em; }
   .vtm-pstudio-ref-img { width: 36px; height: 46px; }
 }
 
@@ -2630,7 +2633,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   filter: drop-shadow(0 0 6px rgba(138, 26, 29, 0.5));
 }
 .vtm-diab-aura-title {
-  font-size: 0.76rem;
+  font-size: 0.81rem;
   color: var(--vtm-bone);
   line-height: 1.35;
 }
@@ -2649,7 +2652,7 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   .vtm-dot { width: 18px; height: 18px; }
   .vtm-ls-dot { width: 18px; height: 18px; }
   .vtm-help-head { padding-right: 2.8rem; }
-  .vtm-diab-aura-icon { font-size: 0.84rem; }
+  .vtm-diab-aura-icon { font-size: 0.87rem; }
 }
 
 /* Читаемость основного текста справки: выделяемый текст */
