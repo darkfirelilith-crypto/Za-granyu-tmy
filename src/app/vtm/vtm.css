@@ -1,0 +1,820 @@
+/* ============================================================
+   «ВАМПИРЫ: МАСКАРАД» (5 ред.) — отдельная визуальная вселенная.
+   Готическая гамма: бархатная ночь, запёкшаяся кровь, старое золото,
+   мраморная кость. Ничего общего с пергаментом D&D и бумагой Ктулху.
+   Все классы только с префиксом vtm- — полная изоляция стилей.
+   ============================================================ */
+
+.vtm-root {
+  /* Палитра */
+  --vtm-void: #070204;
+  --vtm-bg: #0e0608;
+  --vtm-panel: #170a0d;
+  --vtm-panel-2: #1f0e12;
+  --vtm-line: #3d1a20;
+  --vtm-line-soft: #2b1116;
+  --vtm-bone: #d9c7b6;
+  --vtm-bone-dim: #a68d80;
+  --vtm-ash: #6e5a53;
+  --vtm-blood: #8a1a1d;
+  --vtm-blood-bright: #c22b30;
+  --vtm-blood-deep: #5c1014;
+  --vtm-gold: #a8863d;
+  --vtm-gold-bright: #d6a840;
+  --vtm-violet: #7a4a8c;
+  --vtm-violet-bright: #a877c0;
+
+  min-height: 100vh;
+  background-color: var(--vtm-void);
+  background-image:
+    linear-gradient(rgba(7, 2, 4, 0.87), rgba(7, 2, 4, 0.87)),
+    radial-gradient(ellipse 110% 80% at 50% -8%, rgba(138, 26, 29, 0.09), transparent 55%),
+    radial-gradient(ellipse 80% 60% at 50% 112%, rgba(168, 134, 61, 0.05), transparent 60%),
+    url("/vtm/bg-texture.jpg");
+  background-size: auto, auto, auto, cover;
+  background-attachment: fixed;
+  background-position: center;
+  color: var(--vtm-bone);
+  font-family: var(--vtm-font-body), Georgia, serif;
+}
+
+/* Виньетка по краям — взгляд сквозь маску */
+.vtm-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background:
+    radial-gradient(ellipse 105% 100% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.6) 100%),
+    linear-gradient(to bottom, rgba(0,0,0,0.4), transparent 10%, transparent 90%, rgba(0,0,0,0.5));
+}
+
+/* Зерно плёнки — старая ночь */
+.vtm-grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.16'/%3E%3C/svg%3E");
+}
+
+/* Заголовки — гравировка надгробия */
+.vtm-display {
+  font-family: var(--vtm-font-display), Georgia, serif;
+  letter-spacing: 0.06em;
+  font-weight: 400;
+}
+
+/* Этикетки и счётчики — узкий рубленый шрифт */
+.vtm-label {
+  font-family: var(--vtm-font-labels), "Arial Narrow", sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* ---------- Панель — надгробная плита ---------- */
+
+.vtm-panel {
+  position: relative;
+  background: linear-gradient(165deg, var(--vtm-panel-2), var(--vtm-panel));
+  border: 1px solid var(--vtm-line);
+  border-radius: 8px;
+  box-shadow:
+    0 1px 0 rgba(217, 199, 182, 0.05) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.45),
+    0 14px 34px rgba(0, 0, 0, 0.55);
+}
+
+.vtm-panel-head {
+  border-bottom: 1px solid var(--vtm-line);
+  padding: 0.65rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(to bottom, rgba(138, 26, 29, 0.08), transparent);
+}
+
+/* Двойная готическая рамка для особых блоков */
+.vtm-frame {
+  border: 1px solid var(--vtm-line);
+  outline: 1px solid rgba(168, 134, 61, 0.22);
+  outline-offset: 3px;
+}
+
+/* ---------- Поля ввода ---------- */
+
+.vtm-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid var(--vtm-line);
+  border-radius: 4px;
+  color: var(--vtm-bone);
+  font-family: var(--vtm-font-body), Georgia, serif;
+  font-size: 0.88rem;
+  padding: 0.45rem 0.6rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.vtm-input::placeholder { color: var(--vtm-ash); font-style: italic; }
+.vtm-input:focus {
+  border-color: var(--vtm-blood-bright);
+  box-shadow: 0 0 0 1px rgba(194, 43, 48, 0.3), 0 0 18px rgba(194, 43, 48, 0.1);
+  background: rgba(0, 0, 0, 0.52);
+}
+
+textarea.vtm-input { resize: vertical; min-height: 60px; line-height: 1.55; }
+textarea.vtm-autogrow { resize: none; overflow: hidden; min-height: 0; max-height: none; }
+
+select.vtm-input { appearance: none; cursor: pointer; }
+select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
+
+/* Числовое поле характеристики */
+.vtm-stat-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--vtm-line);
+  border-radius: 4px;
+  color: var(--vtm-bone);
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-size: 1.05rem;
+  font-weight: 500;
+  text-align: center;
+  padding: 0.3rem 0.2rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.vtm-stat-input:focus {
+  border-color: var(--vtm-blood-bright);
+  box-shadow: 0 0 0 1px rgba(194, 43, 48, 0.35), 0 0 16px rgba(194, 43, 48, 0.15);
+}
+/* Скрыть стрелки у number-полей */
+.vtm-stat-input::-webkit-outer-spin-button,
+.vtm-stat-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.vtm-stat-input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+/* ---------- Кнопки ---------- */
+
+.vtm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: linear-gradient(160deg, #241014, #1a0a0e);
+  border: 1px solid var(--vtm-line);
+  border-radius: 6px;
+  color: var(--vtm-bone);
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.vtm-btn:hover {
+  border-color: var(--vtm-blood-bright);
+  color: #e8d5c4;
+  box-shadow: 0 0 16px rgba(194, 43, 48, 0.22);
+  transform: translateY(-1px);
+}
+.vtm-btn:active { transform: translateY(0); }
+.vtm-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+.vtm-btn-blood {
+  background: linear-gradient(160deg, #6d1418, #4a0d10);
+  border-color: #8a2a32;
+  color: #f0d9c8;
+}
+.vtm-btn-blood:hover {
+  background: linear-gradient(160deg, #8a1a1d, #5c1014);
+  border-color: var(--vtm-blood-bright);
+  box-shadow: 0 0 20px rgba(194, 43, 48, 0.4);
+}
+
+.vtm-btn-gold {
+  background: linear-gradient(160deg, #3a2c12, #2a1f0c);
+  border-color: rgba(168, 134, 61, 0.5);
+  color: #e6c98a;
+}
+.vtm-btn-gold:hover {
+  border-color: var(--vtm-gold-bright);
+  box-shadow: 0 0 16px rgba(214, 168, 64, 0.25);
+}
+
+.vtm-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+.vtm-btn-ghost:hover {
+  background: rgba(194, 43, 48, 0.08);
+  border-color: var(--vtm-line);
+}
+
+.vtm-btn-danger {
+  background: linear-gradient(160deg, #4a0d10, #2e0508);
+  border-color: #7c1d1d;
+  color: #e8a0a0;
+}
+.vtm-btn-danger:hover {
+  border-color: var(--vtm-blood-bright);
+  color: #ffcccc;
+  box-shadow: 0 0 20px rgba(194, 43, 48, 0.5);
+}
+
+/* ---------- Точки характеристик ●●●○○ — фирменный элемент VtM ---------- */
+
+.vtm-dots {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.vtm-dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1.5px solid var(--vtm-line);
+  background: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s;
+  position: relative;
+}
+.vtm-dot:hover { border-color: var(--vtm-blood-bright); transform: scale(1.15); }
+.vtm-dot.filled {
+  background: radial-gradient(circle at 35% 30%, #e04548, var(--vtm-blood) 65%, var(--vtm-blood-deep));
+  border-color: var(--vtm-blood-bright);
+  box-shadow: 0 0 8px rgba(194, 43, 48, 0.45), 0 1px 0 rgba(255,255,255,0.15) inset;
+}
+
+/* Точки навыков — золото */
+.vtm-dot.gold.filled {
+  background: radial-gradient(circle at 35% 30%, #e8c56a, var(--vtm-gold) 65%, #6b5424);
+  border-color: var(--vtm-gold-bright);
+  box-shadow: 0 0 8px rgba(214, 168, 64, 0.4), 0 1px 0 rgba(255,255,255,0.15) inset;
+}
+
+/* Точки Дисциплин — аметист */
+.vtm-dot.violet.filled {
+  background: radial-gradient(circle at 35% 30%, #b98ad0, var(--vtm-violet) 65%, #452854);
+  border-color: var(--vtm-violet-bright);
+  box-shadow: 0 0 8px rgba(168, 119, 192, 0.45), 0 1px 0 rgba(255,255,255,0.15) inset;
+}
+
+.vtm-dot:disabled { cursor: default; opacity: 0.5; }
+.vtm-dot:disabled:hover { transform: none; border-color: var(--vtm-line); }
+
+/* ---------- Треки: Здоровье, Воля, Голод, Человечность ---------- */
+
+/* Прямоугольники здоровья/воли: поверхностный (полный) и тяжёлый (крест) */
+.vtm-track {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.vtm-cell {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--vtm-line);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.vtm-cell:hover { border-color: var(--vtm-blood-bright); box-shadow: 0 0 8px rgba(194,43,48,0.3); }
+
+.vtm-cell.sup {
+  background: linear-gradient(150deg, #d9b06a, #8a6a34);
+  border-color: #b8873a;
+  box-shadow: 0 0 8px rgba(214,168,64,0.25) inset;
+}
+.vtm-cell.agg {
+  background: linear-gradient(150deg, #b83238, #6d1114);
+  border-color: var(--vtm-blood-bright);
+  box-shadow: 0 0 10px rgba(194,43,48,0.4) inset;
+}
+.vtm-cell.agg::before,
+.vtm-cell.agg::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 70%; height: 1.5px;
+  background: #2a0508;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.vtm-cell.agg::after { transform: translate(-50%, -50%) rotate(-45deg); }
+
+/* Голод — алые колбы */
+.vtm-hunger-cell {
+  width: 24px;
+  height: 24px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 1px solid var(--vtm-line);
+  background: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s;
+  position: relative;
+}
+.vtm-hunger-cell:hover { border-color: var(--vtm-blood-bright); }
+.vtm-hunger-cell.filled {
+  background: radial-gradient(circle at 40% 35%, #e04548, var(--vtm-blood) 60%, var(--vtm-blood-deep));
+  border-color: var(--vtm-blood-bright);
+  box-shadow: 0 0 10px rgba(194, 43, 48, 0.55);
+}
+.vtm-hunger-cell.low {
+  animation: vtm-hunger-pulse 2.4s ease-in-out infinite;
+}
+@keyframes vtm-hunger-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(194,43,48,0.35); }
+  50% { box-shadow: 0 0 16px rgba(194,43,48,0.7); }
+}
+.vtm-hunger-cell > span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(45deg);
+  font-size: 0.6rem;
+  color: rgba(0,0,0,0.55);
+  font-weight: 700;
+}
+
+/* Человечность — цепь из звеньев */
+.vtm-humanity-cell {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--vtm-line);
+  background: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vtm-humanity-cell:hover { border-color: var(--vtm-gold-bright); }
+.vtm-humanity-cell.filled {
+  background: linear-gradient(150deg, #e8c56a, #a8863d 70%);
+  border-color: var(--vtm-gold-bright);
+  box-shadow: 0 0 8px rgba(214,168,64,0.35);
+}
+.vtm-humanity-cell.stain {
+  background: transparent;
+  border-color: var(--vtm-blood-bright);
+  border-style: dashed;
+}
+.vtm-humanity-cell.stain::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--vtm-blood-bright), var(--vtm-blood-deep));
+  box-shadow: 0 0 6px rgba(194,43,48,0.6);
+}
+
+/* ---------- Штампы и метки ---------- */
+
+.vtm-stamp {
+  display: inline-block;
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--vtm-blood-bright);
+  border: 1px solid rgba(194, 43, 48, 0.45);
+  border-radius: 3px;
+  padding: 0.15rem 0.5rem;
+  background: rgba(194, 43, 48, 0.07);
+  transform: rotate(-1.2deg);
+}
+
+.vtm-stamp-gold {
+  color: var(--vtm-gold-bright);
+  border-color: rgba(168, 134, 61, 0.5);
+  background: rgba(168, 134, 61, 0.07);
+}
+
+.vtm-hint {
+  font-size: 0.72rem;
+  color: var(--vtm-ash);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* Печать сохранения */
+.vtm-save-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--vtm-ash);
+  display: inline-block;
+}
+.vtm-save-dot.saving { background: var(--vtm-gold-bright); animation: vtm-blink 0.9s infinite; }
+.vtm-save-dot.saved { background: #5f8f6e; box-shadow: 0 0 8px rgba(95,143,110,0.5); }
+.vtm-save-dot.error { background: var(--vtm-blood-bright); box-shadow: 0 0 8px rgba(194,43,48,0.6); }
+
+@keyframes vtm-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.vtm-save-stamp {
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vtm-ash);
+  border: 1px dashed var(--vtm-line);
+  border-radius: 3px;
+  padding: 0.1rem 0.45rem;
+  transition: color 0.3s, border-color 0.3s;
+}
+.vtm-save-stamp.is-saved { color: #7fc39a; border-color: rgba(95,143,110,0.5); }
+.vtm-save-stamp.is-error { color: var(--vtm-blood-bright); border-color: rgba(194,43,48,0.6); }
+
+/* ---------- Вкладки ---------- */
+
+.vtm-tab {
+  position: relative;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--vtm-bone-dim);
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+.vtm-tab:hover { color: var(--vtm-bone); background: rgba(194, 43, 48, 0.06); }
+.vtm-tab.active {
+  color: var(--vtm-gold-bright);
+  background: linear-gradient(to bottom, rgba(194, 43, 48, 0.1), transparent);
+}
+
+/* Подсказка прокрутки вкладок */
+.vtm-tabs-bar { scrollbar-width: none; -ms-overflow-style: none; }
+.vtm-tabs-bar::-webkit-scrollbar { display: none; }
+.vtm-tabs-bar.fade-left,
+.vtm-tabs-bar.fade-right {
+  mask-image: linear-gradient(to right, transparent, black 28px, black calc(100% - 28px), transparent);
+}
+.vtm-tabs-bar.fade-left:not(.fade-right) {
+  mask-image: linear-gradient(to right, transparent, black 28px, black);
+}
+.vtm-tabs-bar.fade-right:not(.fade-left) {
+  mask-image: linear-gradient(to right, black, black calc(100% - 28px), transparent);
+}
+
+/* ---------- Карточка листа в архиве — гробовая табличка ---------- */
+
+.vtm-card {
+  position: relative;
+  background: linear-gradient(160deg, var(--vtm-panel-2), var(--vtm-panel));
+  border: 1px solid var(--vtm-line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+  overflow: hidden;
+}
+.vtm-card:hover,
+.vtm-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(194, 43, 48, 0.55);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.6), 0 0 24px rgba(194, 43, 48, 0.16);
+  outline: none;
+}
+/* Верхняя готическая кромка с каплей */
+.vtm-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(194,43,48,0.5), transparent);
+}
+.vtm-card-over { border-color: var(--vtm-gold-bright); box-shadow: 0 0 20px rgba(214,168,64,0.3); }
+
+.vtm-move-btn {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--vtm-line);
+  border-radius: 3px;
+  color: var(--vtm-bone-dim);
+  font-size: 0.62rem;
+  padding: 0.05rem 0.35rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.vtm-move-btn:hover { color: var(--vtm-gold-bright); border-color: var(--vtm-gold); }
+
+/* ---------- Карточки заготовок — саркофаги выбора ---------- */
+
+.vtm-template-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  text-align: center;
+  background: linear-gradient(165deg, var(--vtm-panel-2), var(--vtm-panel));
+  border: 1px solid var(--vtm-line);
+  border-radius: 10px;
+  padding: 1.1rem 1rem 0.9rem;
+  cursor: pointer;
+  transition: all 0.25s;
+  overflow: hidden;
+}
+.vtm-template-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(194, 43, 48, 0.6);
+  box-shadow: 0 16px 34px rgba(0,0,0,0.55), 0 0 26px rgba(194, 43, 48, 0.18);
+}
+.vtm-template-title {
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-size: 1.02rem;
+  color: var(--vtm-bone);
+  letter-spacing: 0.05em;
+}
+.vtm-template-tagline {
+  font-size: 0.72rem;
+  color: var(--vtm-bone-dim);
+  font-style: italic;
+  line-height: 1.45;
+  min-height: 3em;
+}
+.vtm-template-clan {
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vtm-blood-bright);
+}
+
+/* Случайная судьба — не используется (пока), задел */
+
+/* ---------- Панель костей ---------- */
+
+.vtm-dice-panel {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 40;
+}
+
+.vtm-dice-toggle {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #6d1418, #2e0508 75%);
+  border: 1px solid rgba(194, 43, 48, 0.55);
+  color: #e8d5c4;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.6), 0 0 22px rgba(194, 43, 48, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vtm-dice-toggle:hover { transform: scale(1.08) rotate(-6deg); box-shadow: 0 10px 26px rgba(0,0,0,0.6), 0 0 32px rgba(194,43,48,0.5); }
+
+.vtm-dice-body {
+  width: min(92vw, 360px);
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--vtm-line) transparent;
+}
+
+/* Кости результата */
+.vtm-die {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  border: 1px solid var(--vtm-line);
+  background: linear-gradient(160deg, #241014, #12070a);
+  color: var(--vtm-bone);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+}
+.vtm-die.success { border-color: #5f8f6e; color: #9fd8b3; box-shadow: 0 0 10px rgba(95,143,110,0.35); }
+.vtm-die.crit {
+  border-color: var(--vtm-gold-bright);
+  color: var(--vtm-gold-bright);
+  box-shadow: 0 0 14px rgba(214,168,64,0.5);
+}
+.vtm-die.hunger {
+  background: linear-gradient(160deg, #6d1418, #2a0508);
+  border-color: rgba(194,43,48,0.7);
+  border-radius: 50% 50% 50% 4px;
+}
+.vtm-die.hunger.success { color: #ff9b9b; border-color: var(--vtm-blood-bright); }
+
+/* Строки навыков */
+.vtm-skill-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  border-radius: 5px;
+  transition: background 0.15s;
+}
+.vtm-skill-row:hover { background: rgba(194, 43, 48, 0.05); }
+
+/* Полоса бюджета очков */
+.vtm-budget-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--vtm-line);
+  overflow: hidden;
+}
+.vtm-budget-fill {
+  height: 100%;
+  background: linear-gradient(to right, var(--vtm-blood-deep), var(--vtm-blood-bright));
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.vtm-budget-fill.gold { background: linear-gradient(to right, #6b5424, var(--vtm-gold-bright)); }
+
+/* Журнал бросков */
+.vtm-roll-row {
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--vtm-bone-dim);
+  padding: 0.3rem 0;
+  border-bottom: 1px dashed var(--vtm-line-soft);
+  line-height: 1.5;
+}
+
+/* Моргание и дыхание */
+.vtm-flicker { animation: vtm-flicker 3.2s infinite; }
+@keyframes vtm-flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.55; }
+  94% { opacity: 1; }
+  96% { opacity: 0.7; }
+  97% { opacity: 1; }
+}
+
+.vtm-breath { animation: vtm-breath 4s ease-in-out infinite; }
+@keyframes vtm-breath {
+  0%, 100% { opacity: 0.65; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.045); }
+}
+
+/* Движение капли крови в шапке */
+.vtm-blood-drop {
+  display: inline-block;
+  animation: vtm-drip 5s ease-in-out infinite;
+}
+@keyframes vtm-drip {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
+
+/* Скрытая печать */
+.vtm-conflict-pop { animation: vtm-pop 0.35s ease-out; }
+@keyframes vtm-pop {
+  from { transform: scale(0.94); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Скроллбары внутри вселенной */
+.vtm-scroll { scrollbar-width: thin; scrollbar-color: var(--vtm-line) transparent; }
+.vtm-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.vtm-scroll::-webkit-scrollbar-thumb { background: var(--vtm-line); border-radius: 4px; }
+.vtm-scroll::-webkit-scrollbar-thumb:hover { background: var(--vtm-blood); }
+
+/* Тонкая разделительная линия с ромбом */
+.vtm-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--vtm-blood);
+}
+.vtm-divider::before,
+.vtm-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--vtm-line), transparent);
+}
+
+/* Печать факсимиле (для распечатки) */
+@media print {
+  .vtm-root { background: #fff !important; }
+}
+
+/* Уважение к reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .vtm-flicker, .vtm-breath, .vtm-blood-drop, .vtm-hunger-cell.low { animation: none !important; }
+  .vtm-card, .vtm-template-card, .vtm-dice-toggle { transition: none !important; }
+}
+
+/* ---------- Печать досье ---------- */
+
+.vtm-print-only { display: none; }
+
+@media print {
+  @page {
+    margin: 14mm 12mm;
+    size: A4;
+  }
+  html, body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  .vtm-root {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  .vtm-screen,
+  .vtm-grain,
+  .vtm-vignette,
+  .vtm-dice-panel,
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+  .vtm-root * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+  .vtm-print-only {
+    display: block !important;
+  }
+  .vtm-print-doc {
+    color: #111;
+    font-family: var(--vtm-font-body), Georgia, serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+  .vtm-print-head {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    border-bottom: 2.5px double #111;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+  .vtm-print-title {
+    font-family: var(--vtm-font-display), Georgia, serif;
+    font-size: 19pt;
+    letter-spacing: 0.12em;
+    margin: 0 0 2px;
+    text-transform: uppercase;
+  }
+  .vtm-print-name { font-size: 14pt; font-weight: 700; margin: 0 0 4px; }
+  .vtm-print-line { font-size: 9pt; margin: 1px 0; }
+  .vtm-print-portrait {
+    width: 30mm;
+    height: 38mm;
+    object-fit: cover;
+    border: 1px solid #111;
+  }
+  .vtm-print-section {
+    margin: 10px 0 4px;
+    font-family: var(--vtm-font-labels), sans-serif;
+    font-size: 10pt;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #111;
+    padding-bottom: 2px;
+  }
+  .vtm-print-grid { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .vtm-print-item { font-size: 9pt; min-width: 130px; }
+  .vtm-print-dots { letter-spacing: 2px; font-size: 10pt; }
+  .vtm-print-footer {
+    margin-top: 14px;
+    border-top: 1px solid #111;
+    padding-top: 6px;
+    font-size: 8pt;
+    font-style: italic;
+  }
+}
+
+/* ---------- Мобильная адаптация ---------- */
+
+@media (max-width: 640px) {
+  .vtm-cell { width: 21px; height: 21px; }
+  .vtm-hunger-cell { width: 20px; height: 20px; }
+  .vtm-humanity-cell { width: 19px; height: 19px; }
+  .vtm-dot { width: 14px; height: 14px; }
+}

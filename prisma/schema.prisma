@@ -21,6 +21,7 @@ model User {
   role      String    @default("PLAYER") // ADMIN (Божество) | PLAYER (Приключенец)
   character Character?
   cocSheets CocSheet[]
+  vtmSheets VtmSheet[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -35,6 +36,23 @@ model CocSheet {
   name      String   @default("Новый сыщик")
   data      String   @default("{}") // JSON-снапшот всего листа персонажа
   sortOrder Int      @default(0)    // ручной порядок дел в архиве (перетаскивание)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ===== Vampire: The Masquerade (5 ред.) — интерактивные листы вампира =====
+// Отдельная вселенная (как и «Зов Ктулху»): до 5 листов на пользователя,
+// данные листа хранятся в JSON. Никак не пересекается с D&D-моделями и CocSheet.
+
+model VtmSheet {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String   @default("Новая ночь")
+  data      String   @default("{}") // JSON-снапшот всего листа персонажа
+  sortOrder Int      @default(0)    // ручной порядок в архиве (перетаскивание)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

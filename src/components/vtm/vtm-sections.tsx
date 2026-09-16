@@ -1,0 +1,921 @@
+"use client";
+
+// ============================================================
+// Секции листа: Досье (личность + треки Крови), Характеристики, Навыки.
+// ============================================================
+
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import {
+  VtmSheetData,
+  VtmAttributes,
+  ATTRIBUTE_GROUPS,
+  SKILL_LIBRARY,
+  CLANS,
+  CLAN_BY_ID,
+  SECTS,
+  SECT_BY_ID,
+  PREDATOR_TYPES,
+  PREDATOR_BY_ID,
+  GENERATIONS,
+} from "@/lib/vtm-data";
+import { DerivedStats, bpHint } from "@/lib/vtm-calc";
+import { rollRouse, useVtmDice } from "@/components/vtm/vtm-dice";
+
+export function AutoTextarea({
+  value,
+  onChange,
+  className = "",
+  placeholder,
+  ariaLabel,
+  minHeight = 80,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  className?: string;
+  placeholder?: string;
+  ariaLabel?: string;
+  minHeight?: number;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const resize = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "0px";
+    el.style.height = `${Math.max(minHeight, el.scrollHeight)}px`;
+  };
+
+  useLayoutEffect(resize, [value]);
+
+  useEffect(() => {
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      className={`vtm-input vtm-autogrow ${className}`}
+      style={{ minHeight: 0 }}
+      rows={1}
+    />
+  );
+}
+
+/** Контрол точек ●●●○○ */
+function Dots({
+  value,
+  max = 5,
+  color = "blood",
+  onChange,
+  onRoll,
+  ariaLabel,
+}: {
+  value: number;
+  max?: number;
+  color?: "blood" | "gold" | "violet";
+  onChange?: (n: number) => void;
+  onRoll?: () => void;
+  ariaLabel?: string;
+}) {
+  return (
+    <span className="vtm-dots" role="group" aria-label={ariaLabel}>
+      {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
+        <button
+          key={n}
+          type="button"
+          className={`vtm-dot ${color === "gold" ? "gold" : color === "violet" ? "violet" : ""} ${n <= value ? "filled" : ""}`}
+          onClick={() => {
+            if (!onChange) return;
+            if (n === value) {
+              // клик по заполненной крайней точке — снять одну
+              onChange(value - 1);
+            } else if (n === value + 1) {
+              onChange(value + 1);
+            } else {
+              onChange(n);
+            }
+          }}
+          onContextMenu={(e) => {
+            if (!onChange) return;
+            e.preventDefault();
+            onChange(Math.max(0, value - 1));
+          }}
+          disabled={!onChange}
+          aria-label={`Уровень ${n}`}
+          title={onRoll ? `${ariaLabel}: клик по строке — бросок` : `Уровень ${n}`}
+        />
+      ))}
+    </span>
+  );
+}
+
+// ============================================================
+// ДОСЬЕ
+// ============================================================
+
+export function DossierSection({
+  data,
+  mutate,
+  derived,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (draft: VtmSheetData) => void) => void;
+  derived: DerivedStats;
+}) {
+  const info = data.info;
+  const clan = CLAN_BY_ID.get(info.clan);
+  const predator = PREDATOR_BY_ID.get(info.predator);
+
+  // Портрет: сжатие до 480px + миниатюра 96px
+  const fileRef = useRef<HTMLInputElement>(null);
+  const onPortrait = (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Это не изображение");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const scale = Math.min(1, 480 / Math.max(img.width, img.height));
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const portrait = canvas.toDataURL("image/jpeg", 0.82);
+        const tCanvas = document.createElement("canvas");
+        const tScale = Math.min(1, 96 / Math.max(img.width, img.height));
+        tCanvas.width = Math.round(img.width * tScale);
+        tCanvas.height = Math.round(img.height * tScale);
+        tCanvas.getContext("2d")?.drawImage(img, 0, 0, tCanvas.width, tCanvas.height);
+        const thumb = tCanvas.toDataURL("image/jpeg", 0.7);
+        mutate((d) => {
+          d.info.portrait = portrait;
+          d.info.portraitThumb = thumb;
+        });
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const usedWp = data.trackers.wpSup + data.trackers.wpAgg;
+  const healthLeft = derived.healthMax - data.trackers.healthSup - data.trackers.healthAgg;
+
+  const doRouse = (label: string) => {
+    const r = rollRouse(label);
+    useVtmDice.getState().pushRouse({ ...r, label });
+    if (!r.ok) {
+      mutate((d) => {
+        d.trackers.hunger = Math.min(5, d.trackers.hunger + 1);
+      });
+    }
+    return r;
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* ===== Личность ===== */}
+      <section className="vtm-panel lg:col-span-2" aria-label="Личность Сородича">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.7rem] text-[#d6a840]">Личность</span>
+        </div>
+        <div className="p-4 md:p-5 space-y-4">
+          {/* Портрет + базовые поля */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="shrink-0 w-28 h-36 rounded-md overflow-hidden border border-[#3d1a20] bg-black relative group">
+              {info.portrait ? (
+                <img src={info.portrait} alt="Портрет Сородича" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-4xl opacity-30" aria-hidden>🩸</div>
+              )}
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="absolute inset-0 flex items-end justify-center pb-1.5 bg-gradient-to-t from-black/80 via-transparent opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                aria-label="Вклеить портрет"
+              >
+                <span className="vtm-label text-[0.55rem] text-[#d9c7b6]">Вклеить фото</span>
+              </button>
+              {info.portrait && (
+                <button
+                  onClick={() => mutate((d) => { d.info.portrait = ""; d.info.portraitThumb = ""; })}
+                  className="absolute top-1 right-1 vtm-btn vtm-btn-danger !p-1 !text-[0.6rem] opacity-0 group-hover:opacity-100"
+                  aria-label="Убрать портрет"
+                >
+                  ✕
+                </button>
+              )}
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onPortrait(e.target.files?.[0])} />
+            </div>
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="block">
+                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Концепция</span>
+                <input
+                  className="vtm-input mt-1"
+                  value={info.concept}
+                  onChange={(e) => mutate((d) => { d.info.concept = e.target.value; })}
+                  placeholder="бывший хирург, ныне доктор без диплома"
+                />
+              </label>
+              <label className="block">
+                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Хроника</span>
+                <input
+                  className="vtm-input mt-1"
+                  value={info.chronicle}
+                  onChange={(e) => mutate((d) => { d.info.chronicle = e.target.value; })}
+                  placeholder="Ночь над Невой"
+                />
+              </label>
+              <label className="block">
+                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Сир</span>
+                <input
+                  className="vtm-input mt-1"
+                  value={info.sire}
+                  onChange={(e) => mutate((d) => { d.info.sire = e.target.value; })}
+                  placeholder="кто и зачем даровал Становление"
+                />
+              </label>
+              <label className="block">
+                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Род деятельности</span>
+                <input
+                  className="vtm-input mt-1"
+                  value={info.occupation}
+                  onChange={(e) => mutate((d) => { d.info.occupation = e.target.value; })}
+                  placeholder="профессия смертной жизни / нынешнее занятие"
+                />
+              </label>
+            </div>
+          </div>
+
+          {/* Клан / секта / поколение / охота */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
+              <span className="vtm-label text-[0.6rem] text-[#a68d80]">Клан</span>
+              <select
+                className="vtm-input mt-1"
+                value={info.clan}
+                onChange={(e) => mutate((d) => { d.info.clan = e.target.value; })}
+              >
+                <option value="">— не выбран —</option>
+                {CLANS.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name} ({c.nick})</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="vtm-label text-[0.6rem] text-[#a68d80]">Принадлежность (секта)</span>
+              <select
+                className="vtm-input mt-1"
+                value={info.sect}
+                onChange={(e) => mutate((d) => { d.info.sect = e.target.value; })}
+              >
+                {SECTS.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="vtm-label text-[0.6rem] text-[#a68d80]">Поколение · {bpHint(info.generation)}</span>
+              <select
+                className="vtm-input mt-1"
+                value={info.generation || ""}
+                onChange={(e) => mutate((d) => { d.info.generation = parseInt(e.target.value, 10) || 0; })}
+              >
+                <option value="">— не выбрано —</option>
+                {GENERATIONS.map((g) => (
+                  <option key={g.value} value={g.value}>{g.label} {g.note ? `— ${g.note}` : ""}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="vtm-label text-[0.6rem] text-[#a68d80]">Стиль охоты</span>
+              <select
+                className="vtm-input mt-1"
+                value={info.predator}
+                onChange={(e) => mutate((d) => { d.info.predator = e.target.value; })}
+              >
+                <option value="">— не выбран —</option>
+                {PREDATOR_TYPES.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {/* Изъян и принуждение клана */}
+          {clan && (
+            <div className="vtm-frame rounded-md p-3 space-y-2" style={{ background: "rgba(194,43,48,0.04)" }}>
+              <div className="flex items-center gap-2">
+                <span className="vtm-stamp">Изъян клана</span>
+                <span className="vtm-label text-[0.58rem] text-[#a68d80]">тяжесть по Силе Крови: {derived.baneSeverity}</span>
+              </div>
+              <p className="text-xs leading-relaxed text-[#a68d80]">{clan.bane}</p>
+              <div className="flex items-center gap-2 pt-1">
+                <span className="vtm-stamp vtm-stamp-gold">Принуждение</span>
+              </div>
+              <p className="text-xs leading-relaxed text-[#a68d80]">{clan.compulsion}</p>
+            </div>
+          )}
+
+          {predator && (
+            <div className="vtm-frame rounded-md p-3 space-y-1.5" style={{ background: "rgba(168,134,61,0.04)" }}>
+              <span className="vtm-stamp vtm-stamp-gold">Стиль охоты: {predator.name}</span>
+              <p className="text-xs leading-relaxed text-[#a68d80]">{predator.description}</p>
+              <p className="vtm-hint !text-[0.66rem]">
+                Бонусные навыки: {predator.skills.map((k) => SKILL_LIBRARY.find((s) => s.id === k)?.name || k).join(", ")}
+                {predator.discipline ? ` · Дисциплина: +1` : ""}
+              </p>
+            </div>
+          )}
+
+          {/* Цель / Желание / принципы / опоры */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="block md:col-span-2">
+              <span className="vtm-label text-[0.6rem] text-[#d6a840]">Цель — к чему идёт вся хроника</span>
+              <input
+                className="vtm-input mt-1"
+                value={info.ambition}
+                onChange={(e) => mutate((d) => { d.info.ambition = e.target.value; })}
+                placeholder="великая цель, ради которой стоит вечность"
+              />
+            </label>
+            <label className="block md:col-span-2">
+              <span className="vtm-label text-[0.6rem] text-[#d6a840]">Желание — цель этой арки</span>
+              <input
+                className="vtm-input mt-1"
+                value={info.desire}
+                onChange={(e) => mutate((d) => { d.info.desire = e.target.value; })}
+                placeholder="ближний шаг к великой цели"
+              />
+            </label>
+            {(["principle1", "principle2", "principle3"] as const).map((key, i) => (
+              <label key={key} className="block">
+                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Принцип {i + 1}</span>
+                <input
+                  className="vtm-input mt-1"
+                  value={info[key]}
+                  onChange={(e) => mutate((d) => { d.info[key] = e.target.value; })}
+                  placeholder={`«${i === 0 ? "никогда не…" : i === 1 ? "всегда…" : "никогда не предаю…"}»`}
+                />
+              </label>
+            ))}
+            {(["anchor1", "anchor2", "anchor3"] as const).map((key, i) => (
+              <label key={key} className="block">
+                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Опора {i + 1}</span>
+                <input
+                  className="vtm-input mt-1"
+                  value={info[key]}
+                  onChange={(e) => mutate((d) => { d.info[key] = e.target.value; })}
+                  placeholder="кто держит твою Человечность"
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Кровь: треки ===== */}
+      <section className="space-y-4" aria-label="Состояние Крови">
+        <div className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.7rem] text-[#e8636b]">Кровь</span>
+            <span className="vtm-hint ml-auto !text-[0.6rem]">считается автоматически</span>
+          </div>
+          <div className="p-4 space-y-4">
+            {/* Голод */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Голод</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    className="vtm-btn vtm-btn-ghost !py-0.5 !px-1.5 !text-[0.58rem]"
+                    onClick={() => doRouse("испытание Крови")}
+                    title="Испытание Крови: 1 кость, успех на 6+ — иначе Голод +1"
+                  >
+                    🩸 испытание
+                  </button>
+                  <button
+                    className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.62rem]"
+                    onClick={() => mutate((d) => { d.trackers.hunger = Math.max(0, d.trackers.hunger - 1); })}
+                    aria-label="Утолить Голод на 1"
+                    title="Утолить Голод"
+                  >
+                    −
+                  </button>
+                  <span className="vtm-label text-[0.72rem] text-[#e8636b] w-4 text-center">{data.trackers.hunger}</span>
+                  <button
+                    className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.62rem]"
+                    onClick={() => mutate((d) => { d.trackers.hunger = Math.min(5, d.trackers.hunger + 1); })}
+                    aria-label="Повысить Голод на 1"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    className={`vtm-hunger-cell ${n <= data.trackers.hunger ? "filled" : ""} ${data.trackers.hunger >= 4 && n === data.trackers.hunger ? "low" : ""}`}
+                    onClick={() => mutate((d) => { d.trackers.hunger = n === d.trackers.hunger ? n - 1 : n; })}
+                    aria-label={`Голод ${n}`}
+                    title={n <= data.trackers.hunger ? "кость Голода" : ""}
+                  >
+                    <span aria-hidden>{n}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="vtm-hint mt-1.5 !text-[0.62rem]">
+                {data.trackers.hunger >= 5
+                  ? "Голод 5: все кости пула красны. Зверь у руля — Compulsion в каждой сцене."
+                  : data.trackers.hunger >= 4
+                    ? "Голод высок: последние кости пула — кости Голода."
+                    : `${data.trackers.hunger} из последних костей каждого пула — кости Голода.`}
+              </p>
+            </div>
+
+            <div className="vtm-divider text-[0.6rem]"><span>🩸</span></div>
+
+            {/* Здоровье */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Здоровье</span>
+                <span className="vtm-hint !text-[0.6rem]">Выносливость + 3 = {derived.healthMax}</span>
+              </div>
+              <div className="vtm-track">
+                {Array.from({ length: derived.healthMax }, (_, i) => {
+                  const n = i + 1;
+                  const isAgg = n <= data.trackers.healthAgg;
+                  const isSup = !isAgg && n <= data.trackers.healthAgg + data.trackers.healthSup;
+                  return (
+                    <button
+                      key={n}
+                      className={`vtm-cell ${isAgg ? "agg" : isSup ? "sup" : ""}`}
+                      onClick={(e) => {
+                        mutate((d) => {
+                          // цикл: пусто → поверхностный → тяжёлый → пусто
+                          if (isAgg) { d.trackers.healthAgg -= 1; }
+                          else if (isSup) { d.trackers.healthSup -= 1; d.trackers.healthAgg += 1; }
+                          else {
+                            if (e.shiftKey) d.trackers.healthAgg += 1;
+                            else d.trackers.healthSup += 1;
+                          }
+                        });
+                      }}
+                      aria-label={`Здоровье ${n}: ${isAgg ? "тяжёлая рана" : isSup ? "поверхностная рана" : "цел"}`}
+                      title="клик — поверхностная рана · Shift+клик — тяжёлая · клик по заполненной — усилить"
+                    />
+                  );
+                })}
+              </div>
+              <p className="vtm-hint mt-1.5 !text-[0.62rem]">
+                {healthLeft <= 0 ? "Искалечен: торпор близок." : `Целых клеток: ${healthLeft}/${derived.healthMax}. Пустая клетка при новом тяжёлом уроне = торпор.`}
+              </p>
+            </div>
+
+            {/* Воля */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Воля</span>
+                <span className="vtm-hint !text-[0.6rem]">Самообладание + Упорство = {derived.wpMax}</span>
+              </div>
+              <div className="vtm-track">
+                {Array.from({ length: derived.wpMax }, (_, i) => {
+                  const n = i + 1;
+                  const isAgg = n <= data.trackers.wpAgg;
+                  const isSup = !isAgg && n <= data.trackers.wpAgg + data.trackers.wpSup;
+                  return (
+                    <button
+                      key={n}
+                      className={`vtm-cell ${isAgg ? "agg" : isSup ? "sup" : ""}`}
+                      onClick={(e) => {
+                        mutate((d) => {
+                          if (isAgg) { d.trackers.wpAgg -= 1; }
+                          else if (isSup) { d.trackers.wpSup -= 1; d.trackers.wpAgg += 1; }
+                          else {
+                            if (e.shiftKey) d.trackers.wpAgg += 1;
+                            else d.trackers.wpSup += 1;
+                          }
+                        });
+                      }}
+                      aria-label={`Воля ${n}: ${isAgg ? "тяжёлый стресс" : isSup ? "поверхностный стресс" : "цел"}`}
+                      title="клик — поверхностный стресс · Shift+клик — тяжёлый"
+                    />
+                  );
+                })}
+              </div>
+              <p className="vtm-hint mt-1.5 !text-[0.62rem]">
+                Осталось воли: {Math.max(0, derived.wpMax - usedWp)}/{derived.wpMax}. Заполненная шкала — изнурение (−2d10 к соц/мент пулам).
+              </p>
+            </div>
+
+            {/* Человечность */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Человечность</span>
+                <span className="vtm-label text-[0.72rem] text-[#d6a840]">{derived.humanityTotal}/10</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
+                  const isStain = n > data.trackers.humanity && n <= data.trackers.humanity + data.trackers.stains;
+                  const filled = n <= data.trackers.humanity;
+                  return (
+                    <button
+                      key={n}
+                      className={`vtm-humanity-cell ${filled ? "filled" : ""} ${isStain ? "stain" : ""}`}
+                      onClick={() => {
+                        mutate((d) => { d.trackers.humanity = n === d.trackers.humanity ? n - 1 : n; if (d.trackers.stains > 10 - d.trackers.humanity) d.trackers.stains = 10 - d.trackers.humanity; });
+                      }}
+                      aria-label={`Человечность ${n}`}
+                      title={filled ? "звено Человечности" : isStain ? "пятно" : ""}
+                    />
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between mt-1.5">
+                <span className="vtm-hint !text-[0.62rem]">Пятна: {data.trackers.stains}</span>
+                <div className="flex gap-1">
+                  <button className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.6rem]" onClick={() => mutate((d) => { d.trackers.stains = Math.max(0, d.trackers.stains - 1); })} aria-label="Смыть пятно">−</button>
+                  <button className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.6rem]" onClick={() => mutate((d) => { d.trackers.stains = Math.min(10 - d.trackers.humanity, d.trackers.stains + 1); })} aria-label="Поставить пятно">+</button>
+                </div>
+              </div>
+              <p className="vtm-hint mt-1 !text-[0.62rem]">
+                Пятна (дashed) исчезают при успешной проверке Человечности, иначе превращаются в потерянные звенья. При 0 — Зверь пожирает тебя.
+              </p>
+            </div>
+
+            {/* Сила Крови */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Сила Крови</span>
+                <span className="vtm-label text-[0.72rem] text-[#a877c0]">{derived.bp}</span>
+              </div>
+              <Dots value={derived.bp} max={5} color="violet" ariaLabel="Сила Крови" />
+              <p className="vtm-hint mt-1.5 !text-[0.62rem]">
+                По поколению: бонус +{derived.bpRow.bonusDice} к физике и Дисциплинам · заживление: {derived.bpRow.mend} · изъян: тяжесть {derived.bpRow.baneSeverity}
+                {derived.bpRow.feedingPenalty !== "—" ? ` · кормление: ${derived.bpRow.feedingPenalty}` : ""}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Описание и предыстория */}
+        <div className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.7rem] text-[#d6a840]">Облик и прошлое</span>
+          </div>
+          <div className="p-4 space-y-3">
+            <div>
+              <span className="vtm-label text-[0.6rem] text-[#a68d80]">Внешность</span>
+              <div className="mt-1">
+                <AutoTextarea
+                  value={info.description}
+                  onChange={(v) => mutate((d) => { d.info.description = v; })}
+                  placeholder="что видят смертные, когда ты позволяешь себя рассмотреть"
+                  ariaLabel="Внешность"
+                />
+              </div>
+            </div>
+            <div>
+              <span className="vtm-label text-[0.6rem] text-[#a68d80]">Предыстория</span>
+              <div className="mt-1">
+                <AutoTextarea
+                  value={info.history}
+                  onChange={(v) => mutate((d) => { d.info.history = v; })}
+                  placeholder="смертная жизнь, Становление и всё, что после"
+                  ariaLabel="Предыстория"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ============================================================
+// ХАРАКТЕРИСТИКИ
+// ============================================================
+
+const ATTR_RU: Record<keyof VtmAttributes, string> = {
+  str: "Сила", dex: "Ловкость", sta: "Выносливость",
+  cha: "Обаяние", man: "Манипуляция", com: "Самообладание",
+  int: "Интеллект", wit: "Смекалка", res: "Упорство",
+};
+
+export function AttributesSection({
+  data,
+  mutate,
+  derived,
+  onRoll,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (draft: VtmSheetData) => void) => void;
+  derived: DerivedStats;
+  onRoll: (pool: number, label: string) => void;
+}) {
+  const delta = derived.attrDelta;
+  const attrKeyToSkill = (key: keyof VtmAttributes) => {
+    const map: Partial<Record<keyof VtmAttributes, string>> = {
+      str: "brawl", dex: "larceny", sta: "survival",
+      cha: "persuasion", man: "subterfuge", com: "insight",
+      int: "academics", wit: "awareness", res: "leadership",
+    };
+    const skillKey = map[key]!;
+    const skill = data.skills.find((s) => s.key === skillKey);
+    return skill;
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Бюджет */}
+      <div className="vtm-panel p-4 flex flex-wrap items-center gap-3">
+        <span className="vtm-stamp vtm-stamp-gold">Одна 4 · три 3 · четыре 2 · одна 1</span>
+        <p className="vtm-hint !text-[0.66rem] flex-1 min-w-[220px]">
+          По правилам (стр. 137): одна характеристика 4 пункта, ещё три — по 3, ещё четыре — по 2, ещё одна — 1. Клик по точке — поставить, клик по крайней заполненной — снять. Правый клик — снять одну.
+        </p>
+        <span
+          className={`vtm-label text-xs ${delta === 0 ? "text-[#9fd8b3]" : delta > 0 ? "text-[#e8636b]" : "text-[#d6a840]"}`}
+          title={delta === 0 ? "Бюджет распределён точно" : delta > 0 ? "Превышение бюджета правил" : "Остались нераспределённые очки"}
+        >
+          {delta === 0 ? "бюджет сходится ✓" : delta > 0 ? `перебор +${delta}` : `осталось ${-delta}`}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {ATTRIBUTE_GROUPS.map((group) => (
+          <section key={group.id} className="vtm-panel" aria-label={group.name}>
+            <div className="vtm-panel-head">
+              <span className="vtm-label text-[0.7rem] text-[#d6a840]">{group.name}</span>
+            </div>
+            <div className="p-3 space-y-1">
+              {group.attrs.map((attr) => {
+                const value = data.attributes[attr.key];
+                const skill = attrKeyToSkill(attr.key);
+                const pool = value + (skill?.value || 0);
+                return (
+                  <div
+                    key={attr.key}
+                    className="vtm-skill-row !grid-cols-[1fr_auto] cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onRoll(pool, `${ATTR_RU[attr.key]}${skill ? ` + ${skill.name}` : " (голая)"}`)}
+                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onRoll(pool, `${ATTR_RU[attr.key]}${skill ? ` + ${skill.name}` : " (голая)"}`)}
+                    title={`Клик — проверка ${ATTR_RU[attr.key]}${skill ? ` + ${skill.name}` : ""} (${pool} костей)`}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-sm text-[#d9c7b6] font-medium">{attr.name}</span>
+                        <span className="vtm-label text-[0.62rem] text-[#6e5a53]">{pool}🞄</span>
+                      </div>
+                      <p className="vtm-hint !text-[0.6rem] truncate">{attr.hint}{skill ? ` · пара: ${skill.name}${skill.spec ? ` (${skill.spec})` : ""}` : ""}</p>
+                    </div>
+                    <Dots
+                      value={value}
+                      ariaLabel={`${attr.name}: уровень ${value}`}
+                      onChange={(n) => mutate((d) => { d.attributes[attr.key] = n; })}
+                      onRoll={() => {}}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <p className="vtm-hint text-center">
+        Суммарные пулы справа от названия — характеристика с парной навыковой проверкой (пара выбрана для быстрого броска).
+      </p>
+    </div>
+  );
+}
+
+// ============================================================
+// НАВЫКИ
+// ============================================================
+
+export function SkillsSection({
+  data,
+  mutate,
+  derived,
+  onRoll,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (draft: VtmSheetData) => void) => void;
+  derived: DerivedStats;
+  onRoll: (pool: number, label: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+
+  const skillsByGroup = (group: "physical" | "social" | "mental") =>
+    SKILL_LIBRARY.filter((s) => s.group === group).filter(
+      (s) => !q || s.name.toLowerCase().includes(q) || (s.specExamples.some((e) => e.includes(q)))
+    );
+
+  const getSkill = (key: string): VtmSheetData["skills"][number] | undefined =>
+    data.skills.find((s) => s.key === key);
+
+  const setSkill = (key: string, name: string, patch: Partial<VtmSheetData["skills"][number]>) => {
+    mutate((d) => {
+      const existing = d.skills.find((s) => s.key === key);
+      if (existing) {
+        Object.assign(existing, patch);
+      } else {
+        d.skills.push({ key, name, value: 0, spec: "", xp: 0, ...patch });
+      }
+    });
+  };
+
+  // Пары характеристика + навык по умолчанию (для быстрых бросков)
+  const DEFAULT_PAIR: Record<string, keyof VtmAttributes> = {
+    athletics: "dex", brawl: "str", craft: "int", drive: "dex", firearms: "dex",
+    larceny: "dex", melee: "dex", stealth: "dex", survival: "wit",
+    animal_ken: "cha", etiquette: "com", insight: "int", intimidation: "man",
+    leadership: "cha", performance: "cha", persuasion: "man", streetwise: "man", subterfuge: "man",
+    academics: "int", awareness: "wit", finance: "int", investigation: "int",
+    medicine: "int", occult: "int", politics: "int", science: "int", technology: "int",
+  };
+
+  const rollSkill = (key: string, name: string) => {
+    const attrKey = DEFAULT_PAIR[key] || "wit";
+    const attrValue = data.attributes[attrKey];
+    const skill = getSkill(key);
+    const pool = attrValue + (skill?.value || 0);
+    const specHint = skill?.spec ? ` · ${skill.spec}` : "";
+    onRoll(pool, `${name}${specHint} (${ATTR_RU[attrKey]} + ${skill?.value || 0})`);
+  };
+
+  const groups: { id: "physical" | "social" | "mental"; name: string; icon: string }[] = [
+    { id: "physical", name: "Физические", icon: "⚔" },
+    { id: "social", name: "Социальные", icon: "🎭" },
+    { id: "mental", name: "Ментальные", icon: "🕯" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="vtm-panel p-4 flex flex-wrap items-center gap-3">
+        <span className="vtm-stamp">27 навыков</span>
+        <p className="vtm-hint !text-[0.66rem] flex-1 min-w-[220px]">
+          Клик по точке — уровень (0–5). Клик по строке — проверка: характеристика по умолчанию + навык, кости Голода краснеют. Специализация углубляет конкретное применение навыка.
+        </p>
+        <input
+          className="vtm-input !w-48"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="поиск: ножи, ложь, взлом…"
+          aria-label="Поиск навыка"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {groups.map((group) => (
+          <section key={group.id} className="vtm-panel" aria-label={group.name}>
+            <div className="vtm-panel-head">
+              <span className="vtm-label text-[0.7rem] text-[#d6a840]">{group.icon} {group.name}</span>
+            </div>
+            <div className="p-2 md:p-3 space-y-0.5 max-h-[560px] overflow-y-auto vtm-scroll">
+              {skillsByGroup(group.id).map((def) => {
+                const state = getSkill(def.id);
+                const value = state?.value || 0;
+                const attrKey = DEFAULT_PAIR[def.id] || "wit";
+                const pool = data.attributes[attrKey] + value;
+                return (
+                  <div key={def.id}>
+                    <div
+                      className="vtm-skill-row cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => rollSkill(def.id, def.name)}
+                      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && rollSkill(def.id, def.name)}
+                      title={`Клик — проверка (${pool} костей · ${ATTR_RU[attrKey]} + ${value})`}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className={`text-[0.82rem] leading-snug ${value > 0 ? "text-[#d9c7b6]" : "text-[#a68d80]"}`}>{def.name}</span>
+                          <span className="vtm-label text-[0.6rem] text-[#6e5a53]">{pool}🞄</span>
+                        </div>
+                        {state?.spec && <p className="vtm-hint !text-[0.62rem] italic">«{state.spec}»</p>}
+                      </div>
+                      <Dots
+                        value={value}
+                        color="gold"
+                        ariaLabel={`${def.name}: уровень ${value}`}
+                        onChange={(n) => setSkill(def.id, def.name, { value: n })}
+                        onRoll={() => {}}
+                      />
+                    </div>
+                    {value > 0 && (
+                      <div className="px-2 pb-1.5">
+                        <input
+                          className="vtm-input !py-1 !text-[0.72rem] border-dashed"
+                          value={state?.spec || ""}
+                          onChange={(e) => setSkill(def.id, def.name, { spec: e.target.value.slice(0, 40) })}
+                          placeholder={`специализация: ${def.specExamples.slice(0, 2).join(", ")}…`}
+                          aria-label={`Специализация навыка ${def.name}`}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {skillsByGroup(group.id).length === 0 && (
+                <p className="vtm-hint text-center py-3">Ничего не нашлось — попробуй иначе.</p>
+              )}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      {/* Кастомные навыки */}
+      <CustomSkills data={data} mutate={mutate} onRoll={onRoll} />
+    </div>
+  );
+}
+
+/** Пользовательские навыки (для редких умений: «Пилотирование дирижабля» и т.п.) */
+function CustomSkills({
+  data,
+  mutate,
+  onRoll,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (draft: VtmSheetData) => void) => void;
+  onRoll: (pool: number, label: string) => void;
+}) {
+  const [name, setName] = useState("");
+  const customs = data.skills.filter((s) => s.key === null);
+  const add = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    if (data.skills.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error("Такой навык уже есть");
+      return;
+    }
+    mutate((d) => {
+      d.skills.push({ key: null, name: trimmed, value: 0, spec: "", xp: 0 });
+    });
+    setName("");
+  };
+
+  return (
+    <div className="vtm-panel p-4 space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="vtm-label text-[0.66rem] text-[#d6a840]">Свои навыки</span>
+        <span className="vtm-hint !text-[0.62rem] flex-1">для умений вне списка — клик по строке тоже бросает пул (Смекалка + навык)</span>
+      </div>
+      {customs.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+          {customs.map((s, i) => (
+            <div
+              key={i}
+              className="vtm-skill-row cursor-pointer"
+              role="button"
+              tabIndex={0}
+              onClick={() => onRoll(data.attributes.wit + s.value, `${s.name} (СМК + ${s.value})`)}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onRoll(data.attributes.wit + s.value, `${s.name}`)}
+              title={`Клик — проверка (${data.attributes.wit + s.value} костей)`}
+            >
+              <div className="flex items-baseline gap-2 min-w-0">
+                <span className="text-[0.82rem] text-[#d9c7b6] truncate">{s.name}</span>
+                <span className="vtm-label text-[0.6rem] text-[#6e5a53]">{data.attributes.wit + s.value}🞄</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Dots value={s.value} color="gold" ariaLabel={`${s.name}: уровень`} onChange={(n) => mutate((d) => { const cs = d.skills.filter((x) => x.key === null); cs[i].value = n; })} onRoll={() => {}} />
+                <button
+                  className="vtm-btn vtm-btn-ghost !p-1 !text-[0.6rem]"
+                  onClick={(e) => { e.stopPropagation(); mutate((d) => { d.skills = d.skills.filter((x) => !(x.key === null && x.name === s.name)); }); }}
+                  aria-label={`Удалить навык ${s.name}`}
+                  title="Удалить"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input
+          className="vtm-input flex-1"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && add()}
+          placeholder="например: Пилотирование дирижабля"
+          aria-label="Название нового навыка"
+        />
+        <button className="vtm-btn shrink-0" onClick={add} disabled={!name.trim()}>+ Добавить</button>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,402 @@
+"use client";
+
+// ============================================================
+// БАЗА ЗНАНИЙ — справочник по «Вампирам: Маскарад» (5 ред.):
+// кланы, Дисциплины и их силы, механики костей и Крови, стили охоты,
+// секты, поколения, преимущества. Только чтение — подсказки при создании.
+// ============================================================
+
+import { useMemo, useState } from "react";
+import {
+  CLANS,
+  DISCIPLINES,
+  DISCIPLINE_BY_ID,
+  PREDATOR_TYPES,
+  SECTS,
+  GENERATIONS,
+  BLOOD_POTENCY_TABLE,
+  ADVANTAGE_LIBRARY,
+} from "@/lib/vtm-data";
+
+type CodexTab = "clans" | "disciplines" | "mechanics" | "predators" | "advantages" | "sects";
+
+const TABS: { id: CodexTab; label: string; icon: string }[] = [
+  { id: "clans", label: "Кланы", icon: "⛧" },
+  { id: "disciplines", label: "Дисциплины", icon: "✦" },
+  { id: "mechanics", label: "Механики", icon: "🎲" },
+  { id: "predators", label: "Стили охоты", icon: "🩸" },
+  { id: "advantages", label: "Преимущества", icon: "◈" },
+  { id: "sects", label: "Секты и эпохи", icon: "👑" },
+];
+
+export function CodexSection() {
+  const [tab, setTab] = useState<CodexTab>("clans");
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+
+  return (
+    <div className="space-y-4">
+      {/* Навигация + поиск */}
+      <div className="vtm-panel p-3 md:p-4 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`vtm-btn !py-1.5 !px-3 !text-[0.66rem] ${tab === t.id ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
+              aria-pressed={tab === t.id}
+            >
+              <span aria-hidden>{t.icon}</span> {t.label}
+            </button>
+          ))}
+        </div>
+        <input
+          className="vtm-input"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="поиск по справочнику: клан, сила, изъян, Голод…"
+          aria-label="Поиск по Базе знаний"
+        />
+        <p className="vtm-hint !text-[0.62rem]">
+          Справочник по книге правил 5-й редакции (официальное русское издание). Читается при создании персонажа — сворачивай вкладку «База знаний», когда всё выписал.
+        </p>
+      </div>
+
+      {tab === "clans" && <ClansCodex q={q} />}
+      {tab === "disciplines" && <DisciplinesCodex q={q} />}
+      {tab === "mechanics" && <MechanicsCodex q={q} />}
+      {tab === "predators" && <PredatorsCodex q={q} />}
+      {tab === "advantages" && <AdvantagesCodex q={q} />}
+      {tab === "sects" && <SectsCodex q={q} />}
+    </div>
+  );
+}
+
+// ---------- Кланы ----------
+
+function ClansCodex({ q }: { q: string }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const clans = useMemo(
+    () => CLANS.filter((c) => !q || `${c.name} ${c.nick} ${c.description} ${c.bane} ${c.compulsion}`.toLowerCase().includes(q)),
+    [q]
+  );
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {clans.map((clan) => {
+        const open = openId === clan.id;
+        const discs = clan.disciplines.map((id) => DISCIPLINE_BY_ID.get(id)?.name || id).join(", ");
+        return (
+          <article key={clan.id} className="vtm-panel">
+            <button
+              className="w-full vtm-panel-head text-left cursor-pointer"
+              onClick={() => setOpenId(open ? null : clan.id)}
+              aria-expanded={open}
+              aria-controls={`clan-${clan.id}`}
+            >
+              <span className="vtm-display text-[0.95rem] text-[#d9c7b6]">{clan.name}</span>
+              <span className="vtm-hint !text-[0.6rem] ml-1">«{clan.nick}»</span>
+              <span className="ml-auto vtm-label text-[0.6rem] text-[#a8863d]">{open ? "▲" : "▼"}</span>
+            </button>
+            <div id={`clan-${clan.id}`} className="p-4 space-y-2.5">
+              <p className="text-[0.78rem] leading-relaxed text-[#a68d80]">{clan.description}</p>
+              <p className="text-[0.72rem] italic leading-relaxed text-[#6e5a53] border-l-2 border-[#3d1a20] pl-3">{clan.quote}</p>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="vtm-stamp !text-[0.52rem]">Дисциплины: {discs}</span>
+              </div>
+              {open && (
+                <>
+                  <div className="vtm-frame rounded-md p-3 space-y-1" style={{ background: "rgba(194,43,48,0.05)" }}>
+                    <span className="vtm-label text-[0.58rem] text-[#e8636b]">Изъян</span>
+                    <p className="text-[0.74rem] leading-relaxed text-[#a68d80]">{clan.bane}</p>
+                  </div>
+                  <div className="vtm-frame rounded-md p-3 space-y-1" style={{ background: "rgba(168,134,61,0.05)" }}>
+                    <span className="vtm-label text-[0.58rem] text-[#d6a840]">Принуждение клана</span>
+                    <p className="text-[0.74rem] leading-relaxed text-[#a68d80]">{clan.compulsion}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </article>
+        );
+      })}
+      {clans.length === 0 && <p className="vtm-hint text-center py-6">Ни один клан не откликнулся.</p>}
+    </div>
+  );
+}
+
+// ---------- Дисциплины ----------
+
+function DisciplinesCodex({ q }: { q: string }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const list = useMemo(
+    () => DISCIPLINES.filter((d) => {
+      if (!q) return true;
+      if (`${d.name} ${d.description}`.toLowerCase().includes(q)) return true;
+      return Object.values(d.powers).some((ps) => ps.some((p) => p.name.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q)));
+    }),
+    [q]
+  );
+  return (
+    <div className="space-y-3">
+      {list.map((disc) => {
+        const open = openId === disc.id;
+        return (
+          <article key={disc.id} className="vtm-panel">
+            <button
+              className="w-full vtm-panel-head text-left cursor-pointer"
+              onClick={() => setOpenId(open ? null : disc.id)}
+              aria-expanded={open}
+              aria-controls={`disc-${disc.id}`}
+            >
+              <span className="vtm-display text-[0.95rem] text-[#a877c0]">{disc.name}</span>
+              <span className="ml-auto vtm-label text-[0.6rem] text-[#a8863d]">{open ? "▲" : "▼"}</span>
+            </button>
+            <div id={`disc-${disc.id}`} className="p-4 space-y-3">
+              <p className="text-[0.78rem] leading-relaxed text-[#a68d80]">{disc.description}</p>
+              {open && (
+                <div className="space-y-2.5">
+                  {([1, 2, 3, 4, 5] as const).map((lvl) => (
+                    <div key={lvl}>
+                      <p className="vtm-label text-[0.6rem] text-[#a877c0] mb-1">Уровень {lvl}</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {(disc.powers[lvl] || []).map((p) => (
+                          <div key={p.name} className="vtm-frame rounded-md p-2.5" style={{ background: "rgba(0,0,0,0.22)" }}>
+                            <p className="text-[0.78rem] text-[#d9c7b6]">
+                              {p.name}
+                              {p.amalgam && <span className="vtm-label text-[0.52rem] text-[#a68d80] ml-1.5">амальгама · {p.amalgam}</span>}
+                            </p>
+                            <p className="vtm-hint !text-[0.64rem] mt-0.5">{p.desc}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </article>
+        );
+      })}
+      {list.length === 0 && <p className="vtm-hint text-center py-6">Тьма молчит по этому запросу.</p>}
+    </div>
+  );
+}
+
+// ---------- Механики ----------
+
+function MechanicsCodex({ q }: { q: string }) {
+  const blocks: { title: string; body: string[] }[] = [
+    {
+      title: "Пулы и кости",
+      body: [
+        "Почти всё решает пул из d10: характеристика + навык (+ модификаторы). Кость даёт успех на 6+, десятка — критическая.",
+        "Каждая пара десяток = критический успех: все успехи удваиваются (2 пары — 4+ успеха). Одинокая десятка считается как один успех.",
+        "Провал без успехов — просто неудача. Но не для пулов с костями Голода…",
+      ],
+    },
+    {
+      title: "Голод и кости Голода",
+      body: [
+        "Уровень Голода (0–5) — это количество красных костей в правой части каждого твоего пула: последние N костей — кости Голода.",
+        "Критическая 10 на кости Голода = БЕСПРЕДЕЛЬНЫЙ УСПЕХ: цель достигнута, но Зверь распорядился сам — ужин, ярость, свидетели.",
+        "Ноль успехов при наличии кости Голода = ЗВЕРСКИЙ ПРОВАЛ: рассказчик описывает, как Зверь взял своё. (Дополнительно возможна одержимость.)",
+      ],
+    },
+    {
+      title: "Испытания Крови и Голод",
+      body: [
+        "Использование силы Дисциплины требует испытания Крови: 1 кость, успех на 6+. Успех — Голод не меняется, провал — Голод +1.",
+        "Сила Крови определяет, сколько урона заживляется за испытание Крови (см. таблицу ниже).",
+        "Пустой Голод (0) — редкая роскошь; Голод 5 — все кости пула красны, Зверь ведёт.",
+      ],
+    },
+    {
+      title: "Здоровье, Воля, Человечность",
+      body: [
+        "Здоровье = Выносливость + 3. Поверхностный урон заживает, тяжёлый — нет. Заполненная шкала тяжёлым уроном = торпор.",
+        "Воля = Самообладание + Упорство. Пункт воли тратится на +1 успех или переброс трёх костей. Заполненная шкала воли — изнурение (−2d10 к социальным и ментальным пулам).",
+        "Человечность (0–10) и Пятна: грешки дают пятна; проверка Человечности смывает пятно или превращает его в потерянное звено. Ноль — конец персонажа: Зверь пожирает личность.",
+      ],
+    },
+    {
+      title: "Одержимости (Принуждения)",
+      body: [
+        "При Голоде 4+ (или по решению рассказчика) включается одержимость: клановое Принуждение навязывает поведение до конца сцены.",
+        "Игрок обязан вплетать принуждение в действия персонажа — это не потеря контроля, а обострение характера под властью Зверя.",
+      ],
+    },
+    {
+      title: "Опыт и прокачка",
+      body: [
+        "Характеристика: 5 × новый уровень (2→3 = 15). Навык: 3 × новый уровень. Специализация: 3.",
+        "Дисциплина: 6 × новый уровень (вне клана — дороже по решению рассказчика). Новая сила Дисциплины: 3 × её уровень.",
+        "Человечность: 2 × новое звено. Опыт записывай в трекерах (Досье) — вкладывай с Рассказчиком.",
+      ],
+    },
+  ];
+  const filtered = blocks.filter((b) => !q || `${b.title} ${b.body.join(" ")}`.toLowerCase().includes(q));
+  return (
+    <div className="space-y-4">
+      {filtered.map((b) => (
+        <section key={b.title} className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.7rem] text-[#d6a840]">{b.title}</span>
+          </div>
+          <div className="p-4 space-y-2">
+            {b.body.map((line, i) => (
+              <p key={i} className="text-[0.78rem] leading-relaxed text-[#a68d80] flex gap-2">
+                <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
+                <span>{line}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* Таблица Силы Крови */}
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.7rem] text-[#d6a840]">Сила Крови: таблица</span>
+        </div>
+        <div className="p-3 overflow-x-auto vtm-scroll">
+          <table className="w-full text-[0.72rem] text-[#a68d80]" role="table">
+            <thead>
+              <tr className="vtm-label text-[0.56rem] text-[#a8863d] text-left">
+                <th className="py-1.5 pr-3">СК</th>
+                <th className="py-1.5 pr-3">Бонусные кости</th>
+                <th className="py-1.5 pr-3">Заживление</th>
+                <th className="py-1.5 pr-3">Бонус силы</th>
+                <th className="py-1.5 pr-3">Тяжесть изъяна</th>
+                <th className="py-1.5">Издержки кормления</th>
+              </tr>
+            </thead>
+            <tbody>
+              {BLOOD_POTENCY_TABLE.map((row) => (
+                <tr key={row.level} className="border-t border-[#2b1116]">
+                  <td className="py-1.5 pr-3 text-[#a877c0] font-bold">{row.level}</td>
+                  <td className="py-1.5 pr-3">{row.bonusDice ? `+${row.bonusDice}` : "—"}</td>
+                  <td className="py-1.5 pr-3">{row.mend}</td>
+                  <td className="py-1.5 pr-3">{row.disciplineBonus ? `+${row.disciplineBonus}` : "—"}</td>
+                  <td className="py-1.5 pr-3">{row.baneSeverity}</td>
+                  <td className="py-1.5">{row.feedingPenalty}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="vtm-hint mt-2 !text-[0.62rem]">
+            Сила Крови растёт со временем (у старейшин — сама по себе) и снижается голоданием до торпора. Бонусные кости добавляются к физическим пулам и пулам Дисциплин; «бонус силы» усиливает выбранные силы.
+          </p>
+        </div>
+      </section>
+
+      {/* Поколения */}
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.7rem] text-[#d6a840]">Поколения</span>
+        </div>
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+          {GENERATIONS.map((g) => (
+            <div key={g.value} className="flex items-baseline gap-2 text-[0.74rem] text-[#a68d80]">
+              <span className="vtm-label text-[0.66rem] text-[#a877c0] w-10 shrink-0">{g.label}</span>
+              <span>{g.note || "—"}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ---------- Стили охоты ----------
+
+function PredatorsCodex({ q }: { q: string }) {
+  const list = PREDATOR_TYPES.filter((p) => !q || `${p.name} ${p.description} ${p.skills.join(" ")}`.toLowerCase().includes(q));
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {list.map((p) => (
+        <article key={p.id} className="vtm-panel p-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="vtm-display text-[0.92rem] text-[#e8636b]">{p.name}</span>
+          </div>
+          <p className="text-[0.76rem] leading-relaxed text-[#a68d80]">{p.description}</p>
+          <div className="flex flex-wrap gap-1.5">
+            <span className="vtm-stamp !text-[0.52rem] vtm-stamp-gold">
+              Навыки +1: {p.skills.map((s) => s).join(", ")}
+            </span>
+            {p.discipline && <span className="vtm-stamp !text-[0.52rem]">Дисциплина +1</span>}
+          </div>
+          {p.merit && <p className="vtm-hint !text-[0.64rem]">{p.merit}</p>}
+          {p.extra && <p className="vtm-hint !text-[0.64rem]">{p.extra}</p>}
+        </article>
+      ))}
+    </div>
+  );
+}
+
+// ---------- Преимущества (каталог) ----------
+
+function AdvantagesCodex({ q }: { q: string }) {
+  const list = ADVANTAGE_LIBRARY.filter((a) => !q || `${a.name} ${a.desc}`.toLowerCase().includes(q));
+  const groups: { kind: string; label: string }[] = [
+    { kind: "background", label: "Факты биографии (7 пунктов на старте)" },
+    { kind: "merit", label: "Достоинства" },
+    { kind: "flaw", label: "Недостатки" },
+    { kind: "thinblood", label: "Слабокровные" },
+  ];
+  return (
+    <div className="space-y-4">
+      {groups.map((g) => {
+        const items = list.filter((a) => a.kind === g.kind);
+        if (items.length === 0) return null;
+        return (
+          <section key={g.kind} className="vtm-panel">
+            <div className="vtm-panel-head">
+              <span className="vtm-label text-[0.7rem] text-[#d6a840]">{g.label}</span>
+            </div>
+            <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+              {items.map((a) => (
+                <div key={a.id} className="vtm-frame rounded-md p-2.5" style={{ background: "rgba(0,0,0,0.22)" }}>
+                  <p className="text-[0.78rem] text-[#d9c7b6]">
+                    {a.name}
+                    {a.cost ? <span className="vtm-label text-[0.52rem] text-[#a8863d] ml-1.5">{a.cost} пт</span> : null}
+                  </p>
+                  <p className="vtm-hint !text-[0.64rem] mt-0.5">{a.desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------- Секты ----------
+
+function SectsCodex({ q }: { q: string }) {
+  const list = SECTS.filter((s) => !q || `${s.name} ${s.description}`.toLowerCase().includes(q));
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {list.map((s) => (
+          <article key={s.id} className="vtm-panel p-4 space-y-2">
+            <span className="vtm-display text-[0.95rem] text-[#d6a840]">{s.name}</span>
+            <p className="text-[0.76rem] leading-relaxed text-[#a68d80]">{s.description}</p>
+          </article>
+        ))}
+      </div>
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.7rem] text-[#d6a840]">Памятка Маскарада</span>
+        </div>
+        <div className="p-4 space-y-2 text-[0.76rem] leading-relaxed text-[#a68d80]">
+          <p><b className="text-[#d9c7b6]">Маскарад:</b> не выдай своё существование смертным. Нарушение — суд Элизиума.</p>
+          <p><b className="text-[#d9c7b6]">Домен:</b> право кормления принадлежит правителю города. Охота — по его законам.</p>
+          <p><b className="text-[#d9c7b6]">Потомство:</b> новое Становление — только с дозволением старших. «Слишком много челюстей — мало крови».</p>
+          <p><b className="text-[#d9c7b6]">Ответственность:</b> за своих подручных и гулей отвечаешь ты. Учись выбирать свиту.</p>
+          <p><b className="text-[#d9c7b6]">Гостеприимство:</b> в чужом городе — представься правителю. Если успеешь.</p>
+        </div>
+      </section>
+    </div>
+  );
+}

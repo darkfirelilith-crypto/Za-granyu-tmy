@@ -23,6 +23,7 @@ import { Omnisearch } from "@/components/omnisearch";
 import { DiceRoller } from "@/components/fantasy/dice-roller";
 import { ScrollToTop } from "@/components/fantasy/scroll-to-top";
 import { CthulhuPortalButton, UniverseFade } from "@/components/coc/portal-transition";
+import { VtmPortalButton } from "@/components/vtm/portal-transition";
 
 interface MeResponse {
   user: { id: string; name: string; email: string; role: string } | null;
@@ -171,6 +172,12 @@ export function AppShell() {
                   label="Ктулху"
                   labelClassName="hidden md:inline"
                   className="group flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm tracking-wide transition-all text-[#7fc39a]/80 border border-[#2e4a3a]/60 bg-black/30 hover:text-[#7fc39a] hover:border-[#5f8f6e]/70 hover:shadow-[0_0_14px_rgba(95,143,110,0.35)]"
+                />
+                <VtmPortalButton
+                  compact
+                  label="Маскарад"
+                  labelClassName="hidden md:inline"
+                  className="group flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm tracking-wide transition-all text-[#d97a80]/90 border border-[#4a1a1f]/70 bg-black/30 hover:text-[#e8636b] hover:border-[#8a2a32]/80 hover:shadow-[0_0_14px_rgba(194,43,48,0.4)]"
                 />
                 {isPlayer && (
                   <button
