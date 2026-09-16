@@ -19,8 +19,10 @@ import {
   THINBLOOD_FORMULAS,
   THINBLOOD_RULES,
 } from "@/lib/vtm-data";
+import { LORESHEETS, LORESHEET_RULES, DIABLERIE_BLOCKS } from "@/lib/vtm-histories";
+import { POWER_SYSTEMS, DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
 
-type CodexTab = "clans" | "disciplines" | "thinblood" | "mechanics" | "predators" | "advantages" | "sects";
+type CodexTab = "clans" | "disciplines" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects";
 
 const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "clans", label: "Кланы", icon: "⛧" },
@@ -29,6 +31,7 @@ const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "mechanics", label: "Механики", icon: "🎲" },
   { id: "predators", label: "Стили охоты", icon: "🩸" },
   { id: "advantages", label: "Преимущества", icon: "◈" },
+  { id: "histories", label: "Истории", icon: "📜" },
   { id: "sects", label: "Секты и эпохи", icon: "👑" },
 ];
 
@@ -46,7 +49,7 @@ export function CodexSection() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`vtm-btn !py-1.5 !px-3 !text-[0.66rem] ${tab === t.id ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
+              className={`vtm-btn !py-1.5 !px-3 !text-[0.72rem] ${tab === t.id ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
               aria-pressed={tab === t.id}
             >
               <span aria-hidden>{t.icon}</span> {t.label}
@@ -60,7 +63,7 @@ export function CodexSection() {
           placeholder="поиск по справочнику: клан, сила, изъян, Голод…"
           aria-label="Поиск по Базе знаний"
         />
-        <p className="vtm-hint !text-[0.62rem]">
+        <p className="vtm-hint !text-[0.68rem]">
           Справочник по книге правил 5-й редакции (официальное русское издание). Читается при создании персонажа — сворачивай вкладку «База знаний», когда всё выписал.
         </p>
       </div>
@@ -71,6 +74,7 @@ export function CodexSection() {
       {tab === "mechanics" && <MechanicsCodex q={q} />}
       {tab === "predators" && <PredatorsCodex q={q} />}
       {tab === "advantages" && <AdvantagesCodex q={q} />}
+      {tab === "histories" && <HistoriesCodex q={q} />}
       {tab === "sects" && <SectsCodex q={q} />}
     </div>
   );
@@ -97,25 +101,25 @@ function ClansCodex({ q }: { q: string }) {
               aria-expanded={open}
               aria-controls={`clan-${clan.id}`}
             >
-              <span className="vtm-display text-[0.95rem] text-[#d9c7b6]">{clan.name}</span>
-              <span className="vtm-hint !text-[0.6rem] ml-1">«{clan.nick}»</span>
-              <span className="ml-auto vtm-label text-[0.6rem] text-[#a8863d]">{open ? "▲" : "▼"}</span>
+              <span className="vtm-display text-[1.01rem] text-[#d9c7b6]">{clan.name}</span>
+              <span className="vtm-hint !text-[0.66rem] ml-1">«{clan.nick}»</span>
+              <span className="ml-auto vtm-label text-[0.66rem] text-[#a8863d]">{open ? "▲" : "▼"}</span>
             </button>
             <div id={`clan-${clan.id}`} className="p-4 space-y-2.5">
-              <p className="text-[0.78rem] leading-relaxed text-[#a68d80]">{clan.description}</p>
-              <p className="text-[0.72rem] italic leading-relaxed text-[#6e5a53] border-l-2 border-[#3d1a20] pl-3">{clan.quote}</p>
+              <p className="text-[0.9rem] leading-relaxed text-[#a68d80]">{clan.description}</p>
+              <p className="text-[0.78rem] italic leading-relaxed text-[#6e5a53] border-l-2 border-[#3d1a20] pl-3">{clan.quote}</p>
               <div className="flex flex-wrap gap-1.5">
-                <span className="vtm-stamp !text-[0.52rem]">Дисциплины: {discs}</span>
+                <span className="vtm-stamp !text-[0.58rem]">Дисциплины: {discs}</span>
               </div>
               {open && (
                 <>
                   <div className="vtm-frame rounded-md p-3 space-y-1" style={{ background: "rgba(194,43,48,0.05)" }}>
-                    <span className="vtm-label text-[0.58rem] text-[#e8636b]">Изъян</span>
-                    <p className="text-[0.74rem] leading-relaxed text-[#a68d80]">{clan.bane}</p>
+                    <span className="vtm-label text-[0.64rem] text-[#e8636b]">Изъян</span>
+                    <p className="text-[0.8rem] leading-relaxed text-[#a68d80]">{clan.bane}</p>
                   </div>
                   <div className="vtm-frame rounded-md p-3 space-y-1" style={{ background: "rgba(168,134,61,0.05)" }}>
-                    <span className="vtm-label text-[0.58rem] text-[#d6a840]">Принуждение клана</span>
-                    <p className="text-[0.74rem] leading-relaxed text-[#a68d80]">{clan.compulsion}</p>
+                    <span className="vtm-label text-[0.64rem] text-[#d6a840]">Принуждение клана</span>
+                    <p className="text-[0.8rem] leading-relaxed text-[#a68d80]">{clan.compulsion}</p>
                   </div>
                 </>
               )}
@@ -152,26 +156,45 @@ function DisciplinesCodex({ q }: { q: string }) {
               aria-expanded={open}
               aria-controls={`disc-${disc.id}`}
             >
-              <span className="vtm-display text-[0.95rem] text-[#a877c0]">{disc.name}</span>
-              <span className="ml-auto vtm-label text-[0.6rem] text-[#a8863d]">{open ? "▲" : "▼"}</span>
+              <span className="vtm-display text-[1.01rem] text-[#a877c0]">{disc.name}</span>
+              <span className="ml-auto vtm-label text-[0.66rem] text-[#a8863d]">{open ? "▲" : "▼"}</span>
             </button>
             <div id={`disc-${disc.id}`} className="p-4 space-y-3">
-              <p className="text-[0.78rem] leading-relaxed text-[#a68d80]">{disc.description}</p>
+              <p className="text-[0.9rem] leading-relaxed text-[#a68d80]">{disc.description}</p>
+              {DISCIPLINE_RULES[disc.id] && (
+                <div className="vtm-frame rounded-md p-3 space-y-1" style={{ background: "rgba(122,74,140,0.06)" }}>
+                  <span className="vtm-label text-[0.64rem] text-[#a877c0]">Как работает {disc.name}</span>
+                  {DISCIPLINE_RULES[disc.id].map((rule, i) => (
+                    <p key={i} className="text-[0.8rem] leading-relaxed text-[#a68d80] flex gap-1.5">
+                      <span className="text-[#a877c0] shrink-0 not-italic" aria-hidden>◈</span>{rule}
+                    </p>
+                  ))}
+                </div>
+              )}
               {open && (
                 <div className="space-y-2.5">
                   {([1, 2, 3, 4, 5] as const).map((lvl) => (
                     <div key={lvl}>
-                      <p className="vtm-label text-[0.6rem] text-[#a877c0] mb-1">Уровень {lvl}</p>
+                      <p className="vtm-label text-[0.66rem] text-[#a877c0] mb-1">Уровень {lvl}</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {(disc.powers[lvl] || []).map((p) => (
-                          <div key={p.name} className="vtm-frame rounded-md p-2.5" style={{ background: "rgba(0,0,0,0.22)" }}>
-                            <p className="text-[0.78rem] text-[#d9c7b6]">
-                              {p.name}
-                              {p.amalgam && <span className="vtm-label text-[0.52rem] text-[#a68d80] ml-1.5">амальгама · {p.amalgam}</span>}
-                            </p>
-                            <p className="vtm-hint !text-[0.64rem] mt-0.5">{p.desc}</p>
-                          </div>
-                        ))}
+                        {(disc.powers[lvl] || []).map((p) => {
+                          const system = POWER_SYSTEMS[`${disc.id}:${p.name}`];
+                          return (
+                            <div key={p.name} className="vtm-frame rounded-md p-2.5 space-y-1" style={{ background: "rgba(0,0,0,0.22)" }}>
+                              <p className="text-[0.9rem] text-[#d9c7b6]">
+                                {p.name}
+                                {p.amalgam && <span className="vtm-label text-[0.58rem] text-[#a68d80] ml-1.5">амальгама · {p.amalgam}</span>}
+                              </p>
+                              <p className="vtm-hint !text-[0.74rem] mt-0.5">{p.desc}</p>
+                              {system && (
+                                <p className="vtm-hint !text-[0.78rem] leading-relaxed rounded-md p-2 mt-1" style={{ background: "rgba(122,74,140,0.08)", border: "1px dashed rgba(122,74,140,0.3)" }}>
+                                  <span className="vtm-label text-[0.6rem] text-[#a877c0] mr-1.5">МЕХАНИКА</span>
+                                  {system}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -208,11 +231,11 @@ function ThinbloodCodex({ q }: { q: string }) {
       {rules.map((b) => (
         <section key={b.title} className="vtm-panel">
           <div className="vtm-panel-head">
-            <span className="vtm-label text-[0.7rem] text-[#d6a840]">{b.title}</span>
+            <span className="vtm-label text-[0.76rem] text-[#d6a840]">{b.title}</span>
           </div>
           <div className="p-4 space-y-2">
             {b.body.map((line, i) => (
-              <p key={i} className="text-[0.78rem] leading-relaxed text-[#a68d80] flex gap-2">
+              <p key={i} className="text-[0.9rem] leading-relaxed text-[#a68d80] flex gap-2">
                 <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
                 <span>{line}</span>
               </p>
@@ -225,7 +248,7 @@ function ThinbloodCodex({ q }: { q: string }) {
       <div className="vtm-tb-divider" aria-hidden>
         <span>⚗</span>
         <i />
-        <span className="vtm-label text-[0.62rem] text-[#a8863d]">формулы алхимии слабокровных</span>
+        <span className="vtm-label text-[0.68rem] text-[#a8863d]">формулы алхимии слабокровных</span>
         <i />
         <span>⚗</span>
       </div>
@@ -236,17 +259,17 @@ function ThinbloodCodex({ q }: { q: string }) {
             <div className="flex items-center gap-2.5">
               <span className="vtm-formula-vial" aria-hidden>⚗</span>
               <div className="min-w-0 flex-1">
-                <p className="text-[0.82rem] text-[#d9c7b6] leading-tight">
+                <p className="text-[0.88rem] text-[#d9c7b6] leading-tight">
                   {f.name}
-                  <span className="vtm-label text-[0.52rem] text-[#a877c0] ml-1.5">ур. {f.level}</span>
+                  <span className="vtm-label text-[0.58rem] text-[#a877c0] ml-1.5">ур. {f.level}</span>
                 </p>
-                <p className="vtm-label text-[0.5rem] text-[#6e5a53] mt-0.5" aria-label={`Уровень ${f.level}`}>
+                <p className="vtm-label text-[0.56rem] text-[#6e5a53] mt-0.5" aria-label={`Уровень ${f.level}`}>
                   {"◆".repeat(f.level)}{"◇".repeat(5 - f.level)}
                 </p>
               </div>
-              <span className="vtm-stamp !text-[0.5rem] shrink-0">XP {f.level * 3}</span>
+              <span className="vtm-stamp !text-[0.56rem] shrink-0">XP {f.level * 3}</span>
             </div>
-            <p className="text-[0.74rem] leading-relaxed text-[#a68d80] mt-2">{f.effect}</p>
+            <p className="text-[0.8rem] leading-relaxed text-[#a68d80] mt-2">{f.effect}</p>
             <p className="vtm-formula-brew mt-1.5">{f.brew}</p>
           </article>
         ))}
@@ -256,13 +279,13 @@ function ThinbloodCodex({ q }: { q: string }) {
       {/* Достоинства и недостатки слабокровных */}
       <section className="vtm-panel">
         <div className="vtm-panel-head">
-          <span className="vtm-label text-[0.7rem] text-[#d6a840]">Слабокровные достоинства и недостатки</span>
+          <span className="vtm-label text-[0.76rem] text-[#d6a840]">Слабокровные достоинства и недостатки</span>
         </div>
         <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-2">
           {traits.map((a) => (
             <div key={a.id} className="vtm-frame rounded-md p-2.5" style={{ background: "rgba(0,0,0,0.22)" }}>
-              <p className="text-[0.78rem] text-[#d9c7b6]">{a.name}</p>
-              <p className="vtm-hint !text-[0.64rem] mt-0.5">{a.desc}</p>
+              <p className="text-[0.9rem] text-[#d9c7b6]">{a.name}</p>
+              <p className="vtm-hint !text-[0.7rem] mt-0.5">{a.desc}</p>
             </div>
           ))}
           {traits.length === 0 && <p className="vtm-hint text-center py-3 md:col-span-2">Кровь молчит по этому запросу.</p>}
@@ -320,21 +343,24 @@ function MechanicsCodex({ q }: { q: string }) {
       body: [
         "Характеристика: 5 × новый уровень (2→3 = 15). Навык: 3 × новый уровень. Специализация: 3.",
         "Дисциплина: 6 × новый уровень (вне клана — дороже по решению рассказчика). Новая сила Дисциплины: 3 × её уровень.",
-        "Человечность: 2 × новое звено. Опыт записывай в трекерах (Досье) — вкладывай с Рассказчиком.",
+        "Человечность: 2 × новое звено. Факты биографии после создания: 3 опыта за точку. Листоги («Истории») — 3–7 опыта за ступень.",
+        "Опыт записывай в трекерах (Досье) — вкладывай с Рассказчиком.",
       ],
     },
   ];
-  const filtered = blocks.filter((b) => !q || `${b.title} ${b.body.join(" ")}`.toLowerCase().includes(q));
+  // Диаблери и ауры — из раздела «Истории» (vtm-histories.ts)
+  const blocksAll = [...blocks, ...DIABLERIE_BLOCKS];
+  const filtered = blocksAll.filter((b) => !q || `${b.title} ${b.body.join(" ")}`.toLowerCase().includes(q));
   return (
     <div className="space-y-4">
       {filtered.map((b) => (
         <section key={b.title} className="vtm-panel">
           <div className="vtm-panel-head">
-            <span className="vtm-label text-[0.7rem] text-[#d6a840]">{b.title}</span>
+            <span className="vtm-label text-[0.76rem] text-[#d6a840]">{b.title}</span>
           </div>
           <div className="p-4 space-y-2">
             {b.body.map((line, i) => (
-              <p key={i} className="text-[0.78rem] leading-relaxed text-[#a68d80] flex gap-2">
+              <p key={i} className="text-[0.9rem] leading-relaxed text-[#a68d80] flex gap-2">
                 <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
                 <span>{line}</span>
               </p>
@@ -346,12 +372,12 @@ function MechanicsCodex({ q }: { q: string }) {
       {/* Таблица Силы Крови */}
       <section className="vtm-panel">
         <div className="vtm-panel-head">
-          <span className="vtm-label text-[0.7rem] text-[#d6a840]">Сила Крови: таблица</span>
+          <span className="vtm-label text-[0.76rem] text-[#d6a840]">Сила Крови: таблица</span>
         </div>
         <div className="p-3 overflow-x-auto vtm-scroll">
-          <table className="w-full text-[0.72rem] text-[#a68d80]" role="table">
+          <table className="w-full text-[0.78rem] text-[#a68d80]" role="table">
             <thead>
-              <tr className="vtm-label text-[0.56rem] text-[#a8863d] text-left">
+              <tr className="vtm-label text-[0.62rem] text-[#a8863d] text-left">
                 <th className="py-1.5 pr-3">СК</th>
                 <th className="py-1.5 pr-3">Бонусные кости</th>
                 <th className="py-1.5 pr-3">Заживление</th>
@@ -373,7 +399,7 @@ function MechanicsCodex({ q }: { q: string }) {
               ))}
             </tbody>
           </table>
-          <p className="vtm-hint mt-2 !text-[0.62rem]">
+          <p className="vtm-hint mt-2 !text-[0.68rem]">
             Сила Крови растёт со временем (у старейшин — сама по себе) и снижается голоданием до торпора. Бонусные кости добавляются к физическим пулам и пулам Дисциплин; «бонус силы» усиливает выбранные силы.
           </p>
         </div>
@@ -382,12 +408,12 @@ function MechanicsCodex({ q }: { q: string }) {
       {/* Поколения */}
       <section className="vtm-panel">
         <div className="vtm-panel-head">
-          <span className="vtm-label text-[0.7rem] text-[#d6a840]">Поколения</span>
+          <span className="vtm-label text-[0.76rem] text-[#d6a840]">Поколения</span>
         </div>
         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
           {GENERATIONS.map((g) => (
-            <div key={g.value} className="flex items-baseline gap-2 text-[0.74rem] text-[#a68d80]">
-              <span className="vtm-label text-[0.66rem] text-[#a877c0] w-10 shrink-0">{g.label}</span>
+            <div key={g.value} className="flex items-baseline gap-2 text-[0.8rem] text-[#a68d80]">
+              <span className="vtm-label text-[0.72rem] text-[#a877c0] w-10 shrink-0">{g.label}</span>
               <span>{g.note || "—"}</span>
             </div>
           ))}
@@ -406,17 +432,17 @@ function PredatorsCodex({ q }: { q: string }) {
       {list.map((p) => (
         <article key={p.id} className="vtm-panel p-4 space-y-2">
           <div className="flex items-center gap-2">
-            <span className="vtm-display text-[0.92rem] text-[#e8636b]">{p.name}</span>
+            <span className="vtm-display text-[0.98rem] text-[#e8636b]">{p.name}</span>
           </div>
-          <p className="text-[0.76rem] leading-relaxed text-[#a68d80]">{p.description}</p>
+          <p className="text-[0.82rem] leading-relaxed text-[#a68d80]">{p.description}</p>
           <div className="flex flex-wrap gap-1.5">
-            <span className="vtm-stamp !text-[0.52rem] vtm-stamp-gold">
+            <span className="vtm-stamp !text-[0.58rem] vtm-stamp-gold">
               Навыки +1: {p.skills.map((s) => s).join(", ")}
             </span>
-            {p.discipline && <span className="vtm-stamp !text-[0.52rem]">Дисциплина +1</span>}
+            {p.discipline && <span className="vtm-stamp !text-[0.58rem]">Дисциплина +1</span>}
           </div>
-          {p.merit && <p className="vtm-hint !text-[0.64rem]">{p.merit}</p>}
-          {p.extra && <p className="vtm-hint !text-[0.64rem]">{p.extra}</p>}
+          {p.merit && <p className="vtm-hint !text-[0.7rem]">{p.merit}</p>}
+          {p.extra && <p className="vtm-hint !text-[0.7rem]">{p.extra}</p>}
         </article>
       ))}
     </div>
@@ -441,16 +467,16 @@ function AdvantagesCodex({ q }: { q: string }) {
         return (
           <section key={g.kind} className="vtm-panel">
             <div className="vtm-panel-head">
-              <span className="vtm-label text-[0.7rem] text-[#d6a840]">{g.label}</span>
+              <span className="vtm-label text-[0.76rem] text-[#d6a840]">{g.label}</span>
             </div>
             <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-2">
               {items.map((a) => (
                 <div key={a.id} className="vtm-frame rounded-md p-2.5" style={{ background: "rgba(0,0,0,0.22)" }}>
-                  <p className="text-[0.78rem] text-[#d9c7b6]">
+                  <p className="text-[0.9rem] text-[#d9c7b6]">
                     {a.name}
-                    {a.cost ? <span className="vtm-label text-[0.52rem] text-[#a8863d] ml-1.5">{a.cost} пт</span> : null}
+                    {a.cost ? <span className="vtm-label text-[0.58rem] text-[#a8863d] ml-1.5">{a.cost} пт</span> : null}
                   </p>
-                  <p className="vtm-hint !text-[0.64rem] mt-0.5">{a.desc}</p>
+                  <p className="vtm-hint !text-[0.7rem] mt-0.5">{a.desc}</p>
                 </div>
               ))}
             </div>
@@ -470,16 +496,16 @@ function SectsCodex({ q }: { q: string }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {list.map((s) => (
           <article key={s.id} className="vtm-panel p-4 space-y-2">
-            <span className="vtm-display text-[0.95rem] text-[#d6a840]">{s.name}</span>
-            <p className="text-[0.76rem] leading-relaxed text-[#a68d80]">{s.description}</p>
+            <span className="vtm-display text-[1.01rem] text-[#d6a840]">{s.name}</span>
+            <p className="text-[0.82rem] leading-relaxed text-[#a68d80]">{s.description}</p>
           </article>
         ))}
       </div>
       <section className="vtm-panel">
         <div className="vtm-panel-head">
-          <span className="vtm-label text-[0.7rem] text-[#d6a840]">Памятка Маскарада</span>
+          <span className="vtm-label text-[0.76rem] text-[#d6a840]">Памятка Маскарада</span>
         </div>
-        <div className="p-4 space-y-2 text-[0.76rem] leading-relaxed text-[#a68d80]">
+        <div className="p-4 space-y-2 text-[0.82rem] leading-relaxed text-[#a68d80]">
           <p><b className="text-[#d9c7b6]">Маскарад:</b> не выдай своё существование смертным. Нарушение — суд Элизиума.</p>
           <p><b className="text-[#d9c7b6]">Домен:</b> право кормления принадлежит правителю города. Охота — по его законам.</p>
           <p><b className="text-[#d9c7b6]">Потомство:</b> новое Становление — только с дозволением старших. «Слишком много челюстей — мало крови».</p>
@@ -487,6 +513,67 @@ function SectsCodex({ q }: { q: string }) {
           <p><b className="text-[#d9c7b6]">Гостеприимство:</b> в чужом городе — представься правителю. Если успеешь.</p>
         </div>
       </section>
+    </div>
+  );
+}
+
+// ---------- Истории: листоги (стр. 384+) ----------
+
+function HistoriesCodex({ q }: { q: string }) {
+  const rules = useMemo(
+    () => LORESHEET_RULES.filter((b) => !q || `${b.title} ${b.body.join(" ")}`.toLowerCase().includes(q)),
+    [q]
+  );
+  const sheets = useMemo(
+    () => LORESHEETS.filter((ls) =>
+      !q || `${ls.name} ${ls.tagline} ${ls.desc} ${ls.levels.map((l) => `${l.name} ${l.effect}`).join(" ")}`.toLowerCase().includes(q)
+    ),
+    [q]
+  );
+  return (
+    <div className="space-y-4">
+      {rules.map((b) => (
+        <section key={b.title} className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.76rem] text-[#d6a840]">{b.title}</span>
+          </div>
+          <div className="p-4 space-y-2">
+            {b.body.map((line, i) => (
+              <p key={i} className="text-[0.9rem] leading-relaxed text-[#a68d80] flex gap-2">
+                <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
+                <span>{line}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {sheets.map((ls) => (
+          <article key={ls.id} className="vtm-panel">
+            <div className="vtm-panel-head">
+              <span className="vtm-display text-[1.01rem] text-[#d9c7b6]">{ls.name}</span>
+              <span className="vtm-hint !text-[0.66rem] ml-1">{ls.tagline}</span>
+            </div>
+            <div className="p-4 space-y-2.5">
+              <p className="text-[0.9rem] leading-relaxed text-[#a68d80]">{ls.desc}</p>
+              <div className="space-y-1.5">
+                {ls.levels.map((lv, i) => (
+                  <div key={i} className="rounded-md p-2 border border-[#2b1116]" style={{ background: "rgba(0,0,0,0.2)" }}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[#a8863d] not-italic text-[0.86rem]" aria-hidden>{"●".repeat(i + 1)}{"○".repeat(4 - i)}</span>
+                      <b className="text-[0.86rem] text-[#d9c7b6] not-italic">{lv.name}</b>
+                      <span className="vtm-label text-[0.62rem] text-[#a8863d] ml-auto">{lv.xp} опыта</span>
+                    </div>
+                    <p className="vtm-hint !text-[0.76rem] mt-1 leading-relaxed">{lv.effect}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </article>
+        ))}
+        {sheets.length === 0 && <p className="vtm-hint text-center py-6 md:col-span-2">Истории молчат по этому запросу.</p>}
+      </div>
     </div>
   );
 }

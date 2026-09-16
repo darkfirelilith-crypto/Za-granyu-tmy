@@ -7,6 +7,7 @@
 // ============================================================
 
 import { VtmSheetData } from "@/lib/vtm-data";
+import { LORESHEET_BY_ID } from "@/lib/vtm-histories";
 import { DerivedStats } from "@/lib/vtm-calc";
 import { SKILL_LIBRARY, CLAN_BY_ID, SECT_BY_ID, PREDATOR_BY_ID, RESONANCE_BY_ID, RESONANCE_INTENSITY_LABELS } from "@/lib/vtm-data";
 
@@ -136,6 +137,32 @@ export function VtmPrintSheet({ data, derived }: { data: VtmSheetData; derived: 
               )}
             </p>
           ))}
+        </>
+      )}
+
+      {/* Листоги («Истории», стр. 384+) */}
+      {data.loresheets && data.loresheets.some((l) => l.level > 0) && (
+        <>
+          <p className="vtm-print-section">Истории (листоги)</p>
+          {data.loresheets.map((l) => {
+            const def = LORESHEET_BY_ID.get(l.sheetId);
+            if (!def || l.level <= 0) return null;
+            return (
+              <p className="vtm-print-line" key={l.sheetId}>
+                <b>{def.name}</b> {dots(l.level, 4)}{l.note ? ` — ${l.note}` : ""}
+              </p>
+            );
+          })}
+        </>
+      )}
+
+      {/* Диаблери */}
+      {(data.diablerie?.count || 0) > 0 && (
+        <>
+          <p className="vtm-print-section">Диаблери</p>
+          <p className="vtm-print-line">
+            <b>Выпито душ:</b> {data.diablerie.count} — в ауре чёрные прожилки{data.diablerie.notes ? `. ${data.diablerie.notes}` : ""}
+          </p>
         </>
       )}
 

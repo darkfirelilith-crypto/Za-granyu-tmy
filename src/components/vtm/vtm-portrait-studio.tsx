@@ -316,8 +316,8 @@ export function VtmPortraitStudio({ imageDataUrl, characterName, currentPortrait
           {/* Зум */}
           <div className="space-y-1.5">
             <div className="flex items-baseline justify-between">
-              <span className="vtm-label text-[0.6rem] text-[#a68d80]">Приближение</span>
-              <span className="vtm-label text-[0.6rem] text-[#d6a840]">×{zoom.toFixed(2)}</span>
+              <span className="vtm-label text-[0.66rem] text-[#a68d80]">Приближение</span>
+              <span className="vtm-label text-[0.66rem] text-[#d6a840]">×{zoom.toFixed(2)}</span>
             </div>
             <input
               type="range"
@@ -347,7 +347,7 @@ export function VtmPortraitStudio({ imageDataUrl, characterName, currentPortrait
               ✕ Сжечь негативы
             </button>
           </div>
-          <p className="vtm-hint text-center !text-[0.6rem]">
+          <p className="vtm-hint text-center !text-[0.66rem]">
             Итог: оклад 7:9 с виньеткой · портрет 480px + миниатюра для архива
           </p>
         </div>

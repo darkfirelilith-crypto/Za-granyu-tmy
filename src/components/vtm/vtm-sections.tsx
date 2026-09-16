@@ -182,7 +182,7 @@ export function DossierSection({
       {/* ===== Личность ===== */}
       <section className="vtm-panel lg:col-span-2" aria-label="Личность Сородича">
         <div className="vtm-panel-head">
-          <span className="vtm-label text-[0.7rem] text-[#d6a840]">Личность</span>
+          <span className="vtm-label text-[0.76rem] text-[#d6a840]">Личность</span>
         </div>
         <div className="p-4 md:p-5 space-y-4">
           {/* Портрет + базовые поля */}
@@ -198,14 +198,14 @@ export function DossierSection({
                 className="absolute inset-0 flex items-end justify-center pb-1.5 bg-gradient-to-t from-black/80 via-transparent opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                 aria-label="Вклеить портрет"
               >
-                <span className="vtm-label text-[0.55rem] text-[#d9c7b6]">
+                <span className="vtm-label text-[0.61rem] text-[#d9c7b6]">
                   {info.portrait ? "Переснять" : "Вклеить фото"}
                 </span>
               </button>
               {info.portrait && (
                 <button
                   onClick={() => fileRef.current?.click()}
-                  className="absolute top-1 left-1 vtm-btn vtm-btn-ghost !p-1 !text-[0.6rem] opacity-0 group-hover:opacity-100"
+                  className="absolute top-1 left-1 vtm-btn vtm-btn-ghost !p-1 !text-[0.66rem] opacity-0 group-hover:opacity-100"
                   aria-label="Кадрировать заново"
                   title="Кадрировать заново"
                 >
@@ -215,7 +215,7 @@ export function DossierSection({
               {info.portrait && (
                 <button
                   onClick={() => mutate((d) => { d.info.portrait = ""; d.info.portraitThumb = ""; })}
-                  className="absolute top-1 right-1 vtm-btn vtm-btn-danger !p-1 !text-[0.6rem] opacity-0 group-hover:opacity-100"
+                  className="absolute top-1 right-1 vtm-btn vtm-btn-danger !p-1 !text-[0.66rem] opacity-0 group-hover:opacity-100"
                   aria-label="Убрать портрет"
                 >
                   ✕
@@ -235,7 +235,7 @@ export function DossierSection({
             </div>
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="block">
-                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Концепция</span>
+                <span className="vtm-label text-[0.66rem] text-[#a68d80]">Концепция</span>
                 <input
                   className="vtm-input mt-1"
                   value={info.concept}
@@ -244,7 +244,7 @@ export function DossierSection({
                 />
               </label>
               <label className="block">
-                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Хроника</span>
+                <span className="vtm-label text-[0.66rem] text-[#a68d80]">Хроника</span>
                 <input
                   className="vtm-input mt-1"
                   value={info.chronicle}
@@ -253,7 +253,7 @@ export function DossierSection({
                 />
               </label>
               <label className="block">
-                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Сир</span>
+                <span className="vtm-label text-[0.66rem] text-[#a68d80]">Сир</span>
                 <input
                   className="vtm-input mt-1"
                   value={info.sire}
@@ -262,7 +262,7 @@ export function DossierSection({
                 />
               </label>
               <label className="block">
-                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Род деятельности</span>
+                <span className="vtm-label text-[0.66rem] text-[#a68d80]">Род деятельности</span>
                 <input
                   className="vtm-input mt-1"
                   value={info.occupation}
@@ -276,7 +276,7 @@ export function DossierSection({
           {/* Клан / секта / поколение / охота */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="block">
-              <span className="vtm-label text-[0.6rem] text-[#a68d80]">Клан</span>
+              <span className="vtm-label text-[0.66rem] text-[#a68d80]">Клан</span>
               <select
                 className="vtm-input mt-1"
                 value={info.clan}
@@ -289,7 +289,7 @@ export function DossierSection({
               </select>
             </label>
             <label className="block">
-              <span className="vtm-label text-[0.6rem] text-[#a68d80]">Принадлежность (секта)</span>
+              <span className="vtm-label text-[0.66rem] text-[#a68d80]">Принадлежность (секта)</span>
               <select
                 className="vtm-input mt-1"
                 value={info.sect}
@@ -301,7 +301,7 @@ export function DossierSection({
               </select>
             </label>
             <label className="block">
-              <span className="vtm-label text-[0.6rem] text-[#a68d80]">Поколение · {bpHint(info.generation)}</span>
+              <span className="vtm-label text-[0.66rem] text-[#a68d80]">Поколение · {bpHint(info.generation)}</span>
               <select
                 className="vtm-input mt-1"
                 value={info.generation || ""}
@@ -314,7 +314,7 @@ export function DossierSection({
               </select>
             </label>
             <label className="block">
-              <span className="vtm-label text-[0.6rem] text-[#a68d80]">Стиль охоты</span>
+              <span className="vtm-label text-[0.66rem] text-[#a68d80]">Стиль охоты</span>
               <select
                 className="vtm-input mt-1"
                 value={info.predator}
@@ -333,7 +333,7 @@ export function DossierSection({
             <div className="vtm-frame rounded-md p-3 space-y-2" style={{ background: "rgba(194,43,48,0.04)" }}>
               <div className="flex items-center gap-2">
                 <span className="vtm-stamp">Изъян клана</span>
-                <span className="vtm-label text-[0.58rem] text-[#a68d80]">
+                <span className="vtm-label text-[0.64rem] text-[#a68d80]">
                   {derived.baneSeverity > 0 ? `тяжесть по Силе Крови: ${derived.baneSeverity}` : "Сила Крови 0 — изъян не тянет"}
                 </span>
               </div>
@@ -349,7 +349,7 @@ export function DossierSection({
             <div className="vtm-frame rounded-md p-3 space-y-1.5" style={{ background: "rgba(168,134,61,0.04)" }}>
               <span className="vtm-stamp vtm-stamp-gold">Стиль охоты: {predator.name}</span>
               <p className="text-xs leading-relaxed text-[#a68d80]">{predator.description}</p>
-              <p className="vtm-hint !text-[0.66rem]">
+              <p className="vtm-hint !text-[0.72rem]">
                 Бонусные навыки: {predator.skills.map((k) => SKILL_LIBRARY.find((s) => s.id === k)?.name || k).join(", ")}
                 {predator.discipline ? ` · Дисциплина: +1` : ""}
               </p>
@@ -359,7 +359,7 @@ export function DossierSection({
           {/* Цель / Желание / принципы / опоры */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <label className="block md:col-span-2">
-              <span className="vtm-label text-[0.6rem] text-[#d6a840]">Цель — к чему идёт вся хроника</span>
+              <span className="vtm-label text-[0.66rem] text-[#d6a840]">Цель — к чему идёт вся хроника</span>
               <input
                 className="vtm-input mt-1"
                 value={info.ambition}
@@ -368,7 +368,7 @@ export function DossierSection({
               />
             </label>
             <label className="block md:col-span-2">
-              <span className="vtm-label text-[0.6rem] text-[#d6a840]">Желание — цель этой арки</span>
+              <span className="vtm-label text-[0.66rem] text-[#d6a840]">Желание — цель этой арки</span>
               <input
                 className="vtm-input mt-1"
                 value={info.desire}
@@ -378,7 +378,7 @@ export function DossierSection({
             </label>
             {(["principle1", "principle2", "principle3"] as const).map((key, i) => (
               <label key={key} className="block">
-                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Принцип {i + 1}</span>
+                <span className="vtm-label text-[0.66rem] text-[#a68d80]">Принцип {i + 1}</span>
                 <input
                   className="vtm-input mt-1"
                   value={info[key]}
@@ -389,7 +389,7 @@ export function DossierSection({
             ))}
             {(["anchor1", "anchor2", "anchor3"] as const).map((key, i) => (
               <label key={key} className="block">
-                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Опора {i + 1}</span>
+                <span className="vtm-label text-[0.66rem] text-[#a68d80]">Опора {i + 1}</span>
                 <input
                   className="vtm-input mt-1"
                   value={info[key]}
@@ -406,33 +406,33 @@ export function DossierSection({
       <section className={`space-y-4 ${data.trackers.hunger >= 5 ? "vtm-beast-panel" : ""}`} aria-label="Состояние Крови">
         <div className="vtm-panel">
           <div className="vtm-panel-head">
-            <span className="vtm-label text-[0.7rem] text-[#e8636b]">Кровь</span>
+            <span className="vtm-label text-[0.76rem] text-[#e8636b]">Кровь</span>
             <NewHuntButton data={data} mutate={mutate} />
           </div>
           <div className="p-4 space-y-4">
             {/* Голод */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Голод</span>
+                <span className="vtm-label text-[0.72rem] text-[#d9c7b6]">Голод</span>
                 <div className="flex items-center gap-1">
                   <button
-                    className="vtm-btn vtm-btn-ghost !py-0.5 !px-1.5 !text-[0.58rem]"
+                    className="vtm-btn vtm-btn-ghost !py-0.5 !px-1.5 !text-[0.64rem]"
                     onClick={() => doRouse("испытание Крови")}
                     title="Испытание Крови: 1 кость, успех на 6+ — иначе Голод +1"
                   >
                     🩸 испытание
                   </button>
                   <button
-                    className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.62rem]"
+                    className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.68rem]"
                     onClick={() => mutate((d) => { d.trackers.hunger = Math.max(0, d.trackers.hunger - 1); })}
                     aria-label="Утолить Голод на 1"
                     title="Утолить Голод"
                   >
                     −
                   </button>
-                  <span className="vtm-label text-[0.72rem] text-[#e8636b] w-4 text-center">{data.trackers.hunger}</span>
+                  <span className="vtm-label text-[0.78rem] text-[#e8636b] w-4 text-center">{data.trackers.hunger}</span>
                   <button
-                    className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.62rem]"
+                    className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.68rem]"
                     onClick={() => mutate((d) => { d.trackers.hunger = Math.min(5, d.trackers.hunger + 1); })}
                     aria-label="Повысить Голод на 1"
                   >
@@ -453,7 +453,7 @@ export function DossierSection({
                   </button>
                 ))}
               </div>
-              <p className="vtm-hint mt-1.5 !text-[0.62rem]">
+              <p className="vtm-hint mt-1.5 !text-[0.68rem]">
                 {data.trackers.hunger >= 5
                   ? "Голод 5: все кости пула красны. Зверь у руля — Compulsion в каждой сцене."
                   : data.trackers.hunger >= 4
@@ -462,13 +462,13 @@ export function DossierSection({
               </p>
             </div>
 
-            <div className="vtm-divider text-[0.6rem]"><span>🩸</span></div>
+            <div className="vtm-divider text-[0.66rem]"><span>🩸</span></div>
 
             {/* Здоровье */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Здоровье</span>
-                <span className="vtm-hint !text-[0.6rem]">Выносливость + 3 = {derived.healthMax}</span>
+                <span className="vtm-label text-[0.72rem] text-[#d9c7b6]">Здоровье</span>
+                <span className="vtm-hint !text-[0.66rem]">Выносливость + 3 = {derived.healthMax}</span>
               </div>
               <div className="vtm-track">
                 {Array.from({ length: derived.healthMax }, (_, i) => {
@@ -496,7 +496,7 @@ export function DossierSection({
                   );
                 })}
               </div>
-              <p className="vtm-hint mt-1.5 !text-[0.62rem]">
+              <p className="vtm-hint mt-1.5 !text-[0.68rem]">
                 {healthLeft <= 0 ? "Искалечен: торпор близок." : `Целых клеток: ${healthLeft}/${derived.healthMax}. Пустая клетка при новом тяжёлом уроне = торпор.`}
               </p>
             </div>
@@ -504,8 +504,8 @@ export function DossierSection({
             {/* Воля */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Воля</span>
-                <span className="vtm-hint !text-[0.6rem]">Самообладание + Упорство = {derived.wpMax}</span>
+                <span className="vtm-label text-[0.72rem] text-[#d9c7b6]">Воля</span>
+                <span className="vtm-hint !text-[0.66rem]">Самообладание + Упорство = {derived.wpMax}</span>
               </div>
               <div className="vtm-track">
                 {Array.from({ length: derived.wpMax }, (_, i) => {
@@ -532,7 +532,7 @@ export function DossierSection({
                   );
                 })}
               </div>
-              <p className="vtm-hint mt-1.5 !text-[0.62rem]">
+              <p className="vtm-hint mt-1.5 !text-[0.68rem]">
                 Осталось воли: {Math.max(0, derived.wpMax - usedWp)}/{derived.wpMax}. Заполненная шкала — изнурение (−2d10 к соц/мент пулам).
               </p>
             </div>
@@ -540,8 +540,8 @@ export function DossierSection({
             {/* Человечность */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Человечность</span>
-                <span className="vtm-label text-[0.72rem] text-[#d6a840]">{derived.humanityTotal}/10</span>
+                <span className="vtm-label text-[0.72rem] text-[#d9c7b6]">Человечность</span>
+                <span className="vtm-label text-[0.78rem] text-[#d6a840]">{derived.humanityTotal}/10</span>
               </div>
               <div className="flex flex-wrap gap-1">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
@@ -561,13 +561,13 @@ export function DossierSection({
                 })}
               </div>
               <div className="flex items-center justify-between mt-1.5">
-                <span className="vtm-hint !text-[0.62rem]">Пятна: {data.trackers.stains}</span>
+                <span className="vtm-hint !text-[0.68rem]">Пятна: {data.trackers.stains}</span>
                 <div className="flex gap-1">
-                  <button className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.6rem]" onClick={() => mutate((d) => { d.trackers.stains = Math.max(0, d.trackers.stains - 1); })} aria-label="Смыть пятно">−</button>
-                  <button className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.6rem]" onClick={() => mutate((d) => { d.trackers.stains = Math.min(10 - d.trackers.humanity, d.trackers.stains + 1); })} aria-label="Поставить пятно">+</button>
+                  <button className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.66rem]" onClick={() => mutate((d) => { d.trackers.stains = Math.max(0, d.trackers.stains - 1); })} aria-label="Смыть пятно">−</button>
+                  <button className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.66rem]" onClick={() => mutate((d) => { d.trackers.stains = Math.min(10 - d.trackers.humanity, d.trackers.stains + 1); })} aria-label="Поставить пятно">+</button>
                 </div>
               </div>
-              <p className="vtm-hint mt-1 !text-[0.62rem]">
+              <p className="vtm-hint mt-1 !text-[0.68rem]">
                 Пятна (дashed) исчезают при успешной проверке Человечности, иначе превращаются в потерянные звенья. При 0 — Зверь пожирает тебя.
               </p>
             </div>
@@ -575,22 +575,27 @@ export function DossierSection({
             {/* Сила Крови */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Сила Крови</span>
-                <span className="vtm-label text-[0.72rem] text-[#a877c0]">{derived.bp}</span>
+                <span className="vtm-label text-[0.72rem] text-[#d9c7b6]">Сила Крови</span>
+                <span className="vtm-label text-[0.78rem] text-[#a877c0]">{derived.bp}</span>
               </div>
               <Dots value={derived.bp} max={5} color="violet" ariaLabel="Сила Крови" />
-              <p className="vtm-hint mt-1.5 !text-[0.62rem]">
+              <p className="vtm-hint mt-1.5 !text-[0.68rem]">
                 По поколению: бонус +{derived.bpRow.bonusDice} к физике и Дисциплинам · заживление: {derived.bpRow.mend} · изъян: тяжесть {derived.bpRow.baneSeverity}
                 {derived.bpRow.feedingPenalty !== "—" ? ` · кормление: ${derived.bpRow.feedingPenalty}` : ""}
               </p>
             </div>
 
-            <div className="vtm-divider text-[0.6rem]"><span>☾</span></div>
+            <div className="vtm-divider text-[0.66rem]"><span>☾</span></div>
 
             {/* Резонанс крови */}
             <ResonanceBlock data={data} mutate={mutate} />
 
-            <div className="vtm-divider text-[0.6rem]"><span>🖋</span></div>
+            <div className="vtm-divider text-[0.66rem]"><span>🦇</span></div>
+
+            {/* Диаблери и след в ауре */}
+            <DiablerieBlock data={data} mutate={mutate} />
+
+            <div className="vtm-divider text-[0.66rem]"><span>🖋</span></div>
 
             {/* Опыт и журнал */}
             <XpBlock data={data} mutate={mutate} />
@@ -600,12 +605,12 @@ export function DossierSection({
         {/* Описание и предыстория */}
         <div className="vtm-panel">
           <div className="vtm-panel-head">
-            <span className="vtm-label text-[0.7rem] text-[#d6a840]">Облик и прошлое</span>
+            <span className="vtm-label text-[0.76rem] text-[#d6a840]">Облик и прошлое</span>
           </div>
           <div className="p-4 space-y-3">
             <div>
               <div className="flex items-baseline justify-between gap-2">
-                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Внешность</span>
+                <span className="vtm-label text-[0.66rem] text-[#a68d80]">Внешность</span>
                 <CharCount value={info.description} limit={BIO_DESC_LIMIT} />
               </div>
               <div className="mt-1">
@@ -620,7 +625,7 @@ export function DossierSection({
             </div>
             <div>
               <div className="flex items-baseline justify-between gap-2">
-                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Предыстория</span>
+                <span className="vtm-label text-[0.66rem] text-[#a68d80]">Предыстория</span>
                 <CharCount value={info.history} limit={BIO_HISTORY_LIMIT} />
               </div>
               <div className="mt-1">
@@ -694,7 +699,7 @@ export function AttributesSection({
       {/* Бюджет */}
       <div className="vtm-panel p-4 flex flex-wrap items-center gap-3">
         <span className="vtm-stamp vtm-stamp-gold">Одна 4 · три 3 · четыре 2 · одна 1</span>
-        <p className="vtm-hint !text-[0.66rem] flex-1 min-w-[220px]">
+        <p className="vtm-hint !text-[0.72rem] flex-1 min-w-[220px]">
           По правилам (стр. 137): одна характеристика 4 пункта, ещё три — по 3, ещё четыре — по 2, ещё одна — 1. Клик по точке — поставить, клик по крайней заполненной — снять. Правый клик — снять одну.
         </p>
         <span
@@ -709,7 +714,7 @@ export function AttributesSection({
         {ATTRIBUTE_GROUPS.map((group) => (
           <section key={group.id} className="vtm-panel" aria-label={group.name}>
             <div className="vtm-panel-head">
-              <span className="vtm-label text-[0.7rem] text-[#d6a840]">{group.name}</span>
+              <span className="vtm-label text-[0.76rem] text-[#d6a840]">{group.name}</span>
             </div>
             <div className="p-3 space-y-1">
               {group.attrs.map((attr) => {
@@ -735,7 +740,7 @@ export function AttributesSection({
                           </span>
                         )}
                       </div>
-                      <p className="vtm-hint !text-[0.6rem] truncate">
+                      <p className="vtm-hint !text-[0.66rem] truncate">
                         {attr.hint}
                         {skill && (
                           <span className="vtm-pair-name">
@@ -836,7 +841,7 @@ export function SkillsSection({
     <div className="space-y-4">
       <div className="vtm-panel p-4 flex flex-wrap items-center gap-3">
         <span className="vtm-stamp">27 навыков</span>
-        <p className="vtm-hint !text-[0.66rem] flex-1 min-w-[220px]">
+        <p className="vtm-hint !text-[0.72rem] flex-1 min-w-[220px]">
           Клик по точке — уровень (0–5). Клик по строке — проверка: характеристика по умолчанию + навык, кости Голода краснеют. Специализация углубляет конкретное применение навыка.
         </p>
         <input
@@ -852,7 +857,7 @@ export function SkillsSection({
         {groups.map((group) => (
           <section key={group.id} className="vtm-panel" aria-label={group.name}>
             <div className="vtm-panel-head">
-              <span className="vtm-label text-[0.7rem] text-[#d6a840]">{group.icon} {group.name}</span>
+              <span className="vtm-label text-[0.76rem] text-[#d6a840]">{group.icon} {group.name}</span>
             </div>
             <div className="p-2 md:p-3 space-y-0.5 max-h-[560px] overflow-y-auto vtm-scroll">
               {skillsByGroup(group.id).map((def) => {
@@ -872,7 +877,7 @@ export function SkillsSection({
                     >
                       <div className="min-w-0">
                         <div className="flex items-baseline gap-2 flex-wrap">
-                          <span className={`text-[0.82rem] leading-snug ${value > 0 ? "text-[#d9c7b6]" : "text-[#a68d80]"}`}>{def.name}</span>
+                          <span className={`text-[0.88rem] leading-snug ${value > 0 ? "text-[#d9c7b6]" : "text-[#a68d80]"}`}>{def.name}</span>
                           <span
                             className="vtm-pair-chip"
                             title={`Пара по умолчанию: ${ATTR_RU[attrKey]}. Клик по строке — бросок ${ATTR_ABBR[attrKey]} + навык`}
@@ -883,7 +888,7 @@ export function SkillsSection({
                             ⚄ пул {pool}
                           </span>
                         </div>
-                        {state?.spec && <p className="vtm-hint !text-[0.62rem] italic">«{state.spec}»</p>}
+                        {state?.spec && <p className="vtm-hint !text-[0.68rem] italic">«{state.spec}»</p>}
                       </div>
                       <Dots
                         value={value}
@@ -896,7 +901,7 @@ export function SkillsSection({
                     {value > 0 && (
                       <div className="px-2 pb-1.5">
                         <input
-                          className="vtm-input !py-1 !text-[0.72rem] border-dashed"
+                          className="vtm-input !py-1 !text-[0.78rem] border-dashed"
                           value={state?.spec || ""}
                           onChange={(e) => setSkill(def.id, def.name, { spec: e.target.value.slice(0, 40) })}
                           placeholder={`специализация: ${def.specExamples.slice(0, 2).join(", ")}…`}
@@ -950,8 +955,8 @@ function CustomSkills({
   return (
     <div className="vtm-panel p-4 space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="vtm-label text-[0.66rem] text-[#d6a840]">Свои навыки</span>
-        <span className="vtm-hint !text-[0.62rem] flex-1">для умений вне списка — клик по строке тоже бросает пул (Смекалка + навык)</span>
+        <span className="vtm-label text-[0.72rem] text-[#d6a840]">Свои навыки</span>
+        <span className="vtm-hint !text-[0.68rem] flex-1">для умений вне списка — клик по строке тоже бросает пул (Смекалка + навык)</span>
       </div>
       {customs.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
@@ -966,13 +971,13 @@ function CustomSkills({
               title={`Клик — проверка (${data.attributes.wit + s.value} костей)`}
             >
               <div className="flex items-baseline gap-2 min-w-0">
-                <span className="text-[0.82rem] text-[#d9c7b6] truncate">{s.name}</span>
-                <span className="vtm-label text-[0.6rem] text-[#6e5a53]">{data.attributes.wit + s.value}🞄</span>
+                <span className="text-[0.88rem] text-[#d9c7b6] truncate">{s.name}</span>
+                <span className="vtm-label text-[0.66rem] text-[#6e5a53]">{data.attributes.wit + s.value}🞄</span>
               </div>
               <div className="flex items-center gap-1">
                 <Dots value={s.value} color="gold" ariaLabel={`${s.name}: уровень`} onChange={(n) => mutate((d) => { const cs = d.skills.filter((x) => x.key === null); cs[i].value = n; })} onRoll={() => {}} />
                 <button
-                  className="vtm-btn vtm-btn-ghost !p-1 !text-[0.6rem]"
+                  className="vtm-btn vtm-btn-ghost !p-1 !text-[0.66rem]"
                   onClick={(e) => { e.stopPropagation(); mutate((d) => { d.skills = d.skills.filter((x) => !(x.key === null && x.name === s.name)); }); }}
                   aria-label={`Удалить навык ${s.name}`}
                   title="Удалить"
@@ -1057,11 +1062,11 @@ function NewHuntButton({
     <span className="ml-auto flex items-center gap-1.5">
       {confirming ? (
         <>
-          <span className="vtm-hint !text-[0.58rem] hidden sm:inline text-[#d9c7b6]">Голод и поверхностное обнулятся, тяжёлое останется</span>
+          <span className="vtm-hint !text-[0.64rem] hidden sm:inline text-[#d9c7b6]">Голод и поверхностное обнулятся, тяжёлое останется</span>
           <button className="vtm-btn vtm-btn-dawn is-confirm" onClick={doReset} aria-label="Подтвердить новую охоту">
             ✦ начала этой ночи
           </button>
-          <button className="vtm-btn vtm-btn-ghost !py-0.5 !px-1.5 !text-[0.58rem]" onClick={() => setConfirming(false)} aria-label="Отменить">
+          <button className="vtm-btn vtm-btn-ghost !py-0.5 !px-1.5 !text-[0.64rem]" onClick={() => setConfirming(false)} aria-label="Отменить">
             ✕
           </button>
         </>
@@ -1076,6 +1081,81 @@ function NewHuntButton({
         </button>
       )}
     </span>
+  );
+}
+
+// ============================================================
+// ДИАБЛЕРИ: счётчик выпитых душ и след в ауре
+// ============================================================
+
+function DiablerieBlock({
+  data,
+  mutate,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (draft: VtmSheetData) => void) => void;
+}) {
+  const count = data.diablerie?.count || 0;
+  const notes = data.diablerie?.notes || "";
+
+  return (
+    <div className="vtm-diab-block">
+      <div className="flex items-center justify-between mb-1.5 gap-2 flex-wrap">
+        <span className="vtm-label text-[0.72rem] text-[#d9c7b6]">Диаблери</span>
+        <div className="flex items-center gap-1">
+          <button
+            className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.68rem]"
+            onClick={() => mutate((d) => { d.diablerie = d.diablerie || { count: 0, notes: "" }; d.diablerie.count = Math.max(0, d.diablerie.count - 1); })}
+            aria-label="Убрать одно Диаблери"
+            title="Снять одно Диаблери (если записали зря)"
+          >
+            −
+          </button>
+          <span className={`vtm-label text-[0.9rem] w-5 text-center ${count > 0 ? "text-[#e8636b]" : "text-[#6e5a53]"}`}>{count}</span>
+          <button
+            className="vtm-btn vtm-btn-danger !py-0.5 !px-2 !text-[0.68rem]"
+            onClick={() => mutate((d) => { d.diablerie = d.diablerie || { count: 0, notes: "" }; d.diablerie.count = d.diablerie.count + 1; })}
+            aria-label="Записать совершённое Диаблери"
+            title="Выпил душу — запиши. Это не забывается."
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      {/* Аура: меняется с каждым Диаблери */}
+      <div className={`vtm-diab-aura ${count > 0 ? "stained" : ""}`} role="status" aria-label={`След в ауре: ${count > 0 ? "чёрные прожилки диаблери" : "чистая аура"}`}>
+        <span className="vtm-diab-aura-icon" aria-hidden>{count > 0 ? "🩸" : "🫧"}</span>
+        <div className="flex-1 min-w-0">
+          <p className="vtm-diab-aura-title">
+            {count === 0
+              ? "Аура чиста — пока только бледный свет Сородича"
+              : count === 1
+                ? "В ауре появились чёрные прожилки — первое Диаблери"
+                : count <= 3
+                  ? `Чёрные прожилки вьются гроздьями — выпито душ: ${count}`
+                  : "Аура изрыта чёрными венами: тень демона видна даже смертным с чутьём"}
+          </p>
+          <p className="vtm-hint !text-[0.7rem] mt-0.5">
+            {count > 0
+              ? "Ясновидение (Познание души) выдаёт след десятилетиями. Свежее Диаблери чуют даже Обострение чувств. В землях Камарильи — Кровавая Охота."
+              : "Каждое Диаблери (выпитая душа Сородича) оставляет в ауре чёрные прожилки. След тускнеет за десятилетия, но не исчезает."}
+          </p>
+        </div>
+      </div>
+
+      <input
+        className="vtm-input !py-1 !text-[0.8rem] mt-1.5 border-dashed"
+        value={notes}
+        onChange={(e) => mutate((d) => { d.diablerie = d.diablerie || { count: 0, notes: "" }; d.diablerie.notes = e.target.value.slice(0, 300); })}
+        placeholder="кто, когда и почему — след в ауре дополняет предысторию"
+        aria-label="Заметки о Диаблери"
+        maxLength={300}
+      />
+      <p className="vtm-hint !text-[0.68rem] mt-1">
+        Механика: каждое Диаблери — 2 пятна Человечности, снижение поколения на ступень (по решению Рассказчика) и след в ауре. Полные правила — «База знаний → Механики → Диаблери».
+      </p>
+    </div>
   );
 }
 
@@ -1097,8 +1177,8 @@ function ResonanceBlock({
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Резонанс крови</span>
-        <span className="vtm-hint !text-[0.6rem]">{def ? RESONANCE_INTENSITY_LABELS[intensity] || "—" : "не отслеживается"}</span>
+        <span className="vtm-label text-[0.72rem] text-[#d9c7b6]">Резонанс крови</span>
+        <span className="vtm-hint !text-[0.66rem]">{def ? RESONANCE_INTENSITY_LABELS[intensity] || "—" : "не отслеживается"}</span>
       </div>
 
       <div className="flex items-center gap-3">
@@ -1155,7 +1235,7 @@ function ResonanceBlock({
             {res.kind && (
               <button
                 type="button"
-                className="vtm-btn vtm-btn-ghost !py-0 !px-1.5 !text-[0.56rem] ml-1"
+                className="vtm-btn vtm-btn-ghost !py-0 !px-1.5 !text-[0.62rem] ml-1"
                 onClick={() => mutate((d) => { d.resonance.kind = ""; d.resonance.intensity = 0; })}
                 aria-label="Сбросить резонанс"
               >
@@ -1165,7 +1245,7 @@ function ResonanceBlock({
           </div>
         </div>
       </div>
-      <p className="vtm-hint mt-1.5 !text-[0.62rem]">
+      <p className="vtm-hint mt-1.5 !text-[0.68rem]">
         {def
           ? `${def.name}: ${def.emotion}. Глубокие резонансы (4–5) утоляют Голод надёжнее и ценятся Кровавым чародейством.`
           : "Привкус эмоций в крови жертвы. Отмечай, чью кровь ты пьёшь — от резонанса зависит насыщение и сила ритуалов."}
@@ -1182,7 +1262,7 @@ function ResonanceBlock({
 function XpBtn({ children, onClick, title, disabled }: { children: React.ReactNode; onClick: () => void; title: string; disabled?: boolean }) {
   return (
     <button
-      className="vtm-btn vtm-btn-ghost !py-0.5 !px-1.5 !text-[0.6rem] font-bold"
+      className="vtm-btn vtm-btn-ghost !py-0.5 !px-1.5 !text-[0.66rem] font-bold"
       onClick={onClick}
       title={title}
       disabled={disabled}
@@ -1236,8 +1316,8 @@ function XpBlock({
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
-        <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Опыт</span>
-        <span className="vtm-hint !text-[0.6rem]">
+        <span className="vtm-label text-[0.72rem] text-[#d9c7b6]">Опыт</span>
+        <span className="vtm-hint !text-[0.66rem]">
           свободно <b className="text-[#d6a840]">{data.trackers.xp}</b> · вложено <b className="text-[#a68d80]">{data.trackers.xpSpent}</b>
         </span>
       </div>
@@ -1256,13 +1336,13 @@ function XpBlock({
       {data.xpLog.length > 0 && (
         <div className="mt-2 max-h-24 overflow-y-auto vtm-scroll pr-1" aria-label="Журнал опыта">
           {data.xpLog.slice(0, 8).map((e) => (
-            <p key={e.id} className="vtm-roll-row !text-[0.6rem]">
+            <p key={e.id} className="vtm-roll-row !text-[0.66rem]">
               {new Date(e.ts).toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · {e.text}
             </p>
           ))}
         </div>
       )}
-      <p className="vtm-hint mt-1.5 !text-[0.6rem]">
+      <p className="vtm-hint mt-1.5 !text-[0.66rem]">
         Цены: характеристика 5×ур · навык 3×ур · специализация 3 · Дисциплина 6×ур · сила Дисциплины 3×ур · Человечность 2×ур.
       </p>
     </div>

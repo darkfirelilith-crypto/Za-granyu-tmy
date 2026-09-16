@@ -6,6 +6,7 @@
 // ============================================================
 
 import { VtmSheetData, SKILL_LIBRARY, CLAN_BY_ID, SECT_BY_ID, PREDATOR_BY_ID, RESONANCE_BY_ID, RESONANCE_INTENSITY_LABELS } from "./vtm-data";
+import { LORESHEET_BY_ID } from "./vtm-histories";
 import { DerivedStats } from "./vtm-calc";
 
 const dots = (n: number, max = 5): string =>
@@ -138,6 +139,20 @@ export function buildSummaryText(data: VtmSheetData, derived: DerivedStats): str
       out.push(
         `[${kindLabel[a.kind] || a.kind}] ${a.name}${a.rating > 1 && a.kind !== "flaw" ? ` ${a.rating}` : ""}${a.note ? ` — ${a.note}` : ""}`
       );
+    }
+  }
+
+  // ── Листоги («Истории») ──
+  if (data.loresheets && data.loresheets.length > 0) {
+    const lsLines: string[] = [];
+    for (const l of data.loresheets) {
+      const def = LORESHEET_BY_ID.get(l.sheetId);
+      if (!def || l.level <= 0) continue;
+      lsLines.push(`${def.name} ${dots(l.level, 4)}${l.note ? ` — ${l.note}` : ""}`);
+    }
+    if (lsLines.length) {
+      out.push(section("Истории (листоги)"));
+      out.push(...lsLines);
     }
   }
 

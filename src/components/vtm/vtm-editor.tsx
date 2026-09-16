@@ -7,11 +7,12 @@ import { toast } from "sonner";
 import { VtmSheetData, normalizeSheet, CLAN_BY_ID, SECT_BY_ID, PREDATOR_BY_ID, RESONANCE_BY_ID } from "@/lib/vtm-data";
 import { deriveStats, DerivedStats } from "@/lib/vtm-calc";
 import { DossierSection, AttributesSection, SkillsSection } from "@/components/vtm/vtm-sections";
-import { DisciplinesSection, AdvantagesSection } from "@/components/vtm/vtm-sections2";
+import { DisciplinesSection, AdvantagesSection, HistoriesSection } from "@/components/vtm/vtm-sections2";
 import { GearSection, NotesSection } from "@/components/vtm/vtm-sections3";
 import { CodexSection } from "@/components/vtm/vtm-codex";
 import { VtmDicePanel, setVtmSheetHooks, vtmRollAndShow } from "@/components/vtm/vtm-dice";
 import { VtmImportDialog } from "@/components/vtm/vtm-import-dialog";
+import { VtmHelpDialog } from "@/components/vtm/vtm-help";
 import { applyParsedMd, MdParseResult } from "@/lib/vtm-md-import";
 import { VtmReturnPortal } from "@/components/vtm/portal-transition";
 import { VtmPrintSheet } from "@/components/vtm/vtm-print-sheet";
@@ -33,6 +34,7 @@ const TABS = [
   { id: "skills", label: "Навыки" },
   { id: "disciplines", label: "Дисциплины" },
   { id: "advantages", label: "Преимущества" },
+  { id: "histories", label: "Истории" },
   { id: "gear", label: "Имущество" },
   { id: "notes", label: "Заметки" },
   { id: "codex", label: "База знаний" },
@@ -336,6 +338,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
 
   // ===== Диалог восстановления (JSON-файл / Markdown-сводка) =====
   const [importOpen, setImportOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const applyMarkdown = (result: MdParseResult) => {
     if (!data) return;
     localEditRef.current = true;
@@ -419,6 +422,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
         onJsonFile={(file) => importSheet(file)}
         onApplyMarkdown={applyMarkdown}
       />
+      <VtmHelpDialog tabId={tab} open={helpOpen} onClose={() => setHelpOpen(false)} />
       <div className="vtm-screen">
       <div className="max-w-7xl mx-auto px-3 md:px-6 py-6 md:py-8 space-y-4">
         {/* Шапка листа */}
@@ -444,7 +448,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
               aria-label="Имя Сородича"
             />
             {(clanName || sectName || predatorName) && (
-              <p className="vtm-label text-[0.6rem] text-[#a8863d] mt-0.5 ml-1 flex flex-wrap gap-x-2">
+              <p className="vtm-label text-[0.66rem] text-[#a8863d] mt-0.5 ml-1 flex flex-wrap gap-x-2">
                 {clanName && <span>⛧ {clanName}</span>}
                 {sectName && <span>· {sectName}</span>}
                 {predatorName && <span>· {predatorName}</span>}
@@ -494,6 +498,14 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
               aria-label="Скопировать сводку в Markdown"
             >
               Ⓜ<span className="hidden min-[480px]:inline"> МД</span>
+            </button>
+            <button
+              onClick={() => setHelpOpen(true)}
+              className="vtm-btn vtm-btn-help !py-1.5 !px-2 text-xs"
+              title={`Справка по вкладке «${TABS.find((t) => t.id === tab)?.label}» — как работают механики`}
+              aria-label="Открыть справку по текущей вкладке"
+            >
+              <span aria-hidden>☾?</span>
             </button>
             <button
               onClick={() => setImportOpen(true)}
@@ -570,6 +582,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
           {tab === "skills" && <SkillsSection data={data} mutate={mutate} derived={derived} onRoll={rollCheck} />}
           {tab === "disciplines" && <DisciplinesSection data={data} mutate={mutate} derived={derived} />}
           {tab === "advantages" && <AdvantagesSection data={data} mutate={mutate} derived={derived} />}
+          {tab === "histories" && <HistoriesSection data={data} mutate={mutate} />}
           {tab === "gear" && <GearSection data={data} mutate={mutate} derived={derived} />}
           {tab === "notes" && <NotesSection data={data} mutate={mutate} />}
           {tab === "codex" && <CodexSection />}

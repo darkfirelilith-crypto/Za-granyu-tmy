@@ -7,6 +7,7 @@
 // ============================================================
 
 import { VtmSheetData } from "@/lib/vtm-data";
+import { LORESHEET_BY_ID } from "@/lib/vtm-histories";
 import { DerivedStats } from "@/lib/vtm-calc";
 import {
   SKILL_LIBRARY,
@@ -129,6 +130,31 @@ export function VtmPrintSummary({ data, derived }: { data: VtmSheetData; derived
             </div>
           ) : (
             <p className="vtm-sum-empty">— ничего примечательного —</p>
+          )}
+
+          {data.loresheets && data.loresheets.some((l) => l.level > 0) && (
+            <>
+              <p className="vtm-sum-section">Истории (листоги)</p>
+              {data.loresheets.map((l) => {
+                const def = LORESHEET_BY_ID.get(l.sheetId);
+                if (!def || l.level <= 0) return null;
+                return (
+                  <p key={l.sheetId} className="vtm-sum-adv-item">
+                    <i>листог</i> {def.name} {"●".repeat(l.level)}{"○".repeat(4 - l.level)}{l.note ? ` — ${l.note}` : ""}
+                  </p>
+                );
+              })}
+              {(data.diablerie?.count || 0) > 0 && (
+                <p className="vtm-sum-adv-item">
+                  <i>диаблери</i> выпито душ: {data.diablerie.count} — в ауре чёрные прожилки
+                </p>
+              )}
+            </>
+          )}
+          {(data.diablerie?.count || 0) > 0 && data.loresheets && !data.loresheets.some((l) => l.level > 0) && (
+            <p className="vtm-sum-adv-item">
+              <i>диаблери</i> выпито душ: {data.diablerie.count} — в ауре чёрные прожилки
+            </p>
           )}
         </div>
       </div>

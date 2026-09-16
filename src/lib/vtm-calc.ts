@@ -2,7 +2,7 @@
 // «ВАМПИРЫ: МАСКАРАД» (5 ред.) — автоматические подсчёты листа.
 // ============================================================
 
-import { VtmSheetData, VtmSkillState, bloodPotencyByGeneration, BLOOD_POTENCY_TABLE, CLAN_BY_ID } from "./vtm-data";
+import { VtmSheetData, VtmSkillState, bloodPotencyByGeneration, BLOOD_POTENCY_TABLE, CLAN_BY_ID, ADVANTAGE_LIBRARY, ADVANTAGE_BY_ID } from "./vtm-data";
 
 export interface DerivedStats {
   healthMax: number;    // Здоровье = Выносливость + 3
@@ -48,8 +48,19 @@ export function deriveStats(sheet: VtmSheetData): DerivedStats {
   const backgroundPoints = sheet.advantages
     .filter((x) => x.kind === "background")
     .reduce((sum, x) => sum + x.rating, 0);
-  const meritPoints = sheet.advantages.filter((x) => x.kind === "merit").reduce((s, x) => s + x.rating, 0);
-  const flawPoints = sheet.advantages.filter((x) => x.kind === "flaw").reduce((s, x) => s + x.rating, 0);
+  // Достоинства/недостатки: цена = уровень × цену за уровень (из каталога);
+  // свои записи без цены считаются по уровню.
+  const advPoints = (kind: "merit" | "flaw") =>
+    sheet.advantages
+      .filter((x) => x.kind === kind)
+      .reduce((sum, x) => {
+        const byName = ADVANTAGE_LIBRARY.find((d) => d.name === x.name);
+        const def = byName || (ADVANTAGE_BY_ID.get(x.name) as typeof byName);
+        const cost = def?.cost;
+        return sum + (cost ? x.rating * cost : x.rating);
+      }, 0);
+  const meritPoints = advPoints("merit");
+  const flawPoints = advPoints("flaw");
 
   const humanityTotal = Math.max(0, sheet.trackers.humanity - sheet.trackers.stains);
 

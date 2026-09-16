@@ -7,6 +7,7 @@
 // ============================================================
 
 import { VtmSheetData, SKILL_LIBRARY, CLAN_BY_ID, SECT_BY_ID, PREDATOR_BY_ID, RESONANCE_BY_ID, RESONANCE_INTENSITY_LABELS } from "./vtm-data";
+import { LORESHEET_BY_ID } from "./vtm-histories";
 import { DerivedStats } from "./vtm-calc";
 
 const dots = (n: number, max = 5): string =>
@@ -76,6 +77,8 @@ export function buildSummaryMarkdown(data: VtmSheetData, derived: DerivedStats):
   if (data.trackers.huntCount > 0) {
     out.push(`| Ночи в хронике | ${data.trackers.huntCount} · последняя охота: ${data.trackers.lastHunt || "—"} |`);
   }
+  const diab = data.diablerie?.count || 0;
+  out.push(`| Диаблери | ${diab > 0 ? `${diab} × — в ауре чёрные прожилки` : "чисто"} |`);
 
   // ── Характеристики ──
   out.push("");
@@ -156,6 +159,23 @@ export function buildSummaryMarkdown(data: VtmSheetData, derived: DerivedStats):
       const rating = a.rating > 1 && a.kind !== "flaw" ? ` ${a.rating}` : "";
       const note = a.note ? ` — ${a.note}` : "";
       out.push(`- \`${kindLabel[a.kind] || a.kind}\` **${a.name}${rating}**${note}`);
+    }
+  }
+
+  // ── Листоги («Истории», стр. 384+) ──
+  if (data.loresheets && data.loresheets.length > 0) {
+    out.push("");
+    out.push("## Истории (листоги)");
+    out.push("");
+    for (const l of data.loresheets) {
+      const def = LORESHEET_BY_ID.get(l.sheetId);
+      if (!def || l.level <= 0) continue;
+      const taken = def.levels.slice(0, l.level);
+      out.push(`- **${def.name}** ${dots(l.level, 4)} (${def.levels.slice(0, l.level).reduce((s, x) => s + x.xp, 0)} опыта)`);
+      for (const lv of taken) {
+        out.push(`  - *${lv.name}* — ${lv.effect}`);
+      }
+      if (l.note) out.push(`  > Заметка: ${l.note}`);
     }
   }
 

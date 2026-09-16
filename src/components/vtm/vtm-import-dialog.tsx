@@ -50,6 +50,8 @@ export function VtmImportDialog({ open, onClose, onJsonFile, onApplyMarkdown }: 
     "навыки": "навыки",
     "Дисциплины": "Дисциплины",
     "достоинства и недостатки": "достоинства и недостатки",
+    "листоги": "листоги (Истории)",
+    "Диаблери": "Диаблери",
     "Цель": "Цель",
     "Желание": "Желание",
     "принципы": "принципы",
@@ -173,7 +175,7 @@ export function VtmImportDialog({ open, onClose, onJsonFile, onApplyMarkdown }: 
                 spellCheck={false}
               />
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="vtm-hint !text-[0.6rem]">{mdText.length}/30000</span>
+                <span className="vtm-hint !text-[0.66rem]">{mdText.length}/30000</span>
                 <div className="flex gap-2">
                   {parsed && (
                     <button className="vtm-btn vtm-btn-ghost" onClick={() => setParsed(null)}>

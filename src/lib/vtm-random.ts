@@ -366,7 +366,7 @@ function randomThinAdvantages(): VtmAdvantageEntry[] {
       id: `rnd-flaw-${id}`,
       name: def?.name || id,
       kind: "flaw",
-      rating: cost,
+      rating: 1, // уровень (точки); цена = уровень × cost
       note: def?.desc || "",
     });
   }
@@ -404,7 +404,7 @@ function randomAdvantages(clan: ClanDef): VtmAdvantageEntry[] {
       id: `rnd-flaw-${id}`,
       name: def?.name || id,
       kind: "flaw",
-      rating: cost,
+      rating: 1, // уровень (точки); цена = уровень × cost
       note: def?.desc || "",
     });
   }
@@ -531,6 +531,9 @@ export function buildRandomSheet(): VtmSheetData {
     skills,
     disciplines,
     advantages,
+    loresheets: [],
+    diablerie: { count: 0, notes: "" },
+    advV2: true,
     gear: {
       haven: pick(HAVENS),
       resources: pick(RESOURCES),

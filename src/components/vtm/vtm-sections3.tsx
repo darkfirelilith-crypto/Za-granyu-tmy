@@ -105,7 +105,7 @@ export function GearSection({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <section className="vtm-panel" aria-label="Убежище">
           <div className="vtm-panel-head">
-            <span className="vtm-label text-[0.7rem] text-[#d6a840]">Убежище</span>
+            <span className="vtm-label text-[0.76rem] text-[#d6a840]">Убежище</span>
           </div>
           <div className="p-4">
             <AutoTextarea
@@ -114,7 +114,7 @@ export function GearSection({
               placeholder="где ты спишь днём: безопасно ли, кто знает адрес, что припрятано"
               ariaLabel="Убежище"
             />
-            <p className="vtm-hint mt-2 !text-[0.62rem]">
+            <p className="vtm-hint mt-2 !text-[0.68rem]">
               За надёжное убежище отвечает факт биографии «Убежище» (вкладка Преимущества).
             </p>
           </div>
@@ -122,7 +122,7 @@ export function GearSection({
 
         <section className="vtm-panel" aria-label="Средства">
           <div className="vtm-panel-head">
-            <span className="vtm-label text-[0.7rem] text-[#d6a840]">Деньги и источники</span>
+            <span className="vtm-label text-[0.76rem] text-[#d6a840]">Деньги и источники</span>
           </div>
           <div className="p-4">
             <AutoTextarea
@@ -131,7 +131,7 @@ export function GearSection({
               placeholder="наличные, счета, кто платит, чем объясняешь доход"
               ariaLabel="Деньги и источники"
             />
-            <p className="vtm-hint mt-2 !text-[0.62rem]">
+            <p className="vtm-hint mt-2 !text-[0.68rem]">
               Масштаб богатства ведёт факт биографии «Богатство» (0–5).
             </p>
           </div>
@@ -141,8 +141,8 @@ export function GearSection({
       {/* Рюкзак */}
       <section className="vtm-panel" aria-label="Рюкзак">
         <div className="vtm-panel-head">
-          <span className="vtm-label text-[0.7rem] text-[#d6a840]">Рюкзак</span>
-          <span className="vtm-hint !text-[0.6rem] ml-auto">{data.gear.items.length} предметов · на широком экране карточки в две колонки</span>
+          <span className="vtm-label text-[0.76rem] text-[#d6a840]">Рюкзак</span>
+          <span className="vtm-hint !text-[0.66rem] ml-auto">{data.gear.items.length} предметов · на широком экране карточки в две колонки</span>
         </div>
         <div className="p-3 md:p-4 space-y-3">
           {data.gear.items.length === 0 ? (
@@ -161,13 +161,13 @@ export function GearSection({
                     <div className="flex items-center gap-2">
                       <span className="text-[#a8863d] select-none" aria-hidden>◈</span>
                       <input
-                        className="vtm-input !border-transparent !bg-transparent !py-0.5 !text-[0.8rem] flex-1 min-w-0"
+                        className="vtm-input !border-transparent !bg-transparent !py-0.5 !text-[0.86rem] flex-1 min-w-0"
                         value={item.name}
                         onChange={(e) => patchItem(item.id, { name: e.target.value })}
                         aria-label="Название предмета"
                       />
                       <input
-                        className="vtm-input !border-transparent !bg-transparent !py-0.5 !text-[0.74rem] w-12 text-center shrink-0"
+                        className="vtm-input !border-transparent !bg-transparent !py-0.5 !text-[0.8rem] w-12 text-center shrink-0"
                         value={item.count}
                         onChange={(e) => patchItem(item.id, { count: e.target.value })}
                         placeholder="кол-во"
@@ -175,7 +175,7 @@ export function GearSection({
                         title="Количество"
                       />
                       <button
-                        className={`vtm-btn vtm-btn-ghost !p-1 !text-[0.62rem] shrink-0 ${hasNote ? "!text-[#a8863d]" : ""} ${opened ? "!text-[#d6a840]" : ""}`}
+                        className={`vtm-btn vtm-btn-ghost !p-1 !text-[0.68rem] shrink-0 ${hasNote ? "!text-[#a8863d]" : ""} ${opened ? "!text-[#d6a840]" : ""}`}
                         onClick={() => setOpenNotes((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
                         aria-label={hasNote ? (opened ? "Свернуть заметку" : "Развернуть заметку") : "Добавить заметку"}
                         title={hasNote ? (opened ? "Свернуть заметку" : "Развернуть заметку") : "Добавить заметку"}
@@ -183,7 +183,7 @@ export function GearSection({
                         ✎ {hasNote ? (opened ? "▴" : "▾") : ""}
                       </button>
                       <button
-                        className="vtm-btn vtm-btn-ghost !p-1 !text-[0.62rem] shrink-0"
+                        className="vtm-btn vtm-btn-ghost !p-1 !text-[0.68rem] shrink-0"
                         onClick={() => removeItem(item.id)}
                         aria-label={`Убрать ${item.name}`}
                       >
@@ -365,12 +365,12 @@ export function NotesSection({
         {/* Черновик + создание записи */}
         <section className="vtm-panel" aria-label="Журнал ночи">
           <div className="vtm-panel-head">
-            <span className="vtm-label text-[0.7rem] text-[#d6a840]">Журнал ночи</span>
+            <span className="vtm-label text-[0.76rem] text-[#d6a840]">Журнал ночи</span>
           </div>
           <div className="p-4 space-y-3">
             <div>
               <div className="flex items-baseline justify-between gap-2">
-                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Черновик (автосохраняется)</span>
+                <span className="vtm-label text-[0.66rem] text-[#a68d80]">Черновик (автосохраняется)</span>
                 <CharCount value={data.notes.draft} limit={DRAFT_LIMIT} />
               </div>
               <div className="mt-1">
@@ -383,7 +383,7 @@ export function NotesSection({
                 />
               </div>
             </div>
-            <div className="vtm-divider text-[0.6rem]"><span>🖋</span></div>
+            <div className="vtm-divider text-[0.66rem]"><span>🖋</span></div>
             <div className="space-y-2">
               <input
                 className="vtm-input"
@@ -413,8 +413,8 @@ export function NotesSection({
         {/* Список записей */}
         <section className="vtm-panel" aria-label="Записи журнала">
           <div className="vtm-panel-head">
-            <span className="vtm-label text-[0.7rem] text-[#d6a840]">Записи</span>
-            <span className="vtm-hint !text-[0.6rem] ml-auto">
+            <span className="vtm-label text-[0.76rem] text-[#d6a840]">Записи</span>
+            <span className="vtm-hint !text-[0.66rem] ml-auto">
               {(query.trim() || filter !== "all")
                 ? `${filtered.length} из ${entries.length}`
                 : entries.length}
@@ -489,10 +489,10 @@ export function NotesSection({
                     ) : (
                       <h3 className="vtm-display text-sm text-[#a68d80] italic leading-snug">Без заголовка</h3>
                     )}
-                    <p className="vtm-label text-[0.54rem] text-[#6e5a53] mt-0.5">{note.date}</p>
+                    <p className="vtm-label text-[0.6rem] text-[#6e5a53] mt-0.5">{note.date}</p>
                   </div>
                   <button
-                    className="vtm-btn vtm-btn-ghost !p-1 !text-[0.6rem]"
+                    className="vtm-btn vtm-btn-ghost !p-1 !text-[0.66rem]"
                     onClick={() => removeNote(note.id)}
                     aria-label="Удалить запись"
                     title="Удалить запись"
@@ -500,7 +500,7 @@ export function NotesSection({
                     ✕
                   </button>
                 </div>
-                <p className="text-[0.78rem] leading-relaxed text-[#a68d80] whitespace-pre-wrap">{note.content}</p>
+                <p className="text-[0.9rem] leading-relaxed text-[#a68d80] whitespace-pre-wrap">{note.content}</p>
               </article>
             ))}
           </div>

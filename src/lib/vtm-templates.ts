@@ -60,6 +60,9 @@ export function buildTemplateSheet(templateId: string): VtmSheetData | null {
     skills,
     disciplines,
     advantages,
+    loresheets: [],
+    diablerie: { count: 0, notes: "" },
+    advV2: true,
     gear: {
       haven: s.gear.haven,
       resources: s.gear.resources,

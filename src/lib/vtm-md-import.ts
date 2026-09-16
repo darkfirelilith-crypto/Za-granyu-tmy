@@ -28,6 +28,7 @@ import {
   RESONANCES,
   RESONANCE_INTENSITY_LABELS,
 } from "./vtm-data";
+import { LORESHEET_BY_ID } from "./vtm-histories";
 
 // ---------- Типы результата ----------
 
@@ -66,6 +67,8 @@ export interface ParsedMdSheet {
     lastHunt?: string;
   };
   resonance?: { kind: string; intensity: number };
+  loresheets?: { sheetId: string; level: number; note: string }[];
+  diablerie?: { count: number; notes: string };
   gear?: { haven?: string; resources?: string; items?: VtmGearItem[] };
   notes?: VtmNote[];
 }
@@ -132,6 +135,7 @@ export function parseSummaryMarkdown(md: string): MdParseResult {
       else if (t.startsWith("Навыки")) section = "skills";
       else if (t.startsWith("Дисциплины")) section = "discs";
       else if (t.startsWith("Достоинства")) section = "adv";
+      else if (t.startsWith("Истории")) section = "loresheets";
       else if (t.startsWith("Столкновения")) section = "conv";
       else if (t.startsWith("Убежище")) section = "gear";
       else if (t.startsWith("Хроника ночей")) section = "notes";
@@ -349,6 +353,27 @@ export function parseSummaryMarkdown(md: string): MdParseResult {
       continue;
     }
 
+    // ── Листоги («Истории») ──
+    if (section === "loresheets") {
+      const m = line.match(/^\s*-\s+\*\*(.+?)\*\*\s*([●○]+)(?:\s*\((\d+) опыта\))?/);
+      if (m) {
+        const lsName = stripBold(m[1]).trim();
+        const level = clamp(dotsFilled(m[2]), 0, 4);
+        const def = [...LORESHEET_BY_ID.values()].find((d) => d.name.toLowerCase() === lsName.toLowerCase());
+        if (def && level > 0 && !fields.loresheets?.some((l) => l.sheetId === def.id)) {
+          if (!fields.loresheets) fields.loresheets = [];
+          fields.loresheets.push({ sheetId: def.id, level, note: "" });
+          if (!found.includes("листоги")) found.push("листоги");
+        }
+      }
+      // заметка «  > Заметка: ...» относится к последнему листогу
+      const noteM = line.match(/^\s{2,}>\s*Заметка:\s*(.+)$/);
+      if (noteM && fields.loresheets && fields.loresheets.length > 0) {
+        fields.loresheets[fields.loresheets.length - 1].note = noteM[1].trim();
+      }
+      continue;
+    }
+
     // ── Столкновения и опоры ──
     if (section === "conv") {
       const m = line.match(/^-\s+\*\*(.+?):?\*\*\s*(.*)$/);
@@ -520,6 +545,16 @@ export function parseSummaryMarkdown(md: string): MdParseResult {
     if (m) found.push("счётчик ночей");
   }
 
+  // Диаблери: «| Диаблери | 2 × — в ауре чёрные прожилки |» или «| Диаблери | чисто |»
+  const diabRow = tableRows["Диаблери"];
+  if (diabRow && diabRow[0]) {
+    const m = diabRow[0].match(/(\d+)\s*×/);
+    if (m) {
+      fields.diablerie = { count: clamp(m[1], 0, 99), notes: "" };
+      found.push("Диаблери");
+    }
+  }
+
   if (Object.keys(tracks).length > 0) fields.trackers = tracks;
 
   // Финальные проверки
@@ -589,6 +624,14 @@ export function applyParsedMd(draft: VtmSheetData, p: ParsedMdSheet): void {
 
   // Резонанс
   if (p.resonance && p.resonance.kind) draft.resonance = p.resonance;
+
+  // Листоги — замена целиком (только валидные)
+  if (p.loresheets && p.loresheets.length > 0) draft.loresheets = p.loresheets;
+
+  // Диаблери — перезапись счётчика, если найден в сводке
+  if (p.diablerie && typeof p.diablerie.count === "number") {
+    draft.diablerie = { count: p.diablerie.count, notes: draft.diablerie?.notes || "" };
+  }
 
   // Убежище и имущество
   if (p.gear) {
