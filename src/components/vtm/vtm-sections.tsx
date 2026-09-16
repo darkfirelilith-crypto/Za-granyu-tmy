@@ -18,6 +18,9 @@ import {
   PREDATOR_TYPES,
   PREDATOR_BY_ID,
   GENERATIONS,
+  RESONANCES,
+  RESONANCE_BY_ID,
+  RESONANCE_INTENSITY_LABELS,
 } from "@/lib/vtm-data";
 import { DerivedStats, bpHint } from "@/lib/vtm-calc";
 import { rollRouse, useVtmDice } from "@/components/vtm/vtm-dice";
@@ -382,11 +385,11 @@ export function DossierSection({
       </section>
 
       {/* ===== Кровь: треки ===== */}
-      <section className="space-y-4" aria-label="Состояние Крови">
+      <section className={`space-y-4 ${data.trackers.hunger >= 5 ? "vtm-beast-panel" : ""}`} aria-label="Состояние Крови">
         <div className="vtm-panel">
           <div className="vtm-panel-head">
             <span className="vtm-label text-[0.7rem] text-[#e8636b]">Кровь</span>
-            <span className="vtm-hint ml-auto !text-[0.6rem]">считается автоматически</span>
+            <NewHuntButton data={data} mutate={mutate} />
           </div>
           <div className="p-4 space-y-4">
             {/* Голод */}
@@ -563,6 +566,11 @@ export function DossierSection({
                 {derived.bpRow.feedingPenalty !== "—" ? ` · кормление: ${derived.bpRow.feedingPenalty}` : ""}
               </p>
             </div>
+
+            <div className="vtm-divider text-[0.6rem]"><span>☾</span></div>
+
+            {/* Резонанс крови */}
+            <ResonanceBlock data={data} mutate={mutate} />
 
             <div className="vtm-divider text-[0.6rem]"><span>🖋</span></div>
 
@@ -921,6 +929,179 @@ function CustomSkills({
         />
         <button className="vtm-btn shrink-0" onClick={add} disabled={!name.trim()}>+ Добавить</button>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// НОВАЯ ОХОТА: сброс трекеров перед новой ночью + запись в журнал
+// ============================================================
+
+const newHuntSummary = (data: VtmSheetData): string => {
+  const parts: string[] = [];
+  if (data.trackers.hunger > 0) parts.push(`Голод ${data.trackers.hunger} → 0 (утолён)`);
+  if (data.trackers.healthSup > 0) parts.push(`поверхностные раны ${data.trackers.healthSup} → 0 (зажили)`);
+  if (data.trackers.wpSup > 0) parts.push(`поверхностный стресс ${data.trackers.wpSup} → 0 (отдых)`);
+  return parts.length ? parts.join("; ") : "следы прошлой ночи уже смыты — тишина в трекерах";
+};
+
+/** Кнопка «Новая охота»: одной ночью заживает поверхностное, Голод утоляется, тяжёлое остаётся. */
+function NewHuntButton({
+  data,
+  mutate,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (draft: VtmSheetData) => void) => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => {
+    if (!confirming) return;
+    const t = setTimeout(() => setConfirming(false), 6000);
+    return () => clearTimeout(t);
+  }, [confirming]);
+
+  const dirty =
+    data.trackers.hunger > 0 || data.trackers.healthSup > 0 || data.trackers.wpSup > 0;
+
+  const doReset = () => {
+    const summary = newHuntSummary(data);
+    mutate((d) => {
+      d.trackers.hunger = 0;
+      d.trackers.healthSup = 0;
+      d.trackers.wpSup = 0;
+      const now = new Date();
+      const date = now.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
+      d.notes.entries = [
+        {
+          id: `hunt-${now.getTime().toString(36)}`,
+          title: "Новая охота",
+          date,
+          content: `Солнце село — Сородич проснулся. ${summary}. Тяжёлые раны и пятна Человечности не тронуты: ночь не стирает всё.`,
+        },
+        ...d.notes.entries,
+      ].slice(0, 40);
+    });
+    setConfirming(false);
+    toast.success("Новая охота началась", { description: "Голод утолён, поверхностное зажило. Запись в журнале ночи." });
+  };
+
+  return (
+    <span className="ml-auto flex items-center gap-1.5">
+      {confirming ? (
+        <>
+          <span className="vtm-hint !text-[0.58rem] hidden sm:inline text-[#d9c7b6]">Голод и поверхностное обнулятся, тяжёлое останется</span>
+          <button className="vtm-btn vtm-btn-dawn is-confirm" onClick={doReset} aria-label="Подтвердить новую охоту">
+            ✦ начала этой ночи
+          </button>
+          <button className="vtm-btn vtm-btn-ghost !py-0.5 !px-1.5 !text-[0.58rem]" onClick={() => setConfirming(false)} aria-label="Отменить">
+            ✕
+          </button>
+        </>
+      ) : (
+        <button
+          className={`vtm-btn vtm-btn-dawn ${dirty ? "" : "is-clean"}`}
+          onClick={() => setConfirming(true)}
+          title="Начало новой охоты: Голод утолён, поверхностные раны и стресс зажили за день. Тяжёлое остаётся. В журнал ночи добавится запись."
+          aria-label="Начать новую охоту"
+        >
+          🌙 новая охота{dirty ? "" : " · чисто"}
+        </button>
+      )}
+    </span>
+  );
+}
+
+// ============================================================
+// РЕЗОНАНС КРОВИ: привкус эмоций в крови жертвы
+// ============================================================
+
+function ResonanceBlock({
+  data,
+  mutate,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (draft: VtmSheetData) => void) => void;
+}) {
+  const res = data.resonance;
+  const def = res.kind ? RESONANCE_BY_ID.get(res.kind) : undefined;
+  const intensity = res.intensity || 0;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="vtm-label text-[0.66rem] text-[#d9c7b6]">Резонанс крови</span>
+        <span className="vtm-hint !text-[0.6rem]">{def ? RESONANCE_INTENSITY_LABELS[intensity] || "—" : "не отслеживается"}</span>
+      </div>
+
+      <div className="flex items-center gap-3">
+        {/* Капля с жидкостью нужного цвета и уровня */}
+        <span
+          className={`vtm-resonance-drop ${def ? "active" : ""}`}
+          style={
+            def
+              ? ({ "--res-color": def.color, "--res-glow": def.glow, "--res-fill": `${Math.max(8, Math.round((intensity / 5) * 100))}%` } as React.CSSProperties)
+              : undefined
+          }
+          aria-hidden
+        >
+          <span className="vtm-resonance-liquid" />
+        </span>
+        <div className="flex-1 min-w-0">
+          {/* Вид резонанса — чипы */}
+          <div className="flex flex-wrap gap-1" role="group" aria-label="Вид резонанса">
+            {RESONANCES.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                className={`vtm-res-chip ${res.kind === r.id ? "active" : ""}`}
+                style={res.kind === r.id ? { borderColor: r.color, color: r.color, boxShadow: `0 0 8px ${r.glow}` } : undefined}
+                title={r.emotion}
+                aria-label={`Резонанс: ${r.name}`}
+                aria-pressed={res.kind === r.id}
+                onClick={() =>
+                  mutate((d) => {
+                    d.resonance.kind = d.resonance.kind === r.id ? "" : r.id;
+                    if (!d.resonance.kind) d.resonance.intensity = 0;
+                    else if (d.resonance.intensity === 0) d.resonance.intensity = 3;
+                  })
+                }
+              >
+                {r.name}
+              </button>
+            ))}
+          </div>
+          {/* Интенсивность — точки */}
+          <div className="flex items-center gap-1 mt-1.5" role="group" aria-label="Интенсивность резонанса">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={`vtm-res-dot ${n <= intensity ? "filled" : ""}`}
+                style={n <= intensity && def ? { background: def.color, boxShadow: `0 0 6px ${def.glow}` } : undefined}
+                disabled={!res.kind}
+                aria-label={`Интенсивность ${n}`}
+                title={RESONANCE_INTENSITY_LABELS[n]}
+                onClick={() => mutate((d) => { d.resonance.intensity = d.resonance.intensity === n ? n - 1 : n; })}
+              />
+            ))}
+            {res.kind && (
+              <button
+                type="button"
+                className="vtm-btn vtm-btn-ghost !py-0 !px-1.5 !text-[0.56rem] ml-1"
+                onClick={() => mutate((d) => { d.resonance.kind = ""; d.resonance.intensity = 0; })}
+                aria-label="Сбросить резонанс"
+              >
+                сброс
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      <p className="vtm-hint mt-1.5 !text-[0.62rem]">
+        {def
+          ? `${def.name}: ${def.emotion}. Глубокие резонансы (4–5) утоляют Голод надёжнее и ценятся Кровавым чародейством.`
+          : "Привкус эмоций в крови жертвы. Отмечай, чью кровь ты пьёшь — от резонанса зависит насыщение и сила ритуалов."}
+      </p>
     </div>
   );
 }

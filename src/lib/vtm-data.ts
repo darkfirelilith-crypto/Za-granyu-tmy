@@ -110,7 +110,40 @@ export interface VtmSheetData {
   trackers: VtmTrackers;
   rollLog: { id: string; text: string; ts: string }[];
   xpLog: { id: string; text: string; ts: string }[]; // журнал опыта (получено/потрачено)
+  resonance: VtmResonance; // текущий резонанс крови (привкус эмоций; kind="" — не выбран)
 }
+
+// ---------- Резонанс крови ----------
+
+export interface VtmResonance {
+  kind: string;     // id из RESONANCES ("" — не выбран)
+  intensity: number; // 0–5 (0 — не отслеживается)
+}
+
+export const RESONANCES: {
+  id: string;
+  name: string;
+  emotion: string;
+  color: string;
+  glow: string;
+}[] = [
+  { id: "sanguine", name: "Сангвинный", emotion: "радость, любовь, азарт", color: "#c96a2e", glow: "rgba(201,106,46,0.55)" },
+  { id: "choleric", name: "Холерный", emotion: "гнев, ярость, насилие", color: "#c22b30", glow: "rgba(194,43,48,0.6)" },
+  { id: "melancholic", name: "Меланхолийный", emotion: "страх, печаль, тоска", color: "#6f7f9b", glow: "rgba(111,127,155,0.5)" },
+  { id: "phlegmatic", name: "Флегматийный", emotion: "апатия, покой, скука", color: "#8f9b7a", glow: "rgba(143,155,122,0.5)" },
+  { id: "animal", name: "Звериный", emotion: "кровь животных — без привкуса души", color: "#7a4a3c", glow: "rgba(122,74,60,0.5)" },
+];
+
+export const RESONANCE_BY_ID = new Map(RESONANCES.map((r) => [r.id, r]));
+
+export const RESONANCE_INTENSITY_LABELS: Record<number, string> = {
+  0: "—",
+  1: "едва уловимый",
+  2: "слабый",
+  3: "насыщенный",
+  4: "глубокий",
+  5: "животный, чистый",
+};
 
 // ---------- Характеристики ----------
 
@@ -1001,6 +1034,7 @@ export function emptySheet(): VtmSheetData {
     },
     rollLog: [],
     xpLog: [],
+    resonance: { kind: "", intensity: 0 },
   };
 }
 
@@ -1171,6 +1205,15 @@ export function normalizeSheet(input: unknown): VtmSheetData {
         text: asString(r.text),
         ts: asString(r.ts),
       }));
+  }
+
+  // резонанс крови (обратная совместимость: старые листы без резонанса)
+  if (raw.resonance && typeof raw.resonance === "object") {
+    const r = raw.resonance as Record<string, any>;
+    base.resonance = {
+      kind: typeof r.kind === "string" && RESONANCE_BY_ID.has(r.kind) ? r.kind : "",
+      intensity: clampInt(r.intensity, 0, 5),
+    };
   }
 
   // xp log (обратная совместимость: старые листы без журнала опыта)

@@ -78,6 +78,7 @@ export function buildTemplateSheet(templateId: string): VtmSheetData | null {
     },
     rollLog: [],
     xpLog: [],
+    resonance: { kind: "", intensity: 0 },
   };
 }
 

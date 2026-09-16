@@ -8,7 +8,7 @@
 
 import { VtmSheetData } from "@/lib/vtm-data";
 import { DerivedStats } from "@/lib/vtm-calc";
-import { SKILL_LIBRARY, CLAN_BY_ID, SECT_BY_ID, PREDATOR_BY_ID } from "@/lib/vtm-data";
+import { SKILL_LIBRARY, CLAN_BY_ID, SECT_BY_ID, PREDATOR_BY_ID, RESONANCE_BY_ID, RESONANCE_INTENSITY_LABELS } from "@/lib/vtm-data";
 
 const dots = (n: number, max = 5): string => "●".repeat(Math.max(0, Math.min(max, n))) + "○".repeat(Math.max(0, max - Math.max(0, Math.min(max, n))));
 
@@ -39,6 +39,8 @@ export function VtmPrintSheet({ data, derived }: { data: VtmSheetData; derived: 
 
   const customs = data.skills.filter((s) => s.key === null).map((s) => `${s.name} ${dots(s.value)}`);
 
+  const resDef = data.resonance.kind ? RESONANCE_BY_ID.get(data.resonance.kind) : undefined;
+
   return (
     <div className="vtm-print-doc">
       {/* Шапка */}
@@ -62,6 +64,11 @@ export function VtmPrintSheet({ data, derived }: { data: VtmSheetData; derived: 
             Голод: {"◔".repeat(data.trackers.hunger)}{"○".repeat(5 - data.trackers.hunger)} · Человечность: {data.trackers.humanity}/10
             {data.trackers.stains ? ` · Пятна: ${data.trackers.stains}` : ""}
           </p>
+          {resDef && data.resonance.intensity > 0 && (
+            <p className="vtm-print-line">
+              Резонанс крови: {resDef.name}, {RESONANCE_INTENSITY_LABELS[data.resonance.intensity] || data.resonance.intensity}
+            </p>
+          )}
           <p className="vtm-print-line">
             {info.concept ? `Концепция: ${info.concept}` : ""}
             {info.occupation ? ` · Род деятельности: ${info.occupation}` : ""}
@@ -170,6 +177,19 @@ export function VtmPrintSheet({ data, derived }: { data: VtmSheetData; derived: 
               {n.date}{n.title ? ` · ${n.title}` : ""}: {n.content}
             </p>
           ))}
+        </>
+      )}
+
+      {/* Журнал опыта */}
+      {data.xpLog.length > 0 && (
+        <>
+          <p className="vtm-print-section">Журнал опыта</p>
+          {data.xpLog.slice(0, 10).map((x) => (
+            <p className="vtm-print-line" key={x.id}>
+              {new Date(x.ts).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "2-digit" })} · {x.text}
+            </p>
+          ))}
+          {data.xpLog.length > 10 && <p className="vtm-print-line">…и ещё {data.xpLog.length - 10} записей в онлайн-архиве.</p>}
         </>
       )}
 

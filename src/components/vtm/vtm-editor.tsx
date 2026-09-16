@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { VtmSheetData, normalizeSheet, CLAN_BY_ID, SECT_BY_ID, PREDATOR_BY_ID } from "@/lib/vtm-data";
-import { deriveStats } from "@/lib/vtm-calc";
+import { VtmSheetData, normalizeSheet, CLAN_BY_ID, SECT_BY_ID, PREDATOR_BY_ID, RESONANCE_BY_ID } from "@/lib/vtm-data";
+import { deriveStats, DerivedStats } from "@/lib/vtm-calc";
 import { DossierSection, AttributesSection, SkillsSection } from "@/components/vtm/vtm-sections";
 import { DisciplinesSection, AdvantagesSection } from "@/components/vtm/vtm-sections2";
 import { GearSection, NotesSection } from "@/components/vtm/vtm-sections3";
@@ -412,6 +412,9 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
           </div>
         </motion.header>
 
+        {/* Витальная сводка — видна на всех вкладках */}
+        <VitalStrip data={data} derived={derived} onOpenDossier={() => setTab("dossier")} />
+
         {/* Вкладки */}
         <nav className="vtm-panel !rounded-md overflow-hidden" aria-label="Разделы листа">
           <div
@@ -485,6 +488,100 @@ function DeleteButton({ onDelete }: { onDelete: () => void }) {
       title="Предать лист земле"
     >
       {confirming ? "В землю?!" : "В землю"}
+    </button>
+  );
+}
+
+// ============================================================
+// Витальная сводка: компактная строка состояния под шапкой листа.
+// Видна на всех вкладках, клик открывает Досье.
+// ============================================================
+
+function VitalStrip({
+  data,
+  derived,
+  onOpenDossier,
+}: {
+  data: VtmSheetData;
+  derived: DerivedStats;
+  onOpenDossier: () => void;
+}) {
+  const hpLeft = derived.healthMax - data.trackers.healthAgg - data.trackers.healthSup;
+  const wpLeft = derived.wpMax - data.trackers.wpAgg - data.trackers.wpSup;
+  const humanity = derived.humanityTotal;
+  const resonance = data.resonance.kind ? RESONANCE_BY_ID.get(data.resonance.kind) : undefined;
+
+  const cells = (total: number, sup: number, agg: number) => (
+    <span className="vtm-vs-cells" aria-hidden>
+      {Array.from({ length: total }, (_, i) => {
+        const n = i + 1;
+        const isAgg = n <= agg;
+        const isSup = !isAgg && n <= agg + sup;
+        return <i key={n} className={isAgg ? "agg" : isSup ? "sup" : ""} />;
+      })}
+    </span>
+  );
+
+  return (
+    <button
+      type="button"
+      onClick={onOpenDossier}
+      className={`vtm-vital-strip ${data.trackers.hunger >= 5 ? "beast" : ""}`}
+      title="Витальная сводка Сородича — клик откроет Досье"
+      aria-label="Витальная сводка Сородича — открыть Досье"
+    >
+      <span className="vtm-vs-item" title={`Голод: ${data.trackers.hunger} из 5${data.trackers.hunger >= 5 ? " — ЗВЕРЬ У РУЛЯ" : data.trackers.hunger >= 4 ? " — опасен" : ""}`}>
+        <span className="vtm-vs-label text-[#e8636b]">Голод</span>
+        <span className="vtm-vs-hunger" aria-hidden>
+          {Array.from({ length: 5 }, (_, i) => (
+            <i key={i} className={i < data.trackers.hunger ? "on" : ""} />
+          ))}
+        </span>
+        <b>{data.trackers.hunger}</b>
+      </span>
+      <span className="vtm-vs-sep" aria-hidden>·</span>
+      <span className="vtm-vs-item" title={`Здоровье: целых ${hpLeft} из ${derived.healthMax}`}>
+        <span className="vtm-vs-label">Здоровье</span>
+        {cells(derived.healthMax, data.trackers.healthSup, data.trackers.healthAgg)}
+        <b className={hpLeft <= 0 ? "text-[#e8636b]" : ""}>{Math.max(0, hpLeft)}/{derived.healthMax}</b>
+      </span>
+      <span className="vtm-vs-sep" aria-hidden>·</span>
+      <span className="vtm-vs-item" title={`Воля: осталось ${wpLeft} из ${derived.wpMax}${wpLeft === 0 ? " — изнурение" : ""}`}>
+        <span className="vtm-vs-label">Воля</span>
+        {cells(derived.wpMax, data.trackers.wpSup, data.trackers.wpAgg)}
+        <b className={wpLeft === 0 ? "text-[#d6a840]" : ""}>{Math.max(0, wpLeft)}/{derived.wpMax}</b>
+      </span>
+      <span className="vtm-vs-sep" aria-hidden>·</span>
+      <span className="vtm-vs-item" title={`Человечность: ${humanity} из 10${data.trackers.stains ? `, пятен: ${data.trackers.stains}` : ""}`}>
+        <span className="vtm-vs-label">Чел.</span>
+        <b className={humanity <= 2 ? "text-[#e8636b]" : ""}>{humanity}/10</b>
+        {data.trackers.stains > 0 && <span className="vtm-vs-stains" title={`Пятен: ${data.trackers.stains}`}>{data.trackers.stains}◈</span>}
+      </span>
+      <span className="vtm-vs-sep" aria-hidden>·</span>
+      <span className="vtm-vs-item" title="Сила Крови по поколению">
+        <span className="vtm-vs-label text-[#a877c0]">СК</span>
+        <b className="text-[#a877c0]">{derived.bp}</b>
+      </span>
+      {resonance && (
+        <>
+          <span className="vtm-vs-sep" aria-hidden>·</span>
+          <span className="vtm-vs-item" title={`Резонанс: ${resonance.name} — ${resonance.emotion}`}>
+            <span
+              className="vtm-vs-res"
+              style={{ background: resonance.color, boxShadow: `0 0 6px ${resonance.glow}` }}
+              aria-hidden
+            />
+            <span className="hidden lg:inline vtm-vs-label">{resonance.name}</span>
+            <b>{data.resonance.intensity || "—"}</b>
+          </span>
+        </>
+      )}
+      <span className="vtm-vs-sep" aria-hidden>·</span>
+      <span className="vtm-vs-item" title={`Опыт: свободно ${data.trackers.xp}, вложено ${data.trackers.xpSpent}`}>
+        <span className="vtm-vs-label text-[#d6a840]">Опыт</span>
+        <b className="text-[#d6a840]">{data.trackers.xp}</b>
+      </span>
+      {data.trackers.hunger >= 5 && <span className="vtm-vs-beast">ЗВЕРЬ У РУЛЯ</span>}
     </button>
   );
 }

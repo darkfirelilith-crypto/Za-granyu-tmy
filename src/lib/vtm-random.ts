@@ -18,6 +18,7 @@ import {
   DISCIPLINE_BY_ID,
   PREDATOR_TYPES,
   ADVANTAGE_BY_ID,
+  RESONANCES,
 } from "./vtm-data";
 
 // ---------- утилиты ----------
@@ -456,5 +457,11 @@ export function buildRandomSheet(): VtmSheetData {
     },
     rollLog: [],
     xpLog: [],
+    // Кровь решает и вкус жертвы: живой резонанс 2–4 глубины (Звериный — реже)
+    resonance: (() => {
+      const kind = pickWeighted(RESONANCES.filter((r) => r.id !== "animal").map((r) => ({ item: r.id, w: 3 }))
+        .concat(RESONANCES.filter((r) => r.id === "animal").map((r) => ({ item: r.id, w: 1 }))));
+      return { kind, intensity: 2 + Math.floor(Math.random() * 3) };
+    })(),
   };
 }

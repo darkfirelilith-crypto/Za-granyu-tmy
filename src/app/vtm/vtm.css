@@ -223,6 +223,211 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   box-shadow: 0 0 20px rgba(194, 43, 48, 0.5);
 }
 
+/* Кнопка «новая охота» — рассветная медь: гасит тревогу, а не кровь */
+.vtm-btn-dawn {
+  background: linear-gradient(160deg, #2e2013, #1d150b);
+  border-color: rgba(168, 134, 61, 0.45);
+  color: #d9b877;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  padding: 0.25rem 0.6rem;
+  transition: all 0.25s ease;
+}
+.vtm-btn-dawn:hover {
+  border-color: var(--vtm-gold-bright);
+  color: #efd9a7;
+  box-shadow: 0 0 18px rgba(214, 168, 64, 0.28), inset 0 0 12px rgba(214, 168, 64, 0.06);
+}
+.vtm-btn-dawn.is-confirm {
+  background: linear-gradient(160deg, #4a3a14, #33270c);
+  border-color: var(--vtm-gold-bright);
+  color: #ffe9b8;
+  animation: vtm-dawn-pulse 1.6s ease-in-out infinite;
+}
+.vtm-btn-dawn.is-clean { opacity: 0.55; }
+@keyframes vtm-dawn-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(214, 168, 64, 0.2); }
+  50% { box-shadow: 0 0 24px rgba(214, 168, 64, 0.5), inset 0 0 14px rgba(214, 168, 64, 0.12); }
+}
+
+/* ---------- Витальная сводка под шапкой листа ---------- */
+
+.vtm-vital-strip {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.6rem;
+  padding: 0.45rem 0.9rem;
+  background: linear-gradient(to bottom, rgba(31, 14, 18, 0.85), rgba(23, 10, 13, 0.85));
+  border: 1px solid var(--vtm-line-soft);
+  border-left: 3px solid var(--vtm-blood);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+}
+.vtm-vital-strip:hover {
+  border-color: var(--vtm-line);
+  border-left-color: var(--vtm-blood-bright);
+  box-shadow: 0 0 18px rgba(194, 43, 48, 0.15);
+  transform: translateY(-1px);
+}
+.vtm-vital-strip.beast {
+  border-left-color: var(--vtm-blood-bright);
+  animation: vtm-strip-beast 2.2s ease-in-out infinite;
+}
+@keyframes vtm-strip-beast {
+  0%, 100% { box-shadow: 0 0 6px rgba(194, 43, 48, 0.12); }
+  50% { box-shadow: 0 0 22px rgba(194, 43, 48, 0.4); }
+}
+
+.vtm-vs-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.vtm-vs-label {
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--vtm-bone-dim);
+  white-space: nowrap;
+}
+.vtm-vs-item b {
+  font-size: 0.74rem;
+  font-family: var(--vtm-font-display), Georgia, serif;
+  color: var(--vtm-bone);
+  white-space: nowrap;
+}
+.vtm-vs-sep { color: #4a2a2f; font-size: 0.7rem; user-select: none; }
+
+/* мини-треки Здоровья/Воли */
+.vtm-vs-cells { display: inline-flex; gap: 2px; }
+.vtm-vs-cells i {
+  width: 7px; height: 10px;
+  border: 1px solid #4a2a2f;
+  border-radius: 1px;
+  background: transparent;
+}
+.vtm-vs-cells i.sup { background: rgba(194, 43, 48, 0.45); border-color: #7c2a2f; }
+.vtm-vs-cells i.agg { background: var(--vtm-blood-bright); border-color: var(--vtm-blood-bright); }
+
+/* мини-кости Голодa */
+.vtm-vs-hunger { display: inline-flex; gap: 2px; }
+.vtm-vs-hunger i {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  border: 1px solid #4a2a2f;
+}
+.vtm-vs-hunger i.on {
+  background: radial-gradient(circle at 35% 30%, #d84a52, #8a1a1d 70%);
+  border-color: var(--vtm-blood-bright);
+  box-shadow: 0 0 5px rgba(194, 43, 48, 0.5);
+}
+.vtm-vs-stains {
+  font-size: 0.56rem;
+  color: var(--vtm-ash);
+  letter-spacing: 0.05em;
+}
+.vtm-vs-res {
+  width: 10px; height: 10px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 1px solid rgba(255,255,255,0.25);
+}
+.vtm-vs-beast {
+  margin-left: auto;
+  font-size: 0.56rem;
+  letter-spacing: 0.3em;
+  color: var(--vtm-blood-bright);
+  animation: vtm-flicker-anim 1.8s linear infinite;
+}
+
+/* ---------- Резонанс крови ---------- */
+
+.vtm-resonance-drop {
+  position: relative;
+  width: 30px; height: 38px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(45deg);
+  border: 1px solid #4a2a2f;
+  background: linear-gradient(160deg, rgba(31,14,18,0.9), rgba(14,6,8,0.9));
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.vtm-resonance-drop.active {
+  border-color: var(--res-color, var(--vtm-blood));
+  box-shadow: 0 0 14px var(--res-glow, rgba(194,43,48,0.4)), inset 0 0 8px rgba(0,0,0,0.5);
+}
+.vtm-resonance-liquid {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: var(--res-fill, 0%);
+  background: linear-gradient(to top, var(--res-color, #5c1014), color-mix(in srgb, var(--res-color, #5c1014) 70%, white 12%));
+  transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.vtm-resonance-drop.active .vtm-resonance-liquid::before {
+  content: "";
+  position: absolute;
+  top: -3px; left: -50%;
+  width: 200%; height: 6px;
+  background: radial-gradient(ellipse at 30% 50%, rgba(255,255,255,0.35), transparent 60%);
+  animation: vtm-res-wave 2.8s ease-in-out infinite;
+}
+@keyframes vtm-res-wave {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(12%); }
+}
+
+.vtm-res-chip {
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  padding: 0.18rem 0.5rem;
+  border: 1px solid var(--vtm-line);
+  border-radius: 999px;
+  background: rgba(23, 10, 13, 0.6);
+  color: var(--vtm-bone-dim);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.vtm-res-chip:hover { border-color: var(--vtm-bone-dim); color: var(--vtm-bone); }
+.vtm-res-chip.active {
+  background: rgba(23, 10, 13, 0.9);
+  font-weight: 600;
+}
+
+.vtm-res-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 1px solid #4a2a2f;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+.vtm-res-dot:disabled { opacity: 0.35; cursor: not-allowed; }
+.vtm-res-dot:not(:disabled):hover { border-color: var(--vtm-bone-dim); }
+
+/* Зверь у руля: алая пульсация по краям секции Крови */
+.vtm-beast-panel { position: relative; }
+.vtm-beast-panel::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 1px solid rgba(194, 43, 48, 0.5);
+  border-radius: 8px;
+  pointer-events: none;
+  animation: vtm-beast-borders 2.4s ease-in-out infinite;
+}
+@keyframes vtm-beast-borders {
+  0%, 100% { opacity: 0.25; box-shadow: 0 0 8px rgba(194, 43, 48, 0.1); }
+  50% { opacity: 0.8; box-shadow: 0 0 26px rgba(194, 43, 48, 0.35); }
+}
+
 /* ---------- Точки характеристик ●●●○○ — фирменный элемент VtM ---------- */
 
 .vtm-dots {
@@ -803,6 +1008,9 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   .vtm-flicker, .vtm-breath, .vtm-blood-drop, .vtm-hunger-cell.low,
   .vtm-random-dice .die-a, .vtm-random-dice .die-b, .vtm-random-dice .drop { animation: none !important; }
   .vtm-card, .vtm-template-card, .vtm-dice-toggle { transition: none !important; }
+  .vtm-btn-dawn.is-confirm, .vtm-vital-strip.beast,
+  .vtm-beast-panel::after, .vtm-vs-beast,
+  .vtm-resonance-drop.active .vtm-resonance-liquid::before { animation: none !important; }
 }
 
 /* ---------- Печать досье ---------- */
@@ -899,4 +1107,9 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   .vtm-hunger-cell { width: 20px; height: 20px; }
   .vtm-humanity-cell { width: 19px; height: 19px; }
   .vtm-dot { width: 14px; height: 14px; }
+  .vtm-vital-strip { padding: 0.4rem 0.6rem; gap: 0.35rem 0.45rem; }
+  .vtm-vs-label { font-size: 0.52rem; }
+  .vtm-vs-item b { font-size: 0.68rem; }
+  .vtm-vs-beast { margin-left: 0; width: 100%; }
+  .vtm-resonance-drop { width: 24px; height: 31px; }
 }
