@@ -90,6 +90,8 @@ export interface VtmTrackers {
   wpAgg: number;       // тяжёлый урон (Воля)
   xp: number;          // свободный опыт
   xpSpent: number;     // вложено всего
+  huntCount: number;   // сколько «новых охот» начато (сколько ночей прожито)
+  lastHunt: string;    // дата последней «новой охоты» (ru-RU)
 }
 
 export interface VtmSheetData {
@@ -1031,6 +1033,8 @@ export function emptySheet(): VtmSheetData {
       wpAgg: 0,
       xp: 0,
       xpSpent: 0,
+      huntCount: 0,
+      lastHunt: "",
     },
     rollLog: [],
     xpLog: [],
@@ -1192,6 +1196,8 @@ export function normalizeSheet(input: unknown): VtmSheetData {
       wpAgg: clampInt(t.wpAgg, 0, 20),
       xp: clampInt(t.xp, 0, 9999),
       xpSpent: clampInt(t.xpSpent, 0, 9999),
+      huntCount: clampInt(t.huntCount, 0, 9999),
+      lastHunt: asString(t.lastHunt),
     };
   }
 

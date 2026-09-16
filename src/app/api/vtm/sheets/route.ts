@@ -8,7 +8,7 @@ import { buildRandomSheet } from "@/lib/vtm-random";
 const UNAUTHORIZED = { error: "Сессия недействительна — войдите заново" };
 
 /** GET /api/vtm/sheets — список листов «Вампиров: Маскарад» текущего пользователя
- *  (с миниатюрой портрета, кланом и ручным порядком сортировки для карточек архива). */
+ *  (с миниатюрой портрета, кланом, резонансом, счётчиком ночей и стилем охоты — для карточек архива). */
 export async function GET() {
   const session = await requireLiveUser();
   if (!session) return NextResponse.json(UNAUTHORIZED, { status: 401 });
@@ -20,10 +20,32 @@ export async function GET() {
   const sheets = rows.map((r) => {
     let portraitThumb: string | null = null;
     let clan: string | null = null;
+    let predator: string | null = null;
+    let generation: number | null = null;
+    let resonanceKind: string | null = null;
+    let resonanceIntensity: number | null = null;
+    let xp: number | null = null;
+    let nights: number | null = null;
+    let lastHunt: string | null = null;
     try {
       const d = JSON.parse(r.data || "{}");
       portraitThumb = d?.info?.portraitThumb || null;
       clan = d?.info?.clan || null;
+      predator = d?.info?.predator || null;
+      generation = typeof d?.info?.generation === "number" ? d.info.generation : null;
+      resonanceKind = d?.resonance?.kind || null;
+      resonanceIntensity = typeof d?.resonance?.intensity === "number" ? d.resonance.intensity : null;
+      xp = typeof d?.trackers?.xp === "number" ? d.trackers.xp : 0;
+      const huntCount = typeof d?.trackers?.huntCount === "number" ? d.trackers.huntCount : 0;
+      const huntEntries = Array.isArray(d?.notes?.entries)
+        ? d.notes.entries.filter((e: { title?: unknown }) => e?.title === "Новая охота")
+        : [];
+      // новые листы считают охоты трекером huntCount; старые — по записям журнала
+      nights = Math.max(huntCount, huntEntries.length);
+      lastHunt =
+        (typeof d?.trackers?.lastHunt === "string" && d.trackers.lastHunt) ||
+        huntEntries[0]?.date ||
+        null;
     } catch {
       // битые данные не должны ломать список
     }
@@ -34,6 +56,13 @@ export async function GET() {
       updatedAt: r.updatedAt,
       portraitThumb,
       clan,
+      predator,
+      generation,
+      resonanceKind,
+      resonanceIntensity,
+      xp,
+      nights,
+      lastHunt,
     };
   });
   return NextResponse.json(sheets);

@@ -75,6 +75,8 @@ export function buildTemplateSheet(templateId: string): VtmSheetData | null {
       wpAgg: 0,
       xp: s.trackers.xp,
       xpSpent: 0,
+      huntCount: 0,
+      lastHunt: "",
     },
     rollLog: [],
     xpLog: [],

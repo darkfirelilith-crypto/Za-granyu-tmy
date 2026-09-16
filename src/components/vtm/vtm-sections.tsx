@@ -317,7 +317,9 @@ export function DossierSection({
             <div className="vtm-frame rounded-md p-3 space-y-2" style={{ background: "rgba(194,43,48,0.04)" }}>
               <div className="flex items-center gap-2">
                 <span className="vtm-stamp">Изъян клана</span>
-                <span className="vtm-label text-[0.58rem] text-[#a68d80]">тяжесть по Силе Крови: {derived.baneSeverity}</span>
+                <span className="vtm-label text-[0.58rem] text-[#a68d80]">
+                  {derived.baneSeverity > 0 ? `тяжесть по Силе Крови: ${derived.baneSeverity}` : "Сила Крови 0 — изъян не тянет"}
+                </span>
               </div>
               <p className="text-xs leading-relaxed text-[#a68d80]">{clan.bane}</p>
               <div className="flex items-center gap-2 pt-1">
@@ -687,7 +689,11 @@ export function AttributesSection({
                     <div className="min-w-0">
                       <div className="flex items-baseline gap-2 flex-wrap">
                         <span className="text-sm text-[#d9c7b6] font-medium">{attr.name}</span>
-                        <span className="vtm-label text-[0.62rem] text-[#6e5a53]">{pool}🞄</span>
+                        {skill && skill.value > 0 && (
+                          <span className="vtm-pool-chip" title={`Пул быстрого броска: ${attr.name} ${value} + ${skill.name} ${skill.value} = ${pool} костей`}>
+                            ⚄ пул {pool}
+                          </span>
+                        )}
                       </div>
                       <p className="vtm-hint !text-[0.6rem] truncate">{attr.hint}{skill ? ` · пара: ${skill.name}${skill.spec ? ` (${skill.spec})` : ""}` : ""}</p>
                     </div>
@@ -706,7 +712,7 @@ export function AttributesSection({
       </div>
 
       <p className="vtm-hint text-center">
-        Суммарные пулы справа от названия — характеристика с парной навыковой проверкой (пара выбрана для быстрого броска).
+        Чип «⚄ пул N» — пул быстрого броска: характеристика с парной навыковой проверкой (пара выбрана для быстрого броска).
       </p>
     </div>
   );
@@ -815,7 +821,9 @@ export function SkillsSection({
                       <div className="min-w-0">
                         <div className="flex items-baseline gap-2 flex-wrap">
                           <span className={`text-[0.82rem] leading-snug ${value > 0 ? "text-[#d9c7b6]" : "text-[#a68d80]"}`}>{def.name}</span>
-                          <span className="vtm-label text-[0.6rem] text-[#6e5a53]">{pool}🞄</span>
+                          <span className="vtm-pool-chip" title={`Пул быстрого броска: ${ATTR_RU[attrKey]} ${data.attributes[attrKey]} + ${def.name} ${value} = ${pool} костей`}>
+                            ⚄ пул {pool}
+                          </span>
                         </div>
                         {state?.spec && <p className="vtm-hint !text-[0.62rem] italic">«{state.spec}»</p>}
                       </div>
@@ -969,8 +977,10 @@ function NewHuntButton({
       d.trackers.hunger = 0;
       d.trackers.healthSup = 0;
       d.trackers.wpSup = 0;
+      d.trackers.huntCount = (d.trackers.huntCount || 0) + 1;
       const now = new Date();
       const date = now.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
+      d.trackers.lastHunt = date;
       d.notes.entries = [
         {
           id: `hunt-${now.getTime().toString(36)}`,

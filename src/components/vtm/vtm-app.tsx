@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { VtmReturnPortal } from "@/components/vtm/portal-transition";
 import { VtmEditor } from "@/components/vtm/vtm-editor";
-import { MAX_SHEETS, CLAN_BY_ID, SECT_BY_ID, PREDATOR_BY_ID, VtmSheetData, normalizeSheet } from "@/lib/vtm-data";
+import { MAX_SHEETS, CLAN_BY_ID, SECT_BY_ID, PREDATOR_BY_ID, RESONANCES, VtmSheetData, normalizeSheet } from "@/lib/vtm-data";
 import { deriveStats } from "@/lib/vtm-calc";
 import { VTM_TEMPLATES } from "@/lib/vtm-templates";
 import { vtmFetch } from "@/lib/vtm-api";
@@ -19,6 +19,21 @@ interface SheetMeta {
   updatedAt: string;
   portraitThumb?: string | null;
   clan?: string | null;
+  predator?: string | null;
+  generation?: number | null;
+  resonanceKind?: string | null;
+  resonanceIntensity?: number | null;
+  xp?: number | null;
+  nights?: number | null;
+  lastHunt?: string | null;
+}
+
+/** Русское склонение: 1 ночь / 2 ночи / 5 ночей. */
+function nightsLabel(n: number): string {
+  const mod10 = n % 10, mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} ночь`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} ночи`;
+  return `${n} ночей`;
 }
 
 export function VtmApp() {
@@ -440,6 +455,9 @@ function SheetCard({
     day: "2-digit", month: "2-digit", year: "numeric",
   });
   const clanName = sheet.clan ? CLAN_BY_ID.get(sheet.clan)?.name : null;
+  const predatorName = sheet.predator ? PREDATOR_BY_ID.get(sheet.predator)?.name : null;
+  const resonance = sheet.resonanceKind ? RESONANCES.find((r) => r.id === sheet.resonanceKind) : null;
+  const nights = sheet.nights || 0;
 
   return (
     <div
@@ -509,10 +527,32 @@ function SheetCard({
             {clanName && (
               <p className="vtm-label text-[0.6rem] text-[#a8863d] truncate mt-0.5" title={clanName}>
                 ⛧ {clanName}
+                {typeof sheet.generation === "number" && sheet.generation > 0 ? ` · ${sheet.generation}-е пок.` : ""}
+                {predatorName ? ` · ${predatorName}` : ""}
               </p>
             )}
           </div>
         </div>
+        {(resonance || nights > 0 || (sheet.xp || 0) > 0 || sheet.lastHunt) && (
+          <div className="vtm-card-vitals" aria-label="Сводка ночи">
+            {resonance && (
+              <span
+                className="vtm-cv-res"
+                style={{
+                  ["--res-c" as string]: resonance.color,
+                  ["--res-glow" as string]: resonance.glow,
+                }}
+                title={`Резонанс крови: ${resonance.name} (${resonance.emotion})`}
+              >
+                <i className="vtm-cv-drop" aria-hidden="true" />
+                {resonance.name}{sheet.resonanceIntensity ? ` ${sheet.resonanceIntensity}` : ""}
+              </span>
+            )}
+            {nights > 0 && <span title="Прожито «новых охот»">🌙 {nightsLabel(nights)}</span>}
+            {sheet.lastHunt && <span title="Последняя новая охота">Последняя: {sheet.lastHunt}</span>}
+            {(sheet.xp || 0) > 0 && <span title="Свободный опыт">опыт {sheet.xp}</span>}
+          </div>
+        )}
         <div className="flex items-center justify-between vtm-label text-[0.6rem] text-[#6e5a53]">
           <span>пробуждён {openedDate}</span>
           <span>изм. {date.slice(0, 6)}</span>
@@ -732,7 +772,13 @@ function FatePreview({
         <span className="vtm-stamp">Решение Крови</span>
         <h3 className="vtm-display text-2xl text-[#d9c7b6] tracking-[0.08em]">{data.info.name}</h3>
         <p className="vtm-label text-[0.66rem] text-[#d6a840] flex flex-wrap items-center justify-center gap-x-2">
-          <span>⛧ {clan?.name || "—"}</span>
+          {data.info.clan === "thinblood" ? (
+            <span title="Кровь сира разбавлена: Сила Крови 0, из клановых Дисциплин — только Алхимия слабокровных">
+              ⚱ Слабокровная
+            </span>
+          ) : (
+            <span>⛧ {clan?.name || "—"}</span>
+          )}
           {sect && <span>· {sect.name}</span>}
           <span>· {data.info.generation}-е пок.</span>
           {predator && <span>· {predator.name}</span>}

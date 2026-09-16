@@ -297,6 +297,73 @@ function randomDisciplines(clan: ClanDef, predatorDiscId?: string): VtmDisciplin
   return result;
 }
 
+/** Слабокровные: вместо клановых Дисциплин — Алхимия слабокровных (1 уровень, случайная сила). */
+function randomThinDisciplines(): VtmDisciplineState[] {
+  const def = DISCIPLINE_BY_ID.get("thinblood_alchemy");
+  const powers: Record<number, string> = {};
+  const l1 = shuffle(def?.powers[1] || [])[0];
+  if (l1) powers[1] = l1.name;
+  return [
+    {
+      key: "thinblood_alchemy",
+      name: def?.name || "Алхимия слабокровных",
+      value: 1,
+      powers,
+      xp: 0,
+    },
+  ];
+}
+
+/** Слабокровные: 7 пунктов фактов + 2 достоинства «сл.» (бесплатные) + недостатки на 2 пункта. */
+function randomThinAdvantages(): VtmAdvantageEntry[] {
+  const result: VtmAdvantageEntry[] = [];
+  // 7 пунктов фактов биографии (как у полнокровных)
+  const bgPool = shuffle(["allies", "contacts", "herd", "influence", "resources", "mask", "mawla", "retainers", "fame", "status", "haven"]);
+  let left = 7;
+  const groups = 2 + Math.floor(Math.random() * 3); // 2..4
+  for (let i = 0; i < groups && left > 0; i++) {
+    const id = bgPool[i];
+    const rating = i === groups - 1 ? left : Math.max(1, Math.min(5, Math.min(left, 1 + Math.floor(Math.random() * 3))));
+    left -= rating;
+    result.push({
+      id: `rnd-bg-${id}-${i}`,
+      name: ADVANTAGE_BY_ID.get(id)?.name || id,
+      kind: "background",
+      rating,
+      note: "",
+    });
+  }
+  // 2 достоинства слабокровных из каталога (kind "thinblood", cost 0)
+  const tbPool = shuffle(Array.from(ADVANTAGE_BY_ID.values()).filter((a) => a.kind === "thinblood" && a.id !== "tb_vitae_dependent" && a.id !== "tb_dead_flesh" && a.id !== "tb_sun_sick" && a.id !== "tb_toothless"));
+  for (const def of tbPool.slice(0, 2)) {
+    result.push({
+      id: `rnd-tb-${def.id}`,
+      name: def.name,
+      kind: "thinblood",
+      rating: 1,
+      note: def.desc || "",
+    });
+  }
+  // недостатки на 2 пункта (как у полнокровных)
+  const flawPool = shuffle(["methodical", "craving", "prey_exclusion", "anachronism_retro", "bond_junkie", "obvious_predator", "addiction", "organovore", "illiterate", "repulsive"]);
+  let flawLeft = 2;
+  for (const id of flawPool) {
+    if (flawLeft <= 0) break;
+    const def = ADVANTAGE_BY_ID.get(id);
+    const cost = def?.cost ?? (["methodical", "craving", "anachronism_retro", "bond_junkie", "prey_exclusion"].includes(id) ? 1 : 2);
+    if (cost > flawLeft) continue;
+    flawLeft -= cost;
+    result.push({
+      id: `rnd-flaw-${id}`,
+      name: def?.name || id,
+      kind: "flaw",
+      rating: cost,
+      note: def?.desc || "",
+    });
+  }
+  return result;
+}
+
 function randomAdvantages(clan: ClanDef): VtmAdvantageEntry[] {
   const result: VtmAdvantageEntry[] = [];
   // 7 пунктов фактов биографии по 2–4 категориям
@@ -343,28 +410,38 @@ export function buildRandomSheet(): VtmSheetData {
   const withNick = Math.random() < 0.45;
   const name = withNick ? `${first} «${pick(NICKNAMES)}» ${surname}` : `${first} ${surname}`;
 
-  // клан: ядро семи с весами + редкие шансы
-  const clanId = pickWeighted(CORE_CLANS.map((id) => ({ item: id, w: id === "brujah" || id === "nosferatu" ? 1.4 : 1 })));
+  // слабокровные — отдельная ветка Крови (≈12%): 14–15-е поколение, без клана,
+  // без клановых Дисциплин, вместо них — Алхимия слабокровных и достоинства/недостатки «сл.»
+  const isThin = Math.random() < 0.12;
+
+  // клан: ядро семи с весами; для слабокровных — «клан» thinblood
+  const clanId = isThin ? "thinblood" : pickWeighted(CORE_CLANS.map((id) => ({ item: id, w: id === "brujah" || id === "nosferatu" ? 1.4 : 1 })));
   const clan = CLANS.find((c) => c.id === clanId)!;
 
-  // поколение: неонаты чаще; 14+ не даём — слабокровные требуют отдельной ветки (без клана и Дисциплин)
-  const generation = pickWeighted([
-    { item: 13, w: 3.5 },
-    { item: 12, w: 3.5 },
-    { item: 11, w: 1 },
-    { item: 10, w: 0.7 },
-  ]);
+  // поколение: неонаты чаще; слабокровные — 14-е или 15-е
+  const generation = isThin
+    ? Math.random() < 0.6 ? 14 : 15
+    : pickWeighted([
+        { item: 13, w: 3.5 },
+        { item: 12, w: 3.5 },
+        { item: 11, w: 1 },
+        { item: 10, w: 0.7 },
+      ]);
 
-  // секта: по клану
-  let sectId: string = pickWeighted([
-    { item: "camarilla", w: clanId === "brujah" ? 1 : 4 },
-    { item: "anarch", w: clanId === "brujah" ? 4 : clanId === "ventru" ? 0.5 : 2 },
-    { item: "autarkis", w: 1 },
-  ]);
-  if (clanId === "lasombra") sectId = "camarilla";
+  // секта: по клану; слабокровных в секты не берут — они вне закона
+  const sectId: string = isThin
+    ? pickWeighted([{ item: "autarkis", w: 3 }, { item: "anarch", w: 1 }])
+    : pickWeighted([
+        { item: "camarilla", w: clanId === "brujah" ? 1 : 4 },
+        { item: "anarch", w: clanId === "brujah" ? 4 : clanId === "ventru" ? 0.5 : 2 },
+        { item: "autarkis", w: 1 },
+      ]);
 
-  // стиль охоты (для не-слабокровных — любые, кроме алхимика)
-  const predator = pick(PREDATOR_TYPES.filter((p) => p.id !== "alchemist"));
+  // стиль охоты: полнокровным — любые, кроме алхимика; слабокровным — без бонусных
+  // Дисциплин (их всё равно нет), зато Алхимик — их фирменный стиль
+  const predator = isThin
+    ? pick(PREDATOR_TYPES.filter((p) => !p.discipline))
+    : pick(PREDATOR_TYPES.filter((p) => p.id !== "alchemist"));
 
   const sireName = `${pick(female ? FEMALE_NAMES : MALE_NAMES)} ${pick(SURNAMES)}`;
   const sireIntent = pick(SIRE_INTENTS);
@@ -411,7 +488,9 @@ export function buildRandomSheet(): VtmSheetData {
     "Руки всегда холодные — жмёт в перчатках и ссылается на анемию.",
   ];
   info.description = pick(looks);
-  info.history = `${name} ${pick(DEATHWAYS)}. ${sireName} ${sireIntent}. ${pick(AFTERMATHS)}`;
+  info.history = isThin
+    ? `${name} ${pick(DEATHWAYS)}. Кровь сира оказалась разбавленной — Становление оставило ${female ? "её" : "его"} слабокровным. ${sireName} ${sireIntent}. ${pick(AFTERMATHS)}`
+    : `${name} ${pick(DEATHWAYS)}. ${sireName} ${sireIntent}. ${pick(AFTERMATHS)}`;
 
   const skills = randomSkills();
   // стиль охоты: +1 в три его навыка
@@ -421,8 +500,8 @@ export function buildRandomSheet(): VtmSheetData {
     else skills.push({ key, name: SKILL_LIBRARY.find((s) => s.id === key)?.name || key, value: 1, spec: "", xp: 0 });
   }
 
-  const disciplines = randomDisciplines(clan, predator.discipline);
-  const advantages = randomAdvantages(clan);
+  const disciplines = isThin ? randomThinDisciplines() : randomDisciplines(clan, predator.discipline);
+  const advantages = isThin ? randomThinAdvantages() : randomAdvantages(clan);
 
   // имущество
   const items = shuffle(ITEMS_POOL).slice(0, 3 + Math.floor(Math.random() * 2)).map((n, i) => ({
@@ -454,6 +533,8 @@ export function buildRandomSheet(): VtmSheetData {
       wpAgg: 0,
       xp: 0,
       xpSpent: 0,
+      huntCount: 0,
+      lastHunt: "",
     },
     rollLog: [],
     xpLog: [],
