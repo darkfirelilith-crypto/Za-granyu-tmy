@@ -17,6 +17,7 @@ export function AutoTextarea({
   placeholder,
   ariaLabel,
   minHeight = 60,
+  maxLength,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -24,6 +25,7 @@ export function AutoTextarea({
   placeholder?: string;
   ariaLabel?: string;
   minHeight?: number;
+  maxLength?: number;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -48,6 +50,7 @@ export function AutoTextarea({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       aria-label={ariaLabel}
+      maxLength={maxLength}
       className={`vtm-input vtm-autogrow ${className}`}
       style={{ minHeight: 0 }}
       rows={1}
@@ -221,6 +224,58 @@ export function GearSection({
 // ЗАМЕТКИ
 // ============================================================
 
+const DRAFT_LIMIT = 2000;
+const ENTRY_TITLE_LIMIT = 120;
+const ENTRY_CONTENT_LIMIT = 3000;
+
+/** Счётчик символов: меркнет в норме, занимается янтарём у предела, краснеет на нём. */
+function CharCount({ value, limit, className = "" }: { value: string; limit: number; className?: string }) {
+  const len = value.length;
+  const near = len >= Math.round(limit * 0.9);
+  const full = len >= limit;
+  return (
+    <span
+      className={`vtm-char-count ${near ? "near" : ""} ${full ? "full" : ""} ${className}`}
+      aria-live="polite"
+    >
+      {len}/{limit}{near && !full ? ` · осталось ${limit - len}` : full ? " · предел" : ""}
+    </span>
+  );
+}
+
+/** Лента «Хроника ночей» в редакторе: последние события одной строкой-нитью. */
+function ChronicleDigest({ entries }: { entries: VtmNote[] }) {
+  const recent = entries.slice(0, 4);
+  return (
+    <section className="vtm-ed-feed" aria-label="Хроника ночей — последние события">
+      <span className="vtm-ed-feed-head">Хроника ночей</span>
+      {recent.length === 0 ? (
+        <span className="vtm-ed-feed-empty">Ночь первая — на нити ещё пусто</span>
+      ) : (
+        <ol className="vtm-ed-feed-list">
+          {recent.map((n, i) => {
+            const hunt = n.title === "Новая охота";
+            return (
+              <li key={n.id} className="vtm-edf-item" style={{ animationDelay: `${i * 70}ms` }}>
+                <span className={`vtm-edf-icon ${hunt ? "hunt" : ""}`} aria-hidden>
+                  {hunt ? "🌙" : "🖋"}
+                </span>
+                <span className="vtm-edf-body">
+                  <span className="vtm-edf-title">{n.title || "Без заголовка"}</span>
+                  <span className="vtm-edf-date">{n.date}</span>
+                </span>
+              </li>
+            );
+          })}
+          {entries.length > 4 && (
+            <li className="vtm-edf-more">…и ещё {entries.length - 4} записей ниже</li>
+          )}
+        </ol>
+      )}
+    </section>
+  );
+}
+
 export function NotesSection({
   data,
   mutate,
@@ -251,82 +306,95 @@ export function NotesSection({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {/* Черновик + создание записи */}
-      <section className="vtm-panel" aria-label="Журнал ночи">
-        <div className="vtm-panel-head">
-          <span className="vtm-label text-[0.7rem] text-[#d6a840]">Журнал ночи</span>
-        </div>
-        <div className="p-4 space-y-3">
-          <div>
-            <span className="vtm-label text-[0.6rem] text-[#a68d80]">Черновик (автосохраняется)</span>
-            <div className="mt-1">
-              <AutoTextarea
-                value={data.notes.draft}
-                onChange={(v) => mutate((d) => { d.notes.draft = v; })}
-                placeholder="наброски: имена, догадки, спойлеры для себя — всё живёт до перезагрузки"
-                ariaLabel="Черновик заметок"
-              />
-            </div>
-          </div>
-          <div className="vtm-divider text-[0.6rem]"><span>🖋</span></div>
-          <div className="space-y-2">
-            <input
-              className="vtm-input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="заголовок записи: Ночь первая, Дело Савельевых…"
-              aria-label="Заголовок новой записи"
-            />
-            <AutoTextarea
-              value={content}
-              onChange={setContent}
-              placeholder="что случилось, кто кому должен, кого стоит бояться"
-              ariaLabel="Текст новой записи"
-              minHeight={90}
-            />
-            <button className="vtm-btn vtm-btn-blood w-full justify-center" onClick={addNote} disabled={!content.trim()}>
-              + Внести в журнал
-            </button>
-          </div>
-        </div>
-      </section>
+    <div className="space-y-4">
+      {/* Лента последних событий — сводка без прокрутки */}
+      <ChronicleDigest entries={data.notes.entries} />
 
-      {/* Список записей */}
-      <section className="vtm-panel" aria-label="Записи журнала">
-        <div className="vtm-panel-head">
-          <span className="vtm-label text-[0.7rem] text-[#d6a840]">Записи</span>
-          <span className="vtm-hint !text-[0.6rem] ml-auto">{data.notes.entries.length}</span>
-        </div>
-        <div className="p-3 space-y-2 max-h-[620px] overflow-y-auto vtm-scroll">
-          {data.notes.entries.length === 0 && (
-            <p className="vtm-hint text-center py-6">Журнал чист. Ночь только началась.</p>
-          )}
-          {data.notes.entries.map((note) => (
-            <article key={note.id} className="vtm-frame rounded-md p-3 space-y-1.5">
-              <div className="flex items-start gap-2">
-                <div className="flex-1 min-w-0">
-                  {note.title ? (
-                    <h3 className="vtm-display text-sm text-[#d9c7b6] leading-snug">{note.title}</h3>
-                  ) : (
-                    <h3 className="vtm-display text-sm text-[#a68d80] italic leading-snug">Без заголовка</h3>
-                  )}
-                  <p className="vtm-label text-[0.54rem] text-[#6e5a53] mt-0.5">{note.date}</p>
-                </div>
-                <button
-                  className="vtm-btn vtm-btn-ghost !p-1 !text-[0.6rem]"
-                  onClick={() => removeNote(note.id)}
-                  aria-label="Удалить запись"
-                  title="Удалить запись"
-                >
-                  ✕
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Черновик + создание записи */}
+        <section className="vtm-panel" aria-label="Журнал ночи">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.7rem] text-[#d6a840]">Журнал ночи</span>
+          </div>
+          <div className="p-4 space-y-3">
+            <div>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Черновик (автосохраняется)</span>
+                <CharCount value={data.notes.draft} limit={DRAFT_LIMIT} />
+              </div>
+              <div className="mt-1">
+                <AutoTextarea
+                  value={data.notes.draft}
+                  onChange={(v) => mutate((d) => { d.notes.draft = v.slice(0, DRAFT_LIMIT); })}
+                  placeholder="наброски: имена, догадки, спойлеры для себя — всё живёт до перезагрузки"
+                  ariaLabel="Черновик заметок"
+                  maxLength={DRAFT_LIMIT}
+                />
+              </div>
+            </div>
+            <div className="vtm-divider text-[0.6rem]"><span>🖋</span></div>
+            <div className="space-y-2">
+              <input
+                className="vtm-input"
+                value={title}
+                onChange={(e) => setTitle(e.target.value.slice(0, ENTRY_TITLE_LIMIT))}
+                placeholder="заголовок записи: Ночь первая, Дело Савельевых…"
+                aria-label="Заголовок новой записи"
+                maxLength={ENTRY_TITLE_LIMIT}
+              />
+              <AutoTextarea
+                value={content}
+                onChange={setContent}
+                placeholder="что случилось, кто кому должен, кого стоит бояться"
+                ariaLabel="Текст новой записи"
+                minHeight={90}
+              />
+              <div className="flex items-center justify-between gap-2">
+                <CharCount value={content} limit={ENTRY_CONTENT_LIMIT} />
+                <button className="vtm-btn vtm-btn-blood shrink-0" onClick={addNote} disabled={!content.trim() || content.length >= ENTRY_CONTENT_LIMIT}>
+                  + Внести в журнал
                 </button>
               </div>
-              <p className="text-[0.78rem] leading-relaxed text-[#a68d80] whitespace-pre-wrap">{note.content}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+            </div>
+          </div>
+        </section>
+
+        {/* Список записей */}
+        <section className="vtm-panel" aria-label="Записи журнала">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.7rem] text-[#d6a840]">Записи</span>
+            <span className="vtm-hint !text-[0.6rem] ml-auto">{data.notes.entries.length}</span>
+          </div>
+          <div className="p-3 space-y-2 max-h-[620px] overflow-y-auto vtm-scroll">
+            {data.notes.entries.length === 0 && (
+              <p className="vtm-hint text-center py-6">Журнал чист. Ночь только началась.</p>
+            )}
+            {data.notes.entries.map((note) => (
+              <article key={note.id} className="vtm-frame rounded-md p-3 space-y-1.5">
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    {note.title ? (
+                      <h3 className="vtm-display text-sm text-[#d9c7b6] leading-snug">{note.title}</h3>
+                    ) : (
+                      <h3 className="vtm-display text-sm text-[#a68d80] italic leading-snug">Без заголовка</h3>
+                    )}
+                    <p className="vtm-label text-[0.54rem] text-[#6e5a53] mt-0.5">{note.date}</p>
+                  </div>
+                  <button
+                    className="vtm-btn vtm-btn-ghost !p-1 !text-[0.6rem]"
+                    onClick={() => removeNote(note.id)}
+                    aria-label="Удалить запись"
+                    title="Удалить запись"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="text-[0.78rem] leading-relaxed text-[#a68d80] whitespace-pre-wrap">{note.content}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

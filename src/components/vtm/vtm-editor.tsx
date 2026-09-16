@@ -15,6 +15,7 @@ import { VtmReturnPortal } from "@/components/vtm/portal-transition";
 import { VtmPrintSheet } from "@/components/vtm/vtm-print-sheet";
 import { VtmPrintSummary } from "@/components/vtm/vtm-print-summary";
 import { buildSummaryText } from "@/lib/vtm-summary-text";
+import { buildSummaryMarkdown } from "@/lib/vtm-summary-md";
 import { vtmFetch } from "@/lib/vtm-api";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error" | "conflict";
@@ -268,31 +269,45 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
     toast.success("Лист скопирован в личный архив (JSON)");
   };
 
-  // ===== Текстовая «Сводка» в буфер обмена (для мессенджеров стола) =====
-  const [copying, setCopying] = useState(false);
+  // ===== «Сводка» в буфер обмена: текст (мессенджеры) и Markdown (Obsidian-столы) =====
+  const [copying, setCopying] = useState<"text" | "md" | null>(null);
+  const copyText = async (text: string) => {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      // запасной путь для старых контекстов (http/старые вебвью)
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+  };
   const copySummaryText = async () => {
     if (!data || !derived || copying) return;
-    setCopying(true);
+    setCopying("text");
     try {
-      const text = buildSummaryText(data, derived);
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        // запасной путь для старых контекстов (http/старые вебвью)
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        ta.remove();
-      }
+      await copyText(buildSummaryText(data, derived));
       toast.success("Сводка скопирована текстом", { description: "Вставь её в чат стола — Кровь доложится сама." });
     } catch {
       toast.error("Не удалось скопировать сводку", { description: "Браузер не пустил к буферу обмена." });
     } finally {
-      setCopying(false);
+      setCopying(null);
+    }
+  };
+  const copySummaryMarkdown = async () => {
+    if (!data || !derived || copying) return;
+    setCopying("md");
+    try {
+      await copyText(buildSummaryMarkdown(data, derived));
+      toast.success("Сводка скопирована в Markdown", { description: "Вставь в Obsidian или вики стола — таблицы оживут сами." });
+    } catch {
+      toast.error("Не удалось скопировать сводку", { description: "Браузер не пустил к буферу обмена." });
+    } finally {
+      setCopying(null);
     }
   };
 
@@ -442,12 +457,21 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
             </button>
             <button
               onClick={copySummaryText}
-              disabled={copying}
+              disabled={copying !== null}
               className="vtm-btn vtm-btn-ghost vtm-btn-copy !py-1.5 !px-2 text-xs"
               title="Скопировать «Сводку Сородича» текстом — вставить в чат стола"
               aria-label="Скопировать сводку текстом"
             >
               ⧉<span className="hidden min-[480px]:inline"> Текст</span>
+            </button>
+            <button
+              onClick={copySummaryMarkdown}
+              disabled={copying !== null}
+              className="vtm-btn vtm-btn-ghost vtm-btn-md !py-1.5 !px-2 text-xs"
+              title="Скопировать «Сводку Сородича» в Markdown — для Obsidian и вики стола"
+              aria-label="Скопировать сводку в Markdown"
+            >
+              Ⓜ<span className="hidden min-[480px]:inline"> МД</span>
             </button>
             <input
               ref={importRef}
