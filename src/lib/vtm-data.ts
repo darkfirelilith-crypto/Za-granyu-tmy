@@ -53,11 +53,13 @@ export interface VtmSkillState {
 }
 
 export interface VtmDisciplineState {
-  key: string | null;  // id из DISCIPLINES или null для редкой
+  key: string | null;  // id из DISCIPLINES или null для редкой/своей
   name: string;
   value: number;       // 0–5
-  powers: Record<number, string>; // уровень → выбранная сила
+  powers: Record<number, string>; // уровень → выбранная сила (название)
   xp: number;
+  description?: string;          // описание своей Дисциплины (полная кастомизация)
+  powerNotes?: Record<number, string>; // уровень → описание своей силы
 }
 
 export interface VtmAdvantageEntry {
@@ -613,6 +615,7 @@ export interface DisciplineDef {
   name: string;
   description: string;
   powers: Record<number, DisciplinePower[]>;
+  rare?: boolean; // редкая Дисциплина (кровные линии, V20-наследие) — недоступна кланам по умолчанию
 }
 
 export const DISCIPLINES: DisciplineDef[] = [
@@ -921,9 +924,149 @@ export const DISCIPLINES: DisciplineDef[] = [
       ],
     },
   },
+  // === РЕДКИЕ ДИСЦИПЛИНЫ — кровные линии и V20-наследие ===
+  // В 5-й редакции такие силы встречаются у немногих (дополнения и договора с
+  // Рассказчиком); механики адаптированы по классическим изданиям. Свою Дисциплину
+  // всегда можно создать самому — конструктор на листе.
+  {
+    id: "chimerstry",
+    name: "Химерия",
+    rare: true,
+    description: "Искусство иллюзий клана Равнос: ты убеждаешь реальность, что ложь — это правда. Чем выше уровень, тем плотнее становится мираж и тем страшнее цена за его разрушение.",
+    powers: {
+      1: [
+        { name: "Огни Святого Эльма", desc: "Малые неподвижные иллюзии: свет, звук, запах. Идеальны для отвлечения и подмены деталей." },
+      ],
+      2: [
+        { name: "Фата-Моргана", desc: "Полноценная иллюзия всех пяти чувств — предмет или существо, существующее лишь в сознании свидетелей." },
+      ],
+      3: [
+        { name: "Явление", desc: "Даруй миражу движение и простое поведение: часовой на посту, стая крыс, ползущий туман." },
+      ],
+      4: [
+        { name: "Неизгладимость", desc: "Делает иллюзию постоянной: она не рассеивается, пока не разрушена, и остаётся даже без твоего внимания." },
+      ],
+      5: [
+        { name: "Горизонт", desc: "Иллюзия масштаба ландшафта: целиком ложная местность, лабиринт коридоров или зеркальный город." },
+      ],
+    },
+  },
+  {
+    id: "valeren",
+    name: "Валерен",
+    rare: true,
+    description: "Путь воинов-салюбри: дисциплина тела и духа, что жжёт, лечит и карает. Противопоставлена Умиротворению каитифф-линии — там, где те исцеляют, воины Салюбри выжигают.",
+    powers: {
+      1: [
+        { name: "Чувство жизни", desc: "Прикосновением читаешь состояние тела: раны, болезни, голод — и то, сколько в жертве осталось жизни или Крови." },
+      ],
+      2: [
+        { name: "Усмиряющее касание", desc: "Одно касание гасит боль и усыпляет: смертного — в сон, страдающего — в покой. Не действует на сражающихся.", },
+      ],
+      3: [
+        { name: "Жгучее касание", desc: "Твои ладони обжигают как угли: прикосновение наносит тяжёлые раны или выжигает Кровь жертвы." },
+      ],
+      4: [
+        { name: "Взгляд пастыря", desc: "Через третье око видишь тех, кто принял твою защиту: чувствуешь их страх, ложь и местонахождение на расстоянии." },
+      ],
+      5: [
+        { name: "Облегчение звериной души", desc: "Касанием вырываешь из Сородича часть Зверя: гасишь ярость — или обрушиваешь её на него самого.", },
+      ],
+    },
+  },
+  {
+    id: "thanatosis",
+    name: "Танатозис",
+    rare: true,
+    description: "Дар сползших в гниль — линии Гекаты и кровной линии Samedi: власть над разложением, своим и чужим. Тело становится трупом, которым ты управляешь.",
+    powers: {
+      1: [
+        { name: "Старческие морщины", desc: "Ты моргаешь своим телом: складки кожи держат предметы, маскируют лицо, дают вторые «карманы»." },
+      ],
+      2: [
+        { name: "Гниение", desc: "Касание запускает разложение: у смертных — гниющая язва, у Сородичей — болезненная порча плоти." },
+      ],
+      3: [
+        { name: "Прах к праху", desc: "Твоё тело рассыпается на тучу пепла и пыли: движение, ползание сквозь щели, новые «куски» — но ядро уязвимо." },
+      ],
+      4: [
+        { name: "Увядание", desc: "Чужая конечность дряхлеет и отмирает: рука, нога или глаз теряют силу, пока ты держишь контакт." },
+      ],
+      5: [
+        { name: "Некроз", desc: "Ты обрушиваешь смерть на плоть целиком: массовое разложение тел и возбуждение гнили в мёртвых тканях." },
+      ],
+    },
+  },
+  {
+    id: "serpentis",
+    name: "Серпентис",
+    rare: true,
+    description: "Наследие культа Сета, живущее в крови Министерства: тело обретает черты змеи — гипнотический взгляд, мёртвую хватку языка, чешую и гибкость гадюки.",
+    powers: {
+      1: [
+        { name: "Глаза змеи", desc: "Зрачки-щели парализуют: встретивший взгляд застывает, не в силах отвести глаз или бежать." },
+      ],
+      2: [
+        { name: "Язык аспида", desc: "Раздвоенный язык длиной в полметра: чуешь вкус крови в воздухе и наносишь им точные ядовитые уколы." },
+      ],
+      3: [
+        { name: "Кожа гадюки", desc: "Кожа становится чешуйчатой и скользкой: труднее удержать, легче проскользнуть; укусы и когти соскальзывают." },
+      ],
+      4: [
+        { name: "Облик кобры", desc: "Ты превращаешься в гигантскую змею: удушающая хватка, ядовитый укус и тело без сочленений, что пролезет в любую щель." },
+      ],
+      5: [
+        { name: "Сердце тьмы", desc: "Взываешь к древнему проклятию Сета: вырываешь сердце жертвы и хранишь его в сосуде — пока сердце цело, жертва не умирает." },
+      ],
+    },
+  },
 ];
 
 export const DISCIPLINE_BY_ID = new Map(DISCIPLINES.map((d) => [d.id, d]));
+
+/** Срез «ядро»: Дисциплины без пометки rare — 12 клановых/общих из книги правил. */
+export const CORE_DISCIPLINES = DISCIPLINES.filter((d) => !d.rare);
+export const RARE_DISCIPLINES = DISCIPLINES.filter((d) => d.rare);
+
+/** Название силы уровня lvl для записи листа: каталожная или своя (powers хранит название для всех). */
+export function disciplinePowerName(d: VtmDisciplineState, lvl: number): string {
+  return d.powers?.[lvl] || "";
+}
+
+/** Подходящие клану недостатки: стартовые подсказки «как у всех» (иди каталога недостатков). */
+export const CLAN_FLAW_PRESETS: Record<string, string[]> = {
+  brujah: ["enemy", "hunted", "other_risk_taker"],
+  ventru: ["feed_outdated_preference", "other_prestation", "other_dark_secret"],
+  gangrel: ["myth_folkloric_bane", "prey_exclusion", "feed_sloppy"],
+  malkavian: ["df_dominate", "psy_crisis", "myth_folkloric_block"],
+  nosferatu: ["face_ugly", "face_stench", "other_dark_secret"],
+  toreador: ["addiction", "bond_junkie", "arch_grief"],
+  tremere: ["df_blood_sorcery", "enemy", "other_prestation"],
+  banu_haqim: ["enemy", "psy_scars", "hunted"],
+  hecata: ["diab_inherited_bane", "contag_vector", "myth_stigmata"],
+  lasombra: ["face_transparent", "df_oblivion", "hunted"],
+  ministry: ["addiction", "craving", "other_dark_secret"],
+  ravnos: ["myth_twice_cursed", "myth_land_locked", "other_risk_taker"],
+  salubri: ["hunted", "myth_stake_bait", "psy_scars"],
+  tzimisce: ["myth_land_locked", "enemy", "arch_past"],
+  caitif: ["caitiff_clan_curse", "caitiff_debt_peon", "caitiff_muddled"],
+  thinblood: ["tb_sun_sick", "tb_frailty", "tb_unending_hunger"],
+};
+
+/** Несовместимые пары преимуществ/недостатков: нельзя всерьёз держать на листе одновременно.
+ *  Ключ — id записи каталога, значение — массив несовместимых с ней id. */
+export const INCOMPATIBLE_ADVANTAGES: Record<string, string[]> = {
+  unbondable: ["bond_slave", "bond_enduring", "bond_long", "bond_junkie", "bond_fealty"],
+  bond_slave: ["unbondable"],
+  bond_enduring: ["unbondable"],
+  bond_long: ["unbondable"],
+  bond_junkie: ["unbondable"],
+  bond_fealty: ["unbondable"],
+  sub_hopeless: ["sub_hfa"],
+  sub_hfa: ["sub_hopeless"],
+  myth_resistant_blush: ["myth_persistent_blush"],
+  myth_persistent_blush: ["myth_resistant_blush"],
+};
 
 // ---------- Преимущества: каталог ----------
 
@@ -1397,6 +1540,17 @@ export function normalizeSheet(input: unknown): VtmSheetData {
           value: clampInt(d.value, 0, 5),
           powers,
           xp: clampInt(d.xp, 0, 999),
+          // свои Дисциплины: описание и описания сил по уровням (полная кастомизация)
+          description: typeof d.description === "string" ? d.description.slice(0, 600) : undefined,
+          powerNotes: (() => {
+            if (!d.powerNotes || typeof d.powerNotes !== "object") return undefined;
+            const notes: Record<number, string> = {};
+            for (const [lvl, note] of Object.entries(d.powerNotes)) {
+              const n = parseInt(lvl, 10);
+              if (n >= 1 && n <= 5 && typeof note === "string") notes[n] = note.slice(0, 600);
+            }
+            return Object.keys(notes).length ? notes : undefined;
+          })(),
         } as VtmDisciplineState;
       });
   }

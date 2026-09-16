@@ -10,12 +10,15 @@ import { toast } from "sonner";
 import {
   VtmSheetData,
   VtmDisciplineState,
+  DisciplineDef,
   DISCIPLINES,
   DISCIPLINE_BY_ID,
   CLAN_BY_ID,
   ADVANTAGE_LIBRARY,
   ADVANTAGE_BY_ID,
   THINBLOOD_FORMULAS,
+  CLAN_FLAW_PRESETS,
+  INCOMPATIBLE_ADVANTAGES,
 } from "@/lib/vtm-data";
 import { LORESHEETS, LORESHEET_BY_ID, LORESHEET_RULES } from "@/lib/vtm-histories";
 import { POWER_SYSTEMS, DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
@@ -35,11 +38,14 @@ export function DisciplinesSection({
   derived: DerivedStats;
 }) {
   const clan = CLAN_BY_ID.get(data.info.clan);
-  const [showCatalog, setShowCatalog] = useState(false);
-  const [customName, setCustomName] = useState("");
-
   const clanDiscIds = clan?.disciplines || [];
-  const isClanDisc = (key: string | null) => !!key && clanDiscIds.includes(key);
+  const [addMode, setAddMode] = useState<"catalog" | "custom" | null>(null);
+  const [catQuery, setCatQuery] = useState("");
+  const [confirmId, setConfirmId] = useState<string | null>(null); // двухшаговое удаление
+  const [customName, setCustomName] = useState("");
+  const [customDesc, setCustomDesc] = useState("");
+  const [customLvl, setCustomLvl] = useState(1);
+  const cq = catQuery.trim().toLowerCase();
 
   const setDisc = (key: string, name: string, patch: Partial<VtmDisciplineState>) => {
     mutate((d) => {
@@ -49,10 +55,26 @@ export function DisciplinesSection({
     });
   };
 
-  const removeDisc = (key: string | null) => {
+  const setAt = (idx: number, patch: Partial<VtmDisciplineState>) => {
+    mutate((d) => { Object.assign(d.disciplines[idx], patch); });
+  };
+
+  /** Удалить запись листа по индексу — работает и для библиотечных, и для своих. */
+  const removeAt = (idx: number, name: string) => {
+    mutate((d) => { d.disciplines.splice(idx, 1); });
+    setConfirmId(null);
+    toast(`«${name}» стёрта с листа`);
+  };
+
+  const addFromCatalog = (def: DisciplineDef) => {
+    if (data.disciplines.some((x) => x.key === def.id)) {
+      toast.error("Эта Дисциплина уже на листе");
+      return;
+    }
     mutate((d) => {
-      d.disciplines = d.disciplines.filter((x) => x.key !== key);
+      d.disciplines.push({ key: def.id, name: def.name, value: 1, powers: {}, xp: 0 });
     });
+    toast(`«${def.name}» внесена в лист — подними уровень точками и выбери силу`);
   };
 
   const addCustom = () => {
@@ -63,60 +85,204 @@ export function DisciplinesSection({
       return;
     }
     mutate((d) => {
-      d.disciplines.push({ key: null, name: trimmed, value: 0, powers: {}, xp: 0 });
+      d.disciplines.push({
+        key: null,
+        name: trimmed,
+        value: Math.max(1, Math.min(5, customLvl)),
+        powers: {},
+        xp: 0,
+        description: customDesc.trim() || undefined,
+      });
     });
     setCustomName("");
+    setCustomDesc("");
+    setCustomLvl(1);
+    toast(`Своя Дисциплина «${trimmed}» создана — впиши силы по уровням`);
   };
 
-  // Сортировка: клановые сверху, затем остальные
-  const sorted = useMemo(() => {
-    return [...DISCIPLINES].sort((a, b) => {
-      const aClan = clanDiscIds.includes(a.id) ? 0 : 1;
-      const bClan = clanDiscIds.includes(b.id) ? 0 : 1;
-      return aClan - bClan;
+  // Каталог: клановые первыми, затем ядро книги, затем редкие линии; поиск по силам
+  const catalog = useMemo(() => {
+    const rank = (x: DisciplineDef) => (clanDiscIds.includes(x.id) ? 0 : x.rare ? 2 : 1);
+    const list = [...DISCIPLINES].sort((a, b) => rank(a) - rank(b));
+    if (!cq) return list;
+    return list.filter((d) => {
+      const powers = Object.values(d.powers).flat().map((p) => p.name).join(" ");
+      return `${d.name} ${d.description} ${powers}`.toLowerCase().includes(cq);
     });
-  }, [clanDiscIds]);
+  }, [cq, clanDiscIds]);
+
+  const onSheet = (id: string) => data.disciplines.some((x) => x.key === id);
 
   return (
     <div className="space-y-4">
+      {/* Шапка */}
       <div className="vtm-panel p-4 flex flex-wrap items-center gap-3">
         <span className="vtm-stamp">Дисциплины</span>
-        <p className="vtm-hint !text-[0.77rem] flex-1 min-w-[220px]">
-          Клик по точке — уровень (0–5). Выбери силу для каждого уровня — из каталога или впиши свою.
-          {clan && ` Клановые Дисциплины: ${clanDiscIds.map((id) => DISCIPLINE_BY_ID.get(id)?.name).join(", ")}.`}
+        <span className="vtm-hint !text-[0.75rem]">на листе: <b className="not-italic text-[#d9c7b6]">{data.disciplines.length}</b></span>
+        <p className="vtm-hint !text-[0.77rem] flex-1 min-w-[240px]">
+          Клик по точке — уровень (0–5); каждому уровню — своя сила.
+          {clan && ` Клановые: ${clanDiscIds.map((id) => DISCIPLINE_BY_ID.get(id)?.name).join(", ")}.`}
         </p>
-        <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={() => setShowCatalog((v) => !v)}>
-          {showCatalog ? "▲ Скрыть каталог" : "◈ Каталог сил"}
+        <button
+          className={`vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs ${addMode === "catalog" ? "!text-[#e8636b] !border-[#e8636b]" : ""}`}
+          onClick={() => setAddMode(addMode === "catalog" ? null : "catalog")}
+          aria-expanded={addMode === "catalog"}
+        >
+          ◈ Из каталога
+        </button>
+        <button
+          className={`vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs ${addMode === "custom" ? "!text-[#a877c0] !border-[#a877c0]" : ""}`}
+          onClick={() => setAddMode(addMode === "custom" ? null : "custom")}
+          aria-expanded={addMode === "custom"}
+        >
+          ✍ Своя
         </button>
       </div>
 
-      {/* Клановые и библиотечные */}
+      {/* Добавление из каталога */}
+      {addMode === "catalog" && (
+        <section className="vtm-panel p-4 space-y-3" aria-label="Каталог Дисциплин">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="vtm-label text-[0.79rem] text-[#d6a840]">Каталог Дисциплин</span>
+            <span className="vtm-hint !text-[0.73rem] flex-1">⛧ — клановые, ✧ — редкие линии. Уже изученные не предлагаются дважды.</span>
+          </div>
+          <input
+            className="vtm-input"
+            value={catQuery}
+            onChange={(e) => setCatQuery(e.target.value)}
+            placeholder="поиск: название, сила, эффект…"
+            aria-label="Поиск по каталогу Дисциплин"
+          />
+          <div className="max-h-[440px] overflow-y-auto overflow-x-hidden vtm-scroll space-y-1.5 pr-1">
+            {catalog.map((def) => {
+              const taken = onSheet(def.id);
+              const clanMark = clanDiscIds.includes(def.id);
+              return (
+                <div key={def.id} className={`vtm-disc-cat ${taken ? "taken" : ""} ${clanMark ? "clan" : ""}`}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="vtm-label text-[0.80rem] flex-1 min-w-[120px]">
+                      {clanMark ? "⛧ " : def.rare ? "✧ " : ""}{def.name}
+                    </span>
+                    {clanMark && <span className="vtm-hint !text-[0.66rem] uppercase">клановая</span>}
+                    {def.rare && !clanMark && <span className="vtm-hint !text-[0.66rem] uppercase">редкая</span>}
+                    {taken ? (
+                      <span className="vtm-stamp !text-[0.64rem] !py-0.5 shrink-0">на листе</span>
+                    ) : (
+                      <button
+                        className="vtm-btn !py-1 !px-2.5 !text-[0.74rem] shrink-0"
+                        onClick={() => addFromCatalog(def)}
+                        aria-label={`Добавить Дисциплину ${def.name} на лист`}
+                      >
+                        + взять
+                      </button>
+                    )}
+                  </div>
+                  <p className="vtm-hint !text-[0.75rem] leading-relaxed">{def.description}</p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Конструктор своей Дисциплины */}
+      {addMode === "custom" && (
+        <section className="vtm-panel p-4 space-y-2.5" aria-label="Своя Дисциплина — конструктор">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="vtm-label text-[0.79rem] text-[#a877c0]">Своя Дисциплина</span>
+            <span className="vtm-hint !text-[0.73rem] flex-1">
+              Редкая кровь, слияние Дисциплин, домашняя механика — называй, описывай и расписывай силы по уровням сам.
+            </span>
+          </div>
+          <div className="flex gap-3 flex-wrap items-center">
+            <input
+              className="vtm-input flex-1 min-w-[200px]"
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addCustom()}
+              placeholder="название: например, Эхо Ночи"
+              aria-label="Название своей Дисциплины"
+            />
+            <span className="vtm-hint !text-[0.72rem] not-italic flex items-center gap-1.5">
+              стартовый уровень:
+              <Dots value={customLvl} color="violet" onChange={setCustomLvl} ariaLabel="Стартовый уровень своей Дисциплины" />
+            </span>
+          </div>
+          <textarea
+            className="vtm-input min-h-[64px]"
+            value={customDesc}
+            onChange={(e) => setCustomDesc(e.target.value)}
+            placeholder="описание: как проявляется, откуда взялась, чего стоит… (необязательно)"
+            aria-label="Описание своей Дисциплины"
+            maxLength={600}
+          />
+          <div className="flex justify-end">
+            <button className="vtm-btn" onClick={addCustom} disabled={!customName.trim()}>+ Создать</button>
+          </div>
+        </section>
+      )}
+
+      {/* Пустое состояние: Кровь ещё молчит */}
+      {data.disciplines.length === 0 && (
+        <div className="vtm-disc-empty" role="status">
+          <span className="vtm-disc-empty-moon" aria-hidden>☾</span>
+          <p className="vtm-disc-empty-title">Кровь ещё молчит</p>
+          <p className="vtm-hint !text-[0.79rem] text-center max-w-[460px]">
+            Ни одной Дисциплины. Возьми клановые из каталога — или, если твоя кровь странная, создай свою и опиши её сам.
+          </p>
+          <div className="flex gap-2 flex-wrap justify-center">
+            <button className="vtm-btn !py-2 !px-4" onClick={() => setAddMode("catalog")}>◈ Открыть каталог</button>
+            <button className="vtm-btn vtm-btn-ghost !py-2 !px-4" onClick={() => setAddMode("custom")}>✍ Создать свою</button>
+          </div>
+        </div>
+      )}
+
+      {/* ТОЛЬКО Дисциплины игрока — как на листе */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {sorted.map((def) => {
-          const state = data.disciplines.find((x) => x.key === def.id);
-          const value = state?.value || 0;
-          const clanMark = clanDiscIds.includes(def.id);
+        {data.disciplines.map((state, idx) => {
+          const def = state.key ? DISCIPLINE_BY_ID.get(state.key) : undefined;
+          const value = state.value || 0;
+          const clanMark = !!state.key && clanDiscIds.includes(state.key);
+          const confirmKey = state.key || `i:${idx}`;
           return (
             <section
-              key={def.id}
+              key={state.key || `c:${idx}`}
               className="vtm-panel"
-              style={clanMark ? { borderColor: "rgba(194,43,48,0.4)" } : undefined}
-              aria-label={def.name}
+              style={clanMark ? { borderColor: "rgba(194,43,48,0.4)" } : def?.rare ? { borderColor: "rgba(122,74,140,0.4)" } : undefined}
+              aria-label={state.name}
             >
               <div className="vtm-panel-head">
-                <span className={`vtm-label text-[0.81rem] ${clanMark ? "text-[#e8636b]" : "text-[#d6a840]"}`}>
-                  {clanMark ? "⛧ " : ""}{def.name}
+                <span className={`vtm-label text-[0.81rem] ${clanMark ? "text-[#e8636b]" : def?.rare ? "text-[#a877c0]" : "text-[#d6a840]"}`}>
+                  {clanMark ? "⛧ " : def?.rare ? "✧ " : ""}{state.name}
                 </span>
-                {clanMark && <span className="vtm-hint !text-[0.70rem] ml-auto uppercase">клановая</span>}
+                {clanMark && <span className="vtm-hint !text-[0.70rem] uppercase">клановая</span>}
+                {def?.rare && !clanMark && <span className="vtm-hint !text-[0.70rem] uppercase">редкая</span>}
+                {!def && <span className="vtm-hint !text-[0.70rem] uppercase">своя</span>}
+                <button
+                  className="vtm-btn vtm-btn-ghost !p-1 !text-[0.72rem] ml-auto vtm-confirm-del"
+                  onClick={() => (confirmId === confirmKey ? removeAt(idx, state.name) : setConfirmId(confirmKey))}
+                  onBlur={() => confirmId === confirmKey && setConfirmId(null)}
+                  aria-label={`Удалить ${state.name} с листа`}
+                  title="Удалить Дисциплину с листа"
+                >
+                  {confirmId === confirmKey ? "точно?" : "✕"}
+                </button>
               </div>
               <div className="p-3 md:p-4 space-y-2">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <Dots value={value} color="violet" onChange={(n) => setDisc(def.id, def.name, { value: n })} ariaLabel={`${def.name}: уровень ${value}`} />
-                  <span className="vtm-hint !text-[0.75rem] flex-1">{def.description}</span>
+                  <Dots
+                    value={value}
+                    color="violet"
+                    onChange={(n) => (def ? setDisc(def.id, def.name, { value: n }) : setAt(idx, { value: n }))}
+                    ariaLabel={`${state.name}: уровень ${value}`}
+                  />
+                  <span className="vtm-hint !text-[0.75rem] flex-1">
+                    {def ? def.description : state.description || "Своя Дисциплина — опиши её в конструкторе."}
+                  </span>
                 </div>
 
                 {/* Подробные правила Дисциплины — как она работает */}
-                {DISCIPLINE_RULES[def.id] && (
+                {def && DISCIPLINE_RULES[def.id] && (
                   <div className="vtm-frame rounded-md p-2.5 space-y-1" style={{ background: "rgba(122,74,140,0.06)" }}>
                     <span className="vtm-label text-[0.70rem] text-[#a877c0]">Как работает {def.name}</span>
                     {DISCIPLINE_RULES[def.id].map((rule, i) => (
@@ -128,7 +294,7 @@ export function DisciplinesSection({
                 )}
 
                 {/* Силы по уровням */}
-                {value > 0 && (
+                {value > 0 && def && (
                   <div className="space-y-1.5 pt-1">
                     {def.id === "thinblood_alchemy" ? (
                       /* Слабокровные: формулы Алхимии карточками — с эффектами и заметками о варке */
@@ -196,54 +362,37 @@ export function DisciplinesSection({
                     )}
                   </div>
                 )}
+
+                {/* Своя Дисциплина: редактор сил по уровням — название + описание */}
+                {value > 0 && !def && (
+                  <div className="space-y-1.5 pt-1">
+                    {Array.from({ length: value }, (_, i) => i + 1).map((lvl) => (
+                      <div key={lvl} className="vtm-custom-power">
+                        <span className="vtm-label text-[0.70rem] text-[#9c8072] w-8 shrink-0">{lvl} ур.</span>
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <input
+                            className="vtm-input !py-1 !text-[0.84rem]"
+                            value={state.powers?.[lvl] || ""}
+                            onChange={(e) => setAt(idx, { powers: { ...state.powers, [lvl]: e.target.value.slice(0, 60) } })}
+                            placeholder={`сила ${lvl} уровня — впиши название`}
+                            aria-label={`Название силы ${lvl} уровня — ${state.name}`}
+                          />
+                          <textarea
+                            className="vtm-input !py-1 !text-[0.78rem] min-h-[40px]"
+                            value={state.powerNotes?.[lvl] || ""}
+                            onChange={(e) => setAt(idx, { powerNotes: { ...state.powerNotes, [lvl]: e.target.value.slice(0, 600) } })}
+                            placeholder="как работает: пул, цена, эффект — необязательно"
+                            aria-label={`Описание силы ${lvl} уровня — ${state.name}`}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </section>
           );
         })}
-      </div>
-
-      {/* Свои / редкие Дисциплины */}
-      <div className="vtm-panel p-4 space-y-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="vtm-label text-[0.77rem] text-[#d6a840]">Редкие Дисциплины</span>
-          <span className="vtm-hint !text-[0.75rem] flex-1">Химерия, Валерен, Туман Сета, сочетания и домашки — вписывай вручную</span>
-        </div>
-        {data.disciplines.filter((x) => x.key === null).map((disc, i) => (
-          <div key={i} className="vtm-frame rounded-md p-3 space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="vtm-display text-sm text-[#d9c7b6] flex-1 min-w-[140px]">{disc.name}</span>
-              <Dots value={disc.value} color="violet" onChange={(n) => mutate((d) => { const list = d.disciplines.filter((x) => x.key === null); list[i].value = n; })} ariaLabel={`${disc.name}: уровень`} />
-              <button className="vtm-btn vtm-btn-ghost !p-1 !text-[0.75rem]" onClick={() => removeDisc(null)} aria-label={`Удалить ${disc.name}`}>✕</button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {Array.from({ length: disc.value }, (_, lvl) => lvl + 1).map((lvl) => (
-                <input
-                  key={lvl}
-                  className="vtm-input !py-1 !text-[0.84rem]"
-                  value={disc.powers?.[lvl] || ""}
-                  onChange={(e) => mutate((d) => {
-                    const list = d.disciplines.filter((x) => x.key === null);
-                    if (!list[i].powers) list[i].powers = {};
-                    list[i].powers[lvl] = e.target.value.slice(0, 60);
-                  })}
-                  placeholder={`сила ${lvl} уровня — впиши название`}
-                  aria-label={`Сила ${lvl} уровня — ${disc.name}`}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-        <div className="flex gap-2">
-          <input
-            className="vtm-input flex-1"
-            value={customName}
-            onChange={(e) => setCustomName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addCustom()}
-            placeholder="например: Химерия (Равнос)"
-            aria-label="Название редкой Дисциплины"
-          />
-          <button className="vtm-btn shrink-0" onClick={addCustom} disabled={!customName.trim()}>+ Добавить</button>
-        </div>
       </div>
     </div>
   );
@@ -407,7 +556,11 @@ export function AdvantagesSection({
   const [customLvl, setCustomLvl] = useState(1);
   const [customCost, setCustomCost] = useState(1);
   const [catQuery, setCatQuery] = useState("");
+  const [clanOnly, setClanOnly] = useState(false); // фильтр «подходит клану»
   const cq = catQuery.trim().toLowerCase();
+
+  const clan = CLAN_BY_ID.get(data.info.clan);
+  const presetIds = useMemo(() => (clan ? CLAN_FLAW_PRESETS[clan.id] || [] : []), [clan]);
 
   const bgLeft = 7 - derived.backgroundPoints;
 
@@ -430,6 +583,17 @@ export function AdvantagesSection({
   const addFromCatalog = (defId: string) => {
     const def = ADVANTAGE_BY_ID.get(defId);
     if (!def) return;
+    // Несовместимые пары: предупреждаем, но не запрещаем — лист игрока, а не книга законов
+    const conflicts = INCOMPATIBLE_ADVANTAGES[def.id] || [];
+    if (conflicts.length) {
+      const conflictNames = data.advantages
+        .map((a) => findDefByName(a.name))
+        .filter((d) => d && conflicts.includes(d.id))
+        .map((d) => `«${d!.name}»`);
+      if (conflictNames.length) {
+        toast.warning(`Не сходится: на листе уже есть ${conflictNames.join(", ")}. Вместе они не работают — снимаешь лишнее?`);
+      }
+    }
     mutate((d) => {
       d.advantages.push({
         id: `adv-${Date.now().toString(36)}-${defId}`,
@@ -473,10 +637,12 @@ export function AdvantagesSection({
     { id: "all", label: "Всё" },
   ];
 
-  // Каталог: фильтр по типу + поиск, с подгруппами книги
+  // Каталог: фильтр по типу + поиск + «подходит клану», с подгруппами книги
   const pool = ADVANTAGE_LIBRARY.filter((a) =>
     filter === "all" ? true : filter === "background" ? a.kind === "background" : a.kind === filter
-  ).filter((a) => !cq || `${a.name} ${a.desc} ${a.group || ""}`.toLowerCase().includes(cq));
+  )
+    .filter((a) => !clanOnly || presetIds.includes(a.id))
+    .filter((a) => !cq || `${a.name} ${a.desc} ${a.group || ""}`.toLowerCase().includes(cq));
 
   // Групповой порядок внутри выбранного типа
   const GROUP_ORDER: Record<string, string[]> = {
@@ -534,6 +700,12 @@ export function AdvantagesSection({
               const maxLvl = isBg ? 5 : def?.max ?? 5; // свои записи — до 5 уровней
               const pts = advPoints(a.kind, a.name, a.rating, a.cost);
               const tierText = def?.tiers?.[a.rating - 1];
+              const conflictNames = def && INCOMPATIBLE_ADVANTAGES[def.id]
+                ? data.advantages
+                    .map((x) => findDefByName(x.name))
+                    .filter((d) => d && INCOMPATIBLE_ADVANTAGES[def.id].includes(d.id))
+                    .map((d) => d!.name)
+                : [];
               return (
                 <div key={a.id} className="vtm-frame rounded-md p-2.5 space-y-1.5" style={a.kind === "flaw" ? { borderColor: "rgba(138,26,29,0.4)" } : undefined}>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -556,6 +728,11 @@ export function AdvantagesSection({
                   </div>
                   {tierText && (
                     <p className="vtm-hint !text-[0.77rem] border-l-2 border-[#3d1a20] pl-2">Уровень {a.rating}: {tierText}</p>
+                  )}
+                  {conflictNames.length > 0 && (
+                    <p className="vtm-hint !text-[0.74rem] vtm-req">
+                      ⚠ Конфликт: с «{conflictNames.join("», «")}» вместе не работают
+                    </p>
                   )}
                   <input
                     className="vtm-input !py-1 !text-[0.84rem]"
@@ -636,11 +813,25 @@ export function AdvantagesSection({
                 <button
                   key={k.id}
                   className={`vtm-btn !py-1 !px-2 !text-[0.72rem] ${filter === k.id ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
-                  onClick={() => setFilter(k.id)}
+                  onClick={() => {
+                    setFilter(k.id);
+                    // «для клана» имеет смысл только у Недостатков и «Всё» — не даём фильтру молча висеть
+                    if (k.id !== "flaw" && k.id !== "all") setClanOnly(false);
+                  }}
                 >
                   {k.label}
                 </button>
               ))}
+              {presetIds.length > 0 && (filter === "flaw" || filter === "all") && (
+                <button
+                  className={`vtm-btn !py-1 !px-2 !text-[0.72rem] ${clanOnly ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
+                  onClick={() => setClanOnly((v) => !v)}
+                  aria-pressed={clanOnly}
+                  title={`Недостатки, что подходят клану «${clan?.name}»`}
+                >
+                  ⛧ для клана
+                </button>
+              )}
             </div>
           </div>
           <div className="p-3 space-y-2 max-h-[680px] overflow-y-auto overflow-x-hidden vtm-scroll">

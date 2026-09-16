@@ -2697,3 +2697,91 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   user-select: text;
   cursor: auto;
 }
+
+/* ============================================================
+   РАУНД 14: Дисциплины «только свои» — каталог, конструктор,
+   пустое состояние, двухшаговое удаление, свои силы.
+   ============================================================ */
+
+/* Строки каталога Дисциплин */
+.vtm-disc-cat {
+  border: 1px solid rgba(60, 26, 32, 0.6);
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.8rem;
+  background: rgba(0, 0, 0, 0.22);
+  transition: border-color 0.25s ease, background 0.25s ease, transform 0.15s ease;
+}
+.vtm-disc-cat:hover {
+  border-color: rgba(194, 43, 48, 0.35);
+  background: rgba(0, 0, 0, 0.32);
+}
+.vtm-disc-cat.clan {
+  border-left: 3px solid rgba(194, 43, 48, 0.55);
+}
+.vtm-disc-cat.taken {
+  opacity: 0.55;
+}
+.vtm-disc-cat.taken:hover {
+  border-color: rgba(60, 26, 32, 0.6);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+/* Пустое состояние «Кровь ещё молчит» */
+.vtm-disc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 2.6rem 1.2rem;
+  border: 1px dashed rgba(194, 43, 48, 0.28);
+  border-radius: 0.75rem;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(194, 43, 48, 0.07), transparent 62%),
+    rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+.vtm-disc-empty-moon {
+  font-size: 1.9rem;
+  color: var(--vtm-gold-bright, #d6a840);
+  text-shadow: 0 0 18px rgba(214, 168, 64, 0.5);
+  animation: vtm-empty-moon 5.2s ease-in-out infinite;
+}
+@keyframes vtm-empty-moon {
+  0%, 100% { opacity: 0.55; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
+.vtm-disc-empty-title {
+  font-family: var(--vtm-font-display, "Cinzel", serif);
+  font-size: 1.06rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vtm-bone, #d9c7b6);
+}
+
+/* Силы своей Дисциплины: название + описание */
+.vtm-custom-power {
+  display: flex;
+  gap: 0.6rem;
+  align-items: stretch;
+  border-left: 2px solid rgba(122, 74, 140, 0.45);
+  padding-left: 0.6rem;
+}
+
+/* Двухшаговое удаление: подтверждение подсвечивается */
+.vtm-confirm-del {
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.vtm-confirm-del:hover {
+  color: #e8636b;
+  border-color: rgba(194, 43, 48, 0.55);
+}
+
+@media (max-width: 640px) {
+  .vtm-disc-cat { padding: 0.55rem 0.6rem; }
+  .vtm-disc-empty { padding: 2rem 0.8rem; }
+  .vtm-disc-empty-moon { font-size: 1.6rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vtm-disc-empty-moon { animation: none; }
+}

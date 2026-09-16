@@ -21,8 +21,10 @@ import {
 } from "@/lib/vtm-data";
 import { LORESHEETS, LORESHEET_RULES, DIABLERIE_BLOCKS } from "@/lib/vtm-histories";
 import { POWER_SYSTEMS, DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
+import { V20_BLOCKS } from "@/lib/vtm-v20";
+import { WEREWOLF_INTRO, WEREWOLF_FORMS, WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_WAYWARD, WEREWOLF_COEXIST } from "@/lib/vtm-werewolf";
 
-type CodexTab = "clans" | "disciplines" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects";
+type CodexTab = "clans" | "disciplines" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
 
 const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "clans", label: "Кланы", icon: "⛧" },
@@ -33,6 +35,8 @@ const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "advantages", label: "Преимущества", icon: "◈" },
   { id: "histories", label: "Истории", icon: "📜" },
   { id: "sects", label: "Секты и эпохи", icon: "👑" },
+  { id: "v20", label: "4-я ред. (V20)", icon: "🕰" },
+  { id: "werewolf", label: "Оборотни", icon: "🐺" },
 ];
 
 export function CodexSection() {
@@ -76,6 +80,8 @@ export function CodexSection() {
       {tab === "advantages" && <AdvantagesCodex q={q} />}
       {tab === "histories" && <HistoriesCodex q={q} />}
       {tab === "sects" && <SectsCodex q={q} />}
+      {tab === "v20" && <V20Codex q={q} />}
+      {tab === "werewolf" && <WerewolfCodex q={q} />}
     </div>
   );
 }
@@ -156,7 +162,8 @@ function DisciplinesCodex({ q }: { q: string }) {
               aria-expanded={open}
               aria-controls={`disc-${disc.id}`}
             >
-              <span className="vtm-display text-[1.01rem] text-[#a877c0]">{disc.name}</span>
+              <span className="vtm-display text-[1.01rem] text-[#a877c0]">{disc.rare ? "✧ " : ""}{disc.name}</span>
+              {disc.rare && <span className="vtm-hint !text-[0.68rem] uppercase ml-1">редкая</span>}
               <span className="ml-auto vtm-label text-[0.73rem] text-[#a8863d]">{open ? "▲" : "▼"}</span>
             </button>
             <div id={`disc-${disc.id}`} className="p-4 space-y-3">
@@ -606,6 +613,149 @@ function HistoriesCodex({ q }: { q: string }) {
         ))}
         {sheets.length === 0 && <p className="vtm-hint text-center py-6 md:col-span-2">Истории молчат по этому запросу.</p>}
       </div>
+    </div>
+  );
+}
+
+// ---------- 4-я редакция (V20): классические механики ----------
+
+function V20Codex({ q }: { q: string }) {
+  const blocks = useMemo(
+    () => V20_BLOCKS.filter((b) => !q || `${b.title} ${b.body.join(" ")} ${b.tag || ""}`.toLowerCase().includes(q)),
+    [q]
+  );
+  return (
+    <div className="space-y-4">
+      <p className="vtm-hint !text-[0.79rem] vtm-panel p-3">
+        Механики четвёртой редакции («20th Anniversary Edition») — для хроник прошлого, флешбеков и Сородичей старого закала. Переносить лист между системами стоит только через Рассказчика.
+      </p>
+      {blocks.map((b) => (
+        <section key={b.title} className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.81rem] text-[#d6a840]">🕰 {b.title}</span>
+            {b.tag && <span className="vtm-hint !text-[0.68rem] uppercase ml-auto">{b.tag}</span>}
+          </div>
+          <div className="p-4 space-y-2">
+            {b.body.map((line, i) => (
+              <p key={i} className="text-[0.9rem] leading-relaxed text-[#c4ac9d] flex gap-2">
+                <span className="text-[#a8863d] shrink-0 not-italic" aria-hidden>❧</span>
+                <span>{line}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ))}
+      {blocks.length === 0 && <p className="vtm-hint text-center py-6">По этому запросу V20 молчит.</p>}
+    </div>
+  );
+}
+
+// ---------- Оборотни (W5): Гароу рядом с Маскарадом ----------
+
+function WerewolfCodex({ q }: { q: string }) {
+  const match = (...parts: string[]) => !q || parts.join(" ").toLowerCase().includes(q);
+  const intro = WEREWOLF_INTRO.filter((b) => match(b.title, b.body.join(" ")));
+  const forms = WEREWOLF_FORMS.filter((f) => match(f.name, f.ru, f.desc));
+  const auspices = WEREWOLF_AUSPICES.filter((a) => match(a.name, a.moon, a.desc));
+  const tribes = WEREWOLF_TRIBES.filter((t) => match(t.name, t.desc));
+  const wayward = WEREWOLF_WAYWARD.filter((t) => match(t.name, t.desc));
+  const coexist = WEREWOLF_COEXIST.filter((s) => match(s));
+  return (
+    <div className="space-y-4">
+      {intro.map((b) => (
+        <section key={b.title} className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.81rem] text-[#d6a840]">🐺 {b.title}</span>
+            {b.tag && <span className="vtm-hint !text-[0.68rem] uppercase ml-auto">{b.tag}</span>}
+          </div>
+          <div className="p-4 space-y-2">
+            {b.body.map((line, i) => (
+              <p key={i} className="text-[0.9rem] leading-relaxed text-[#c4ac9d] flex gap-2">
+                <span className="text-[#a8863d] shrink-0 not-italic" aria-hidden>❧</span>
+                <span>{line}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#d6a840]">Пять обликов</span>
+          <span className="vtm-hint !text-[0.68rem] uppercase ml-auto">смена облика — проверка Ярости</span>
+        </div>
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+          {forms.map((f) => (
+            <div key={f.name} className="vtm-frame rounded-md p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
+              <p className="text-[0.88rem] text-[#d9c7b6]"><b className="not-italic">{f.name}</b> — {f.ru}</p>
+              <p className="vtm-hint !text-[0.79rem] mt-1 leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
+          {forms.length === 0 && <p className="vtm-hint md:col-span-2 text-center py-2">Облики молчат по этому запросу.</p>}
+        </div>
+      </section>
+
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#d6a840]">Ауспиции: пять лун</span>
+        </div>
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+          {auspices.map((a) => (
+            <div key={a.name} className="vtm-frame rounded-md p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
+              <p className="text-[0.88rem] text-[#d9c7b6]"><b className="not-italic">{a.name}</b> <span className="vtm-hint !text-[0.72rem] ml-1">{a.moon}</span></p>
+              <p className="vtm-hint !text-[0.79rem] mt-1 leading-relaxed">{a.desc}</p>
+            </div>
+          ))}
+          {auspices.length === 0 && <p className="vtm-hint md:col-span-2 text-center py-2">Луны молчат по этому запросу.</p>}
+        </div>
+      </section>
+
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#d6a840]">Племена Гароу</span>
+          <span className="vtm-hint !text-[0.68rem] uppercase ml-auto">W5: племена — идеологии, а не кровь</span>
+        </div>
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+          {tribes.map((t) => (
+            <div key={t.name} className="vtm-frame rounded-md p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
+              <p className="text-[0.88rem] text-[#d9c7b6]"><b className="not-italic">{t.name}</b></p>
+              <p className="vtm-hint !text-[0.79rem] mt-1 leading-relaxed">{t.desc}</p>
+            </div>
+          ))}
+          {tribes.length === 0 && <p className="vtm-hint md:col-span-2 text-center py-2">Племена молчат по этому запросу.</p>}
+        </div>
+      </section>
+
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#e8636b]">Выпавшие из народа (wayward)</span>
+        </div>
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+          {wayward.map((t) => (
+            <div key={t.name} className="vtm-frame rounded-md p-2.5" style={{ background: "rgba(138,26,29,0.12)", borderColor: "rgba(138,26,29,0.35)" }}>
+              <p className="text-[0.88rem] text-[#e8a4a8]"><b className="not-italic">{t.name}</b></p>
+              <p className="vtm-hint !text-[0.79rem] mt-1 leading-relaxed">{t.desc}</p>
+            </div>
+          ))}
+          {wayward.length === 0 && <p className="vtm-hint md:col-span-2 text-center py-2">Тени молчат по этому запросу.</p>}
+        </div>
+      </section>
+
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#d6a840]">Сородичам о соседстве с Гароу</span>
+          <span className="vtm-hint !text-[0.68rem] uppercase ml-auto">памятка Маскарада</span>
+        </div>
+        <div className="p-4 space-y-2">
+          {coexist.map((line, i) => (
+            <p key={i} className="text-[0.9rem] leading-relaxed text-[#c4ac9d] flex gap-2">
+              <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
+              <span>{line}</span>
+            </p>
+          ))}
+          {coexist.length === 0 && <p className="vtm-hint text-center py-2">Памятка молчит по этому запросу.</p>}
+        </div>
+      </section>
     </div>
   );
 }
