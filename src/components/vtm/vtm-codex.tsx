@@ -452,7 +452,7 @@ function PredatorsCodex({ q }: { q: string }) {
 // ---------- Преимущества (каталог) ----------
 
 function AdvantagesCodex({ q }: { q: string }) {
-  const list = ADVANTAGE_LIBRARY.filter((a) => !q || `${a.name} ${a.desc}`.toLowerCase().includes(q));
+  const list = ADVANTAGE_LIBRARY.filter((a) => !q || `${a.name} ${a.desc} ${a.group || ""}`.toLowerCase().includes(q));
   const groups: { kind: string; label: string }[] = [
     { kind: "background", label: "Факты биографии (7 пунктов на старте)" },
     { kind: "merit", label: "Достоинства" },
@@ -464,19 +464,51 @@ function AdvantagesCodex({ q }: { q: string }) {
       {groups.map((g) => {
         const items = list.filter((a) => a.kind === g.kind);
         if (items.length === 0) return null;
+        // подгруппы книги внутри типа
+        const sub = new Map<string, typeof items>();
+        for (const a of items) {
+          const key = a.group || "";
+          if (!sub.has(key)) sub.set(key, []);
+          sub.get(key)!.push(a);
+        }
         return (
           <section key={g.kind} className="vtm-panel">
             <div className="vtm-panel-head">
               <span className="vtm-label text-[0.81rem] text-[#d6a840]">{g.label}</span>
+              <span className="vtm-hint !text-[0.7rem] ml-auto">{items.length} записей</span>
             </div>
-            <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-              {items.map((a) => (
-                <div key={a.id} className="vtm-frame rounded-md p-2.5" style={{ background: "rgba(0,0,0,0.22)" }}>
-                  <p className="text-[0.9rem] text-[#d9c7b6]">
-                    {a.name}
-                    {a.cost ? <span className="vtm-label text-[0.67rem] text-[#a8863d] ml-1.5">{a.cost} пт</span> : null}
-                  </p>
-                  <p className="vtm-hint !text-[0.76rem] mt-0.5">{a.desc}</p>
+            <div className="p-3 space-y-3">
+              {[...sub.entries()].map(([groupName, entries]) => (
+                <div key={groupName || "base"}>
+                  {groupName && <p className="vtm-cat-head vtm-label">{groupName}</p>}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1.5">
+                    {entries.map((a) => (
+                      <div key={a.id} className="vtm-frame rounded-md p-2.5" style={{ background: "rgba(0,0,0,0.22)" }}>
+                        <p className="text-[0.9rem] text-[#d9c7b6]">
+                          {a.name}
+                          {a.cost !== undefined && a.cost > 0 ? (
+                            <span className="vtm-label text-[0.67rem] text-[#a8863d] ml-1.5">
+                              {a.max > 1 ? `1–${a.max} ур. · ${a.cost} пт/ур.` : `${a.cost} пт`}
+                            </span>
+                          ) : a.cost === 0 ? (
+                            <span className="vtm-label text-[0.67rem] text-[#a8863d] ml-1.5">договорная</span>
+                          ) : null}
+                          {a.stackable && <span className="vtm-label text-[0.64rem] text-[#b0565e] ml-1.5">можно несколько</span>}
+                          {a.req && <span className="vtm-req vtm-label ml-1.5">{a.req}</span>}
+                        </p>
+                        <p className="vtm-hint !text-[0.76rem] mt-0.5">{a.desc}</p>
+                        {a.tiers && a.tiers.length > 1 && (
+                          <div className="mt-1 space-y-0.5">
+                            {a.tiers.map((t, i) => (
+                              <p key={i} className="vtm-hint !text-[0.73rem] pl-1 border-l border-[#3d1a20]">
+                                <span className="text-[#a8863d] not-italic">{"●".repeat(i + 1)}</span> {t}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

@@ -48,15 +48,16 @@ export function deriveStats(sheet: VtmSheetData): DerivedStats {
   const backgroundPoints = sheet.advantages
     .filter((x) => x.kind === "background")
     .reduce((sum, x) => sum + x.rating, 0);
-  // Достоинства/недостатки: цена = уровень × цену за уровень (из каталога);
-  // свои записи без цены считаются по уровню.
+  // Достоинства/недостатки: цена = уровень × цену за уровень.
+  // Приоритет: цена из каталога; для своих записей — цена, вбитая в саму запись (x.cost);
+  // если цены нет вовсе — запись считается по уровню (договорная).
   const advPoints = (kind: "merit" | "flaw") =>
     sheet.advantages
       .filter((x) => x.kind === kind)
       .reduce((sum, x) => {
         const byName = ADVANTAGE_LIBRARY.find((d) => d.name === x.name);
         const def = byName || (ADVANTAGE_BY_ID.get(x.name) as typeof byName);
-        const cost = def?.cost;
+        const cost = def?.cost ?? (typeof x.cost === "number" ? x.cost : undefined);
         return sum + (cost ? x.rating * cost : x.rating);
       }, 0);
   const meritPoints = advPoints("merit");

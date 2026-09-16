@@ -1191,6 +1191,43 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 }
 .vtm-skill-row:hover { background: rgba(194, 43, 48, 0.05); }
 
+/* ---------- Каталог преимуществ: подгруппы книги ---------- */
+
+/* Заголовок подгруппы («Внешность», «Охота», «Мифические»…) — гравировка с кровавой нитью */
+.vtm-cat-head {
+  font-size: 0.77rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--vtm-gold-bright);
+  padding: 0.55rem 0.5rem 0.3rem;
+  margin-top: 0.25rem;
+  border-top: 1px solid var(--vtm-line-soft);
+  position: relative;
+  user-select: none;
+}
+.vtm-cat-head::before {
+  content: "❦";
+  margin-right: 0.55rem;
+  color: var(--vtm-blood-bright);
+  font-size: 0.8rem;
+  text-shadow: 0 0 8px rgba(194, 43, 48, 0.4);
+}
+.vtm-cat-head:first-child { border-top: none; margin-top: 0; }
+
+/* Плашка ограничения («Только Каитифы», «Требуется Доминирование»…) */
+.vtm-req {
+  display: inline-block;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  color: #c96d75;
+  border: 1px dashed rgba(194, 43, 48, 0.45);
+  border-radius: 3px;
+  padding: 0.05em 0.4em;
+  background: rgba(194, 43, 48, 0.06);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 /* Полоса бюджета очков */
 .vtm-budget-bar {
   height: 6px;

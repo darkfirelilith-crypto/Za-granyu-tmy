@@ -384,12 +384,12 @@ function findDefByName(name: string) {
   return ADVANTAGE_LIBRARY.find((d) => d.name === name);
 }
 
-/** Итоговая цена в пунктах: уровень × цена за уровень. */
-function advPoints(kind: string, name: string, rating: number): number | null {
+/** Итоговая цена в пунктах: уровень × цена за уровень (каталог или своя цена записи). */
+function advPoints(kind: string, name: string, rating: number, ownCost?: number): number | null {
   if (kind === "background") return null; // факты биографии считаются отдельно
   const def = findDefByName(name);
-  if (!def || !def.cost) return null; // свои записи — цена договорная
-  return rating * def.cost;
+  const cost = def?.cost ?? (typeof ownCost === "number" ? ownCost : undefined);
+  return cost ? rating * cost : rating; // без цены — по уровню (договорная)
 }
 
 export function AdvantagesSection({
@@ -404,11 +404,12 @@ export function AdvantagesSection({
   const [filter, setFilter] = useState<FilterKind>("background");
   const [customName, setCustomName] = useState("");
   const [customKind, setCustomKind] = useState<"merit" | "flaw">("merit");
+  const [customLvl, setCustomLvl] = useState(1);
+  const [customCost, setCustomCost] = useState(1);
   const [catQuery, setCatQuery] = useState("");
   const cq = catQuery.trim().toLowerCase();
 
   const bgLeft = 7 - derived.backgroundPoints;
-  const ownedIds = new Set(data.advantages.filter((a) => a.kind === "background").map((a) => a.name));
 
   const addBackground = (defId: string, defName: string) => {
     if (data.advantages.some((a) => a.kind === "background" && a.name === defName)) {
@@ -448,11 +449,14 @@ export function AdvantagesSection({
         id: `custom-${Date.now().toString(36)}`,
         name: trimmed,
         kind: customKind,
-        rating: 1,
+        rating: Math.max(1, Math.min(5, customLvl)),
         note: "",
+        cost: Math.max(0, Math.min(9, customCost)),
       });
     });
     setCustomName("");
+    setCustomLvl(1);
+    setCustomCost(1);
   };
 
   const removeAdv = (id: string) => {
@@ -461,16 +465,40 @@ export function AdvantagesSection({
     });
   };
 
-  const list = ADVANTAGE_LIBRARY.filter((a) =>
-    filter === "all" ? a.kind !== "background" : a.kind === filter
-  ).filter((a) => !cq || `${a.name} ${a.desc}`.toLowerCase().includes(cq));
-
   const kinds: { id: FilterKind; label: string }[] = [
     { id: "background", label: "Факты биографии" },
     { id: "merit", label: "Достоинства" },
     { id: "flaw", label: "Недостатки" },
     { id: "thinblood", label: "Слабокровные" },
+    { id: "all", label: "Всё" },
   ];
+
+  // Каталог: фильтр по типу + поиск, с подгруппами книги
+  const pool = ADVANTAGE_LIBRARY.filter((a) =>
+    filter === "all" ? true : filter === "background" ? a.kind === "background" : a.kind === filter
+  ).filter((a) => !cq || `${a.name} ${a.desc} ${a.group || ""}`.toLowerCase().includes(cq));
+
+  // Групповой порядок внутри выбранного типа
+  const GROUP_ORDER: Record<string, string[]> = {
+    merit: ["Языки", "Внешность", "Вещества", "Архаичные", "Узы", "Охота", "Мифические", "Психологические", "Кровные узы", "Прочее", "Каитифы", "Гули", "Культы"],
+    flaw: ["Языки", "Внешность", "Вещества", "Архаичные", "Узы", "Охота", "Мифические", "Изъяны Дисциплин", "Психологические", "Заражение", "Кровные узы", "Диаблери", "Прочее", "Каитифы", "Гули", "Культы"],
+  };
+  const groupedEntries = (() => {
+    if (filter === "background") return [{ group: "", items: pool }];
+    const order = GROUP_ORDER[filter] || [];
+    const known = order.map((g) => ({ group: g, items: pool.filter((a) => (a.group || "Прочее") === g) })).filter((g) => g.items.length > 0);
+    if (filter !== "all" && filter !== "thinblood") return known;
+    // для «Всё» и «Слабокровные» — просто по алфавиту групп
+    const rest = pool
+      .filter((a) => !known.some((k) => k.items.includes(a)))
+      .reduce<{ group: string; items: typeof pool }[]>((acc, a) => {
+        const g = a.group || "Прочее";
+        const bucket = acc.find((x) => x.group === g);
+        if (bucket) bucket.items.push(a); else acc.push({ group: g, items: [a] });
+        return acc;
+      }, []);
+    return [...known, ...rest];
+  })();
 
   return (
     <div className="space-y-4">
@@ -483,7 +511,7 @@ export function AdvantagesSection({
         <span className="vtm-label text-xs text-[#c4ac9d]">Достоинства: <b className="text-[#d9c7b6]">{derived.meritPoints}</b></span>
         <span className="vtm-label text-xs text-[#c4ac9d]">Недостатки: <b className="text-[#d9c7b6]">{derived.flawPoints}</b></span>
         <p className="vtm-hint !text-[0.75rem] flex-1 min-w-[200px]">
-          7 пунктов — бюджет фактов биографии (затем 3 опыта за точку). Достоинства и недостатки — уровни точками, цена = уровень × цену за уровень.
+          7 пунктов — бюджет фактов биографии (затем 3 опыта за точку). Достоинства и недостатки — уровни точками, цена = уровень × цену за уровень. Полный каталог 5-й редакции — по группам книги.
         </p>
       </div>
 
@@ -494,7 +522,7 @@ export function AdvantagesSection({
             <span className="vtm-label text-[0.81rem] text-[#d6a840]">У меня есть</span>
             <span className="vtm-hint !text-[0.73rem] ml-auto">{data.advantages.length} записей</span>
           </div>
-          <div className="p-3 space-y-2 max-h-[620px] overflow-y-auto vtm-scroll">
+          <div className="p-3 space-y-2 max-h-[620px] overflow-y-auto overflow-x-hidden vtm-scroll">
             {data.advantages.length === 0 && (
               <p className="vtm-hint text-center py-4">Пока ничего. Выбирай из каталога справа — или вписывай своё.</p>
             )}
@@ -502,13 +530,15 @@ export function AdvantagesSection({
               const isBg = a.kind === "background";
               const kindLabel = isBg ? "факт" : a.kind === "merit" ? "достоинство" : a.kind === "flaw" ? "недостаток" : "слабокровное";
               const def = findDefByName(a.name);
-              const maxLvl = isBg ? 5 : def?.max ?? a.rating;
-              const pts = advPoints(a.kind, a.name, a.rating);
+              const isCustom = !def;
+              const maxLvl = isBg ? 5 : def?.max ?? 5; // свои записи — до 5 уровней
+              const pts = advPoints(a.kind, a.name, a.rating, a.cost);
               const tierText = def?.tiers?.[a.rating - 1];
               return (
                 <div key={a.id} className="vtm-frame rounded-md p-2.5 space-y-1.5" style={a.kind === "flaw" ? { borderColor: "rgba(138,26,29,0.4)" } : undefined}>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`vtm-stamp !text-[0.66rem] ${a.kind === "flaw" ? "" : "vtm-stamp-gold"}`}>{kindLabel}</span>
+                    {def?.group && <span className="vtm-hint !text-[0.67rem] not-italic">{def.group}</span>}
                     <span className="text-sm text-[#d9c7b6] flex-1 min-w-[120px]">{a.name}</span>
                     <div className="flex items-center gap-1.5">
                       <Dots
@@ -534,11 +564,31 @@ export function AdvantagesSection({
                     placeholder="конкретика: кто, где и чем платит"
                     aria-label={`Заметка к ${a.name}`}
                   />
+                  {isCustom && a.kind !== "thinblood" && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <label className="vtm-hint !text-[0.7rem] not-italic flex items-center gap-1">
+                        цена/ур.:
+                        <input
+                          type="number"
+                          min={0}
+                          max={9}
+                          className="vtm-input !w-14 !py-0.5 !text-[0.76rem] text-center"
+                          value={a.cost ?? 0}
+                          onChange={(e) => {
+                            const v = Math.max(0, Math.min(9, Math.floor(Number(e.target.value) || 0)));
+                            mutate((d) => { const x = d.advantages.find((y) => y.id === a.id); if (x) x.cost = v; });
+                          }}
+                          aria-label={`Цена за уровень своей записи ${a.name}`}
+                        />
+                      </label>
+                      <span className="vtm-hint !text-[0.67rem]">0 = договорная (считается по уровню)</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
-          {/* Своё */}
+          {/* Своё: расширенный конструктор */}
           <div className="p-3 border-t border-[#2b1116] space-y-2">
             <div className="flex gap-2">
               <select className="vtm-input !w-36" value={customKind} onChange={(e) => setCustomKind(e.target.value as "merit" | "flaw")} aria-label="Тип своей записи">
@@ -546,14 +596,33 @@ export function AdvantagesSection({
                 <option value="flaw">недостаток</option>
               </select>
               <input
-                className="vtm-input flex-1"
+                className="vtm-input flex-1 min-w-0"
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addCustom()}
-                placeholder="своё: прозвище, тайна, враг…"
+                placeholder="своё: прозвище, тайна, враг, фольклорный страх…"
                 aria-label="Название своей записи"
               />
               <button className="vtm-btn shrink-0" onClick={addCustom} disabled={!customName.trim()}>+</button>
+            </div>
+            <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
+              <span className="vtm-hint !text-[0.7rem] not-italic flex items-center gap-1.5">
+                уровень:
+                <Dots value={customLvl} max={5} color={customKind === "flaw" ? "blood" : "gold"} onChange={setCustomLvl} ariaLabel="Уровень своей записи" />
+              </span>
+              <label className="vtm-hint !text-[0.7rem] not-italic flex items-center gap-1">
+                цена/ур.:
+                <input
+                  type="number"
+                  min={0}
+                  max={9}
+                  className="vtm-input !w-14 !py-0.5 !text-[0.76rem] text-center"
+                  value={customCost}
+                  onChange={(e) => setCustomCost(Math.max(0, Math.min(9, Math.floor(Number(e.target.value) || 0))))}
+                  aria-label="Цена за уровень своей записи"
+                />
+              </label>
+              <span className="vtm-hint !text-[0.67rem]">0 = договорная (считается по уровню); итог = уровень × цена</span>
             </div>
           </div>
         </section>
@@ -574,13 +643,13 @@ export function AdvantagesSection({
               ))}
             </div>
           </div>
-          <div className="p-3 space-y-1.5 max-h-[680px] overflow-y-auto vtm-scroll">
+          <div className="p-3 space-y-2 max-h-[680px] overflow-y-auto overflow-x-hidden vtm-scroll">
             {filter !== "background" && (
               <input
-                className="vtm-input !py-1.5 !text-[0.86rem] mb-1"
+                className="vtm-input !py-1.5 !text-[0.86rem]"
                 value={catQuery}
                 onChange={(e) => setCatQuery(e.target.value)}
-                placeholder="поиск по каталогу: узлы, враг, пища…"
+                placeholder="поиск: чеснок, стигматы, узы, предпочтение…"
                 aria-label="Поиск по каталогу преимуществ"
               />
             )}
@@ -611,45 +680,55 @@ export function AdvantagesSection({
                 </p>
               </>
             ) : (
-              list.map((def) => {
-                const alreadyOwned = data.advantages.some((a) => a.name === def.name);
-                return (
-                  <div key={def.id} className="p-2 rounded-md border border-[#2b1116] space-y-1" style={{ background: "rgba(0,0,0,0.2)", opacity: alreadyOwned ? 0.55 : 1 }}>
-                    <div className="flex items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[0.88rem] text-[#d9c7b6]">
-                          {def.name}
-                          {def.cost ? (
-                            <span className="vtm-label text-[0.70rem] text-[#a8863d] ml-1.5">
-                              {def.max > 1 ? `1–${def.max} ур. · ${def.cost} пт/ур.` : `${def.cost} пт`}
-                            </span>
-                          ) : null}
-                        </p>
-                        <p className="vtm-hint !text-[0.77rem]">{def.desc}</p>
-                        {def.tiers && def.tiers.length > 1 && (
-                          <div className="mt-1 space-y-0.5">
-                            {def.tiers.map((t, i) => (
-                              <p key={i} className="vtm-hint !text-[0.75rem] pl-1 border-l border-[#3d1a20]">
-                                <span className="text-[#a8863d] not-italic">{"●".repeat(i + 1)}</span> {t}
-                              </p>
-                            ))}
+              groupedEntries.map(({ group, items }) => (
+                <div key={group || "base"} className="space-y-1.5">
+                  {group && <p className="vtm-cat-head vtm-label">{group}</p>}
+                  {items.map((def) => {
+                    const alreadyOwned = data.advantages.some((a) => a.name === def.name);
+                    const canAdd = !alreadyOwned || def.stackable;
+                    return (
+                      <div key={def.id} className="p-2 rounded-md border border-[#2b1116] space-y-1" style={{ background: "rgba(0,0,0,0.2)", opacity: alreadyOwned && !def.stackable ? 0.55 : 1 }}>
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[0.88rem] text-[#d9c7b6]">
+                              {def.name}
+                              {def.cost !== undefined && def.cost > 0 ? (
+                                <span className="vtm-label text-[0.70rem] text-[#a8863d] ml-1.5">
+                                  {def.max > 1 ? `1–${def.max} ур. · ${def.cost} пт/ур.` : `${def.cost} пт`}
+                                </span>
+                              ) : def.cost === 0 ? (
+                                <span className="vtm-label text-[0.70rem] text-[#a8863d] ml-1.5">цена договорная</span>
+                              ) : null}
+                              {def.stackable && <span className="vtm-label text-[0.66rem] text-[#b0565e] ml-1.5">можно несколько</span>}
+                              {def.req && <span className="vtm-req vtm-label ml-1.5">{def.req}</span>}
+                            </p>
+                            <p className="vtm-hint !text-[0.77rem]">{def.desc}</p>
+                            {def.tiers && def.tiers.length > 1 && (
+                              <div className="mt-1 space-y-0.5">
+                                {def.tiers.map((t, i) => (
+                                  <p key={i} className="vtm-hint !text-[0.75rem] pl-1 border-l border-[#3d1a20]">
+                                    <span className="text-[#a8863d] not-italic">{"●".repeat(i + 1)}</span> {t}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        )}
+                          <button
+                            className="vtm-btn shrink-0 !py-1 !px-2 !text-[0.73rem] vtm-btn-gold"
+                            onClick={() => addFromCatalog(def.id)}
+                            disabled={!canAdd}
+                            title={alreadyOwned && !def.stackable ? "уже на листе" : def.stackable ? "Добавить ещё одну" : "Добавить к листу (1 уровень)"}
+                          >
+                            {alreadyOwned && !def.stackable ? "✓" : "+"}
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        className="vtm-btn shrink-0 !py-1 !px-2 !text-[0.73rem] vtm-btn-gold"
-                        onClick={() => addFromCatalog(def.id)}
-                        disabled={alreadyOwned}
-                        title={alreadyOwned ? "уже на листе" : "Добавить к листу (1 уровень)"}
-                      >
-                        {alreadyOwned ? "✓" : "+"}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
+                    );
+                  })}
+                </div>
+              ))
             )}
-            {filter !== "background" && list.length === 0 && (
+            {filter !== "background" && pool.length === 0 && (
               <p className="vtm-hint text-center py-3">Ничего не нашлось — попробуй иначе.</p>
             )}
           </div>
