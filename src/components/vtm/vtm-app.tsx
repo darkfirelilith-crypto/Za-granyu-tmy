@@ -612,7 +612,7 @@ function TemplateChooser({
               Кого выпустить из могилы?
             </h2>
             <p className="vtm-hint mt-1">
-              Готовые вампиры приходят с кланом, Дисциплинами, стилем охоты и прошлым.
+              Готовые вампиры приходят с кланом, Дисциплинами, стилем охоты, портретом и прошлым.
               Всё потом можно переписать — это лишь первая ночь.
             </p>
           </div>
@@ -672,6 +672,9 @@ function TemplateChooser({
                 aria-label={`Готовый вампир: ${t.title}`}
               >
                 <span className="vtm-stamp">{clanName(t.sheet.info.clan)}</span>
+                <span className="vtm-tpl-face" aria-hidden>
+                  <img src={t.portrait} alt="" loading="lazy" />
+                </span>
                 <span className="vtm-template-title">{t.title}</span>
                 <span className="vtm-template-tagline">{t.tagline}</span>
                 <span className="flex items-center justify-center gap-3 vtm-label text-[0.56rem] text-[#6e5a53]">

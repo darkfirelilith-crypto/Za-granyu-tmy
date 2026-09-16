@@ -76,6 +76,12 @@ export function VtmPrintSheet({ data, derived }: { data: VtmSheetData; derived: 
           </p>
           {info.sire && <p className="vtm-print-line">Сир: {info.sire}</p>}
           {predator && <p className="vtm-print-line">Стиль охоты: {predator.name}</p>}
+          {data.trackers.huntCount > 0 && (
+            <p className="vtm-print-line">
+              Ночей в хронике: {data.trackers.huntCount}
+              {data.trackers.lastHunt ? ` · последняя охота: ${data.trackers.lastHunt}` : ""}
+            </p>
+          )}
         </div>
       </div>
 

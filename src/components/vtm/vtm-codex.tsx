@@ -16,13 +16,16 @@ import {
   GENERATIONS,
   BLOOD_POTENCY_TABLE,
   ADVANTAGE_LIBRARY,
+  THINBLOOD_FORMULAS,
+  THINBLOOD_RULES,
 } from "@/lib/vtm-data";
 
-type CodexTab = "clans" | "disciplines" | "mechanics" | "predators" | "advantages" | "sects";
+type CodexTab = "clans" | "disciplines" | "thinblood" | "mechanics" | "predators" | "advantages" | "sects";
 
 const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "clans", label: "Кланы", icon: "⛧" },
   { id: "disciplines", label: "Дисциплины", icon: "✦" },
+  { id: "thinblood", label: "Слабокровные", icon: "⚗" },
   { id: "mechanics", label: "Механики", icon: "🎲" },
   { id: "predators", label: "Стили охоты", icon: "🩸" },
   { id: "advantages", label: "Преимущества", icon: "◈" },
@@ -64,6 +67,7 @@ export function CodexSection() {
 
       {tab === "clans" && <ClansCodex q={q} />}
       {tab === "disciplines" && <DisciplinesCodex q={q} />}
+      {tab === "thinblood" && <ThinbloodCodex q={q} />}
       {tab === "mechanics" && <MechanicsCodex q={q} />}
       {tab === "predators" && <PredatorsCodex q={q} />}
       {tab === "advantages" && <AdvantagesCodex q={q} />}
@@ -178,6 +182,92 @@ function DisciplinesCodex({ q }: { q: string }) {
         );
       })}
       {list.length === 0 && <p className="vtm-hint text-center py-6">Тьма молчит по этому запросу.</p>}
+    </div>
+  );
+}
+
+// ---------- Слабокровные и Алхимия ----------
+
+function ThinbloodCodex({ q }: { q: string }) {
+  const rules = useMemo(
+    () => THINBLOOD_RULES.filter((b) => !q || `${b.title} ${b.body.join(" ")}`.toLowerCase().includes(q)),
+    [q]
+  );
+  const formulas = useMemo(
+    () => THINBLOOD_FORMULAS.filter((f) => !q || `${f.name} ${f.effect} ${f.brew}`.toLowerCase().includes(q)),
+    [q]
+  );
+  const traits = useMemo(
+    () => ADVANTAGE_LIBRARY.filter((a) => a.kind === "thinblood" && (!q || `${a.name} ${a.desc}`.toLowerCase().includes(q))),
+    [q]
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Правила слабокровных */}
+      {rules.map((b) => (
+        <section key={b.title} className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.7rem] text-[#d6a840]">{b.title}</span>
+          </div>
+          <div className="p-4 space-y-2">
+            {b.body.map((line, i) => (
+              <p key={i} className="text-[0.78rem] leading-relaxed text-[#a68d80] flex gap-2">
+                <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
+                <span>{line}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* Алхимия: формулы-коктейли */}
+      <div className="vtm-tb-divider" aria-hidden>
+        <span>⚗</span>
+        <i />
+        <span className="vtm-label text-[0.62rem] text-[#a8863d]">формулы алхимии слабокровных</span>
+        <i />
+        <span>⚗</span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {formulas.map((f) => (
+          <article key={f.name} className="vtm-formula-card" style={{ background: "rgba(0,0,0,0.24)" }}>
+            <div className="flex items-center gap-2.5">
+              <span className="vtm-formula-vial" aria-hidden>⚗</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[0.82rem] text-[#d9c7b6] leading-tight">
+                  {f.name}
+                  <span className="vtm-label text-[0.52rem] text-[#a877c0] ml-1.5">ур. {f.level}</span>
+                </p>
+                <p className="vtm-label text-[0.5rem] text-[#6e5a53] mt-0.5" aria-label={`Уровень ${f.level}`}>
+                  {"◆".repeat(f.level)}{"◇".repeat(5 - f.level)}
+                </p>
+              </div>
+              <span className="vtm-stamp !text-[0.5rem] shrink-0">XP {f.level * 3}</span>
+            </div>
+            <p className="text-[0.74rem] leading-relaxed text-[#a68d80] mt-2">{f.effect}</p>
+            <p className="vtm-formula-brew mt-1.5">{f.brew}</p>
+          </article>
+        ))}
+        {formulas.length === 0 && <p className="vtm-hint text-center py-4 md:col-span-2">Котёл пуст по этому запросу.</p>}
+      </div>
+
+      {/* Достоинства и недостатки слабокровных */}
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.7rem] text-[#d6a840]">Слабокровные достоинства и недостатки</span>
+        </div>
+        <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+          {traits.map((a) => (
+            <div key={a.id} className="vtm-frame rounded-md p-2.5" style={{ background: "rgba(0,0,0,0.22)" }}>
+              <p className="text-[0.78rem] text-[#d9c7b6]">{a.name}</p>
+              <p className="vtm-hint !text-[0.64rem] mt-0.5">{a.desc}</p>
+            </div>
+          ))}
+          {traits.length === 0 && <p className="vtm-hint text-center py-3 md:col-span-2">Кровь молчит по этому запросу.</p>}
+        </div>
+      </section>
     </div>
   );
 }

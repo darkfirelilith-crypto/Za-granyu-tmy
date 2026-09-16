@@ -695,7 +695,14 @@ export function AttributesSection({
                           </span>
                         )}
                       </div>
-                      <p className="vtm-hint !text-[0.6rem] truncate">{attr.hint}{skill ? ` · пара: ${skill.name}${skill.spec ? ` (${skill.spec})` : ""}` : ""}</p>
+                      <p className="vtm-hint !text-[0.6rem] truncate">
+                        {attr.hint}
+                        {skill && (
+                          <span className="vtm-pair-name">
+                            {" · "}пара: {skill.name}{skill.spec ? ` (${skill.spec})` : ""}
+                          </span>
+                        )}
+                      </p>
                     </div>
                     <Dots
                       value={value}
@@ -765,6 +772,11 @@ export function SkillsSection({
     medicine: "int", occult: "int", politics: "int", science: "int", technology: "int",
   };
 
+  const ATTR_ABBR: Record<keyof VtmAttributes, string> = {
+    str: "СИЛ", dex: "ЛОВ", sta: "ВЫН", cha: "ОБА", man: "МАН",
+    com: "САМ", int: "ИНТ", wit: "СМК", res: "УПР",
+  };
+
   const rollSkill = (key: string, name: string) => {
     const attrKey = DEFAULT_PAIR[key] || "wit";
     const attrValue = data.attributes[attrKey];
@@ -821,6 +833,12 @@ export function SkillsSection({
                       <div className="min-w-0">
                         <div className="flex items-baseline gap-2 flex-wrap">
                           <span className={`text-[0.82rem] leading-snug ${value > 0 ? "text-[#d9c7b6]" : "text-[#a68d80]"}`}>{def.name}</span>
+                          <span
+                            className="vtm-pair-chip"
+                            title={`Пара по умолчанию: ${ATTR_RU[attrKey]}. Клик по строке — бросок ${ATTR_ABBR[attrKey]} + навык`}
+                          >
+                            +{ATTR_ABBR[attrKey]}
+                          </span>
                           <span className="vtm-pool-chip" title={`Пул быстрого броска: ${ATTR_RU[attrKey]} ${data.attributes[attrKey]} + ${def.name} ${value} = ${pool} костей`}>
                             ⚄ пул {pool}
                           </span>

@@ -12,6 +12,7 @@ export interface VtmTemplate {
   id: string;
   title: string;       // заголовок карточки выбора
   tagline: string;     // однострочная легенда
+  portrait: string;    // путь к портрету из архива крови (public/vtm/portraits)
   sheet: {
     info: VtmSheetData["info"];
     attributes: VtmSheetData["attributes"];
@@ -54,7 +55,7 @@ export function buildTemplateSheet(templateId: string): VtmSheetData | null {
     note: a.note || "",
   }));
   return {
-    info: { ...s.info, portrait: "", portraitThumb: "" },
+    info: { ...s.info, portrait: tpl.portrait, portraitThumb: tpl.portrait },
     attributes: { ...s.attributes },
     skills,
     disciplines,
@@ -89,6 +90,7 @@ export const VTM_TEMPLATES: VtmTemplate[] = [
     id: "brujah-rebel",
     title: "Анарх-бунтарь",
     tagline: "Кулак фрифольда: бьёт первым, извиняется никогда",
+    portrait: "/vtm/portraits/brujah-anarch.jpg",
     sheet: {
       info: {
         name: "Аякс Каменный",
@@ -155,6 +157,7 @@ occupation: "боксёр подпольных боёв, ныне ударный
     id: "ventru-executive",
     title: "Корпоративный хищник",
     tagline: "Днём — совет директоров, ночью — совет клана",
+    portrait: "/vtm/portraits/ventrue-corporate.jpg",
     sheet: {
       info: {
         name: "Виктория Крейн",
@@ -221,6 +224,7 @@ occupation: "инвестиционный директор, правая рук�
     id: "toreador-artist",
     title: "Вечная художница",
     tagline: "Пишет ночь так, что она отвечает взаимностью",
+    portrait: "/vtm/portraits/toreador-artist.jpg",
     sheet: {
       info: {
         name: "Изольда Марр",
@@ -288,6 +292,7 @@ occupation: "галеристка и художница, законодател�
     id: "malkavian-oracle",
     title: "Уличный пророк",
     tagline: "Сеть Малкава шепчет ему чужие сны нараспев",
+    portrait: "/vtm/portraits/malkavian-prophet.jpg",
     sheet: {
       info: {
         name: "Тихон",
@@ -354,6 +359,7 @@ occupation: "бывший дежурный метро, ныне слушател
     id: "nosferatu-broker",
     title: "Торговец тайнами",
     tagline: "Продаст любого — и купит всех",
+    portrait: "/vtm/portraits/nosferatu-broker.jpg",
     sheet: {
       info: {
         name: "Крот",
@@ -419,6 +425,7 @@ occupation: "инфоброкер городских подземелий, «с�
     id: "gangrel-pathfinder",
     title: "Следопыт окраин",
     tagline: "Зверь идёт рядом — и молчит из уважения",
+    portrait: "/vtm/portraits/gangrel-tracker.jpg",
     sheet: {
       info: {
         name: "Рада Волкова",
@@ -485,6 +492,7 @@ occupation: "егерь заповедника, следопыт окраин",
     id: "tremere-sorcerer",
     title: "Чародей крови",
     tagline: "Пирамида пала — формулы остались",
+    portrait: "/vtm/portraits/tremere-sorcerer.jpg",
     sheet: {
       info: {
         name: "Альба Грант",
