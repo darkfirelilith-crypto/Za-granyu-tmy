@@ -8,6 +8,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { VtmSheetData, VtmGearItem, VtmNote } from "@/lib/vtm-data";
 import { DerivedStats } from "@/lib/vtm-calc";
+import { buildChronicleMarkdown, chronicleFileName } from "@/lib/vtm-chronicle-md";
 
 /** Авторасширяющаяся textarea: текст растягивает поле. */
 export function AutoTextarea({
@@ -276,6 +277,14 @@ function ChronicleDigest({ entries }: { entries: VtmNote[] }) {
   );
 }
 
+/** Склонение «запись/записи/записей» для тостов экспорта. */
+function pluralEntries(n: number): string {
+  const mod10 = n % 10, mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "запись";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "записи";
+  return "записей";
+}
+
 export function NotesSection({
   data,
   mutate,
@@ -318,6 +327,33 @@ export function NotesSection({
 
   const removeNote = (id: string) => {
     mutate((d) => { d.notes.entries = d.notes.entries.filter((n) => n.id !== id); });
+  };
+
+  // Экспорт всей хроники в .md файл (Obsidian / печать / архив стола)
+  const [chronoBusy, setChronoBusy] = useState(false);
+  const exportChronicle = () => {
+    if (data.notes.entries.length === 0) {
+      toast.error("Хроника пуста", { description: "Сначала внеси хотя бы одну ночь в журнал — Кровь не печатает белые страницы." });
+      return;
+    }
+    setChronoBusy(true);
+    try {
+      const md = buildChronicleMarkdown(data);
+      const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = chronicleFileName(data.info.name);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      toast.success("Хроника ушла в файл", { description: `${data.notes.entries.length} ${pluralEntries(data.notes.entries.length)} · ${a.download}` });
+    } catch {
+      toast.error("Перо дрогнуло", { description: "Не удалось собрать файл хроники." });
+    } finally {
+      setChronoBusy(false);
+    }
   };
 
   return (
@@ -383,6 +419,14 @@ export function NotesSection({
                 ? `${filtered.length} из ${entries.length}`
                 : entries.length}
             </span>
+            <button
+              className="vtm-btn-chrono"
+              onClick={exportChronicle}
+              disabled={chronoBusy}
+              title="Скачать всю хронику ночей одним Markdown-файлом"
+            >
+              ⇩ Хроника в файл
+            </button>
           </div>
           {/* Поиск + фильтр */}
           <div className="vtm-jsearch-bar">

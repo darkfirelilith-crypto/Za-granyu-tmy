@@ -72,24 +72,54 @@ export function rollRouse(label: string): { ok: boolean; value: number } {
 
 // ---------- Глобальное состояние панели костей ----------
 
+const HISTORY_CAP = 12; // Хроника бросков помнит последнюю дюжину ночей
+
+export interface RollHistoryItem {
+  id: string;
+  label: string;
+  ts: number;
+  kind: "pool" | "rouse";
+  roll?: VtmRollResult;
+  rouse?: { ok: boolean; value: number };
+}
+
 interface DiceState {
   open: boolean;
   last: VtmRollResult | null;
   rouse: { ok: boolean; value: number; label: string; ts: number } | null;
+  history: RollHistoryItem[];
   toggle: () => void;
   setOpen: (v: boolean) => void;
   pushRoll: (r: VtmRollResult) => void;
   pushRouse: (r: { ok: boolean; value: number; label: string }) => void;
+  clearHistory: () => void;
 }
 
 export const useVtmDice = create<DiceState>((set) => ({
   open: false,
   last: null,
   rouse: null,
+  history: [],
   toggle: () => set((s) => ({ open: !s.open })),
   setOpen: (v) => set({ open: v }),
-  pushRoll: (r) => set({ last: r, open: true }),
-  pushRouse: (r) => set({ rouse: { ...r, ts: Date.now() } }),
+  pushRoll: (r) =>
+    set((s) => ({
+      last: r,
+      open: true,
+      history: [
+        { id: `roll-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, label: r.label, ts: Date.now(), kind: "pool", roll: r } as RollHistoryItem,
+        ...s.history,
+      ].slice(0, HISTORY_CAP),
+    })),
+  pushRouse: (r) =>
+    set((s) => ({
+      rouse: { ...r, ts: Date.now() },
+      history: [
+        { id: `rouse-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, label: r.label, ts: Date.now(), kind: "rouse", rouse: r } as RollHistoryItem,
+        ...s.history,
+      ].slice(0, HISTORY_CAP),
+    })),
+  clearHistory: () => set({ history: [] }),
 }));
 
 // ---------- Поставщики колбэков листа (устанавливаются редактором) ----------
@@ -115,11 +145,29 @@ function describe(r: VtmRollResult): string {
   return `ПРОВАЛ · 0 успехов${diff}`;
 }
 
+/** Короткий вердикт для «Хроники бросков» — значок + слово. */
+function verdictShort(r: VtmRollResult): { word: string; tone: "crit" | "win" | "messy" | "fail" | "beast" } {
+  if (r.totalSuccesses > 0 && r.critPairs && !r.messy) return { word: `КРИТ · ${r.totalSuccesses}`, tone: "crit" };
+  if (r.totalSuccesses > 0 && r.messy) return { word: `БЕСПРЕД. · ${r.totalSuccesses}`, tone: "messy" };
+  if (r.totalSuccesses > 0) return { word: `УСПЕХ · ${r.totalSuccesses}`, tone: "win" };
+  if (r.bestial) return { word: "ЗВЕРСКИЙ", tone: "beast" };
+  return { word: "ПРОВАЛ", tone: "fail" };
+}
+
+/** Компактная запись броска для истории: кости через пробел, голодные — в скобках. */
+function diceCompact(r: VtmRollResult): string {
+  const main = r.dice.filter((d) => !d.hunger).map((d) => d.value);
+  const hung = r.dice.filter((d) => d.hunger).map((d) => d.value);
+  const mainStr = main.join("·");
+  return hung.length ? `${mainStr} ⁄ голод ${hung.join("·")}` : mainStr;
+}
+
 // ---------- Плавающая панель ----------
 
 export function VtmDicePanel() {
-  const { open, last, rouse, toggle, setOpen } = useVtmDice();
+  const { open, last, rouse, history, toggle, setOpen, clearHistory } = useVtmDice();
   const [rollBtnArmed, setRollBtnArmed] = useState(false);
+  const [histOpen, setHistOpen] = useState(true);
 
   // Горячий бросок: последние параметры не храним — панель только показывает результат
   // и журнал. Реальные броски делаются из контекстных кнопок (клик по точкам/строкам).
@@ -212,6 +260,62 @@ export function VtmDicePanel() {
                 ⚡ Тратить волю
               </button>
             </div>
+
+            {/* Хроника бросков: последняя дюжина ночей за этим столом */}
+            {history.length > 0 && (
+              <div className="vtm-roll-hist">
+                <button
+                  className="vtm-roll-hist-head"
+                  onClick={() => setHistOpen((v) => !v)}
+                  aria-expanded={histOpen}
+                  title={histOpen ? "Свернуть хронику" : "Развернуть хронику"}
+                >
+                  <span className="vtm-roll-hist-thread" aria-hidden />
+                  <span className="vtm-roll-hist-title">Хроника бросков · {history.length}</span>
+                  <span className="vtm-roll-hist-caret" aria-hidden>{histOpen ? "▼" : "▶"}</span>
+                </button>
+                {histOpen && (
+                  <>
+                    <ol className="vtm-roll-hist-list">
+                      {history.map((h, i) => (
+                        <li
+                          key={h.id}
+                          className="vtm-rh-item"
+                          style={{ animationDelay: `${Math.min(i, 6) * 45}ms` }}
+                        >
+                          {h.kind === "pool" && h.roll ? (
+                            <>
+                              <span className={`vtm-rh-badge ${verdictShort(h.roll).tone}`}>{verdictShort(h.roll).word}</span>
+                              <span className="vtm-rh-body">
+                                <span className="vtm-rh-label">{h.label}</span>
+                                <span className="vtm-rh-dice">{diceCompact(h.roll)}</span>
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className={`vtm-rh-badge ${h.rouse?.ok ? "win" : "beast"}`}>
+                                {h.rouse?.ok ? "КРОВЬ · ОК" : "КРОВЬ · +1"}
+                              </span>
+                              <span className="vtm-rh-body">
+                                <span className="vtm-rh-label">Испытание Крови · {h.label}</span>
+                                <span className="vtm-rh-dice">d10 = {h.rouse?.value}</span>
+                              </span>
+                            </>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                    <button
+                      className="vtm-roll-hist-clear"
+                      onClick={clearHistory}
+                      title="Смыть хронику бросков"
+                    >
+                      ✕ смыть хронику
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

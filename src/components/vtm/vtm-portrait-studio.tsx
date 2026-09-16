@@ -24,16 +24,20 @@ interface Props {
   imageDataUrl: string | null;
   /** Имя Сородича — подпись в шапке студии */
   characterName?: string;
+  /** Портрет, уже вклеенный в досье, — показывается мини-окладом «как сейчас» */
+  currentPortrait?: string;
   onApply: (portrait: string, thumb: string) => void;
   onClose: () => void;
 }
 
-export function VtmPortraitStudio({ imageDataUrl, characterName, onApply, onClose }: Props) {
+export function VtmPortraitStudio({ imageDataUrl, characterName, currentPortrait, onApply, onClose }: Props) {
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0); // 0 | 90 | 180 | 270
   const [pan, setPan] = useState({ x: 0, y: 0 }); // пиксели в системе кадра, зажимаем slack'ом
   const [dragging, setDragging] = useState(false);
   const [working, setWorking] = useState(false);
+  // Подсказка «протяни фото»: живёт до первого перетаскивания в этой сессии студии
+  const [showDragHint, setShowDragHint] = useState(true);
 
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [imgReady, setImgReady] = useState(false);
@@ -182,6 +186,7 @@ export function VtmPortraitStudio({ imageDataUrl, characterName, onApply, onClos
   // ── Перетаскивание ──
   const onPointerDown = (e: React.PointerEvent) => {
     if (!imgReady) return;
+    setShowDragHint(false);
     try {
       (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     } catch {
@@ -271,6 +276,12 @@ export function VtmPortraitStudio({ imageDataUrl, characterName, onApply, onClos
               <span className="vtm-pstudio-corner bl" aria-hidden />
               <span className="vtm-pstudio-corner br" aria-hidden />
               {!imgReady && <span className="vtm-pstudio-loading">проявляем…</span>}
+              {imgReady && showDragHint && (
+                <span className="vtm-pstudio-draghint" aria-hidden>
+                  <span className="vtm-pstudio-draghint-hand">✋</span>
+                  протяни фото
+                </span>
+              )}
             </div>
 
             {/* Управление поворотом — колонкой справа */}
@@ -319,6 +330,14 @@ export function VtmPortraitStudio({ imageDataUrl, characterName, onApply, onClos
               aria-label="Масштаб фото"
             />
           </div>
+
+          {/* Мини-оклад «как вклеено сейчас» — ориентир при повторном кадрировании */}
+          {currentPortrait && (
+            <div className="vtm-pstudio-ref" role="img" aria-label="Портрет, вклеенный в досье сейчас">
+              <img src={currentPortrait} alt="" className="vtm-pstudio-ref-img" />
+              <span className="vtm-pstudio-ref-cap">как вклеено сейчас</span>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2 pt-1">
             <button onClick={apply} disabled={!imgReady || working} className="vtm-btn vtm-btn-blood flex-1 justify-center py-2.5">

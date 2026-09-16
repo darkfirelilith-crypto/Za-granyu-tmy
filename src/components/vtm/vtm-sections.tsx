@@ -221,7 +221,17 @@ export function DossierSection({
                   ✕
                 </button>
               )}
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onPortrait(e.target.files?.[0])} />
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  onPortrait(e.target.files?.[0]);
+                  // сброс значения: тот же файл можно выбрать повторно (пересъёмка кадра)
+                  e.target.value = "";
+                }}
+              />
             </div>
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="block">
@@ -631,6 +641,7 @@ export function DossierSection({
       <VtmPortraitStudio
         imageDataUrl={studioImage}
         characterName={info.name}
+        currentPortrait={info.portrait || undefined}
         onApply={(portrait, thumb) => {
           mutate((d) => {
             d.info.portrait = portrait;
