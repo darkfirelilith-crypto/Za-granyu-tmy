@@ -229,7 +229,7 @@ const ENTRY_TITLE_LIMIT = 120;
 const ENTRY_CONTENT_LIMIT = 3000;
 
 /** Счётчик символов: меркнет в норме, занимается янтарём у предела, краснеет на нём. */
-function CharCount({ value, limit, className = "" }: { value: string; limit: number; className?: string }) {
+export function CharCount({ value, limit, className = "" }: { value: string; limit: number; className?: string }) {
   const len = value.length;
   const near = len >= Math.round(limit * 0.9);
   const full = len >= limit;
@@ -285,6 +285,21 @@ export function NotesSection({
 }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  // Поиск и фильтр по журналу (записей становится много — Кровь требует порядка)
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "hunt" | "note">("all");
+
+  const entries = data.notes.entries;
+  const q = query.trim().toLowerCase();
+  const filtered = entries.filter((n) => {
+    if (filter === "hunt" && n.title !== "Новая охота") return false;
+    if (filter === "note" && n.title === "Новая охота") return false;
+    if (!q) return true;
+    return (
+      (n.title || "").toLowerCase().includes(q) ||
+      n.content.toLowerCase().includes(q)
+    );
+  });
 
   const addNote = () => {
     const c = content.trim();
@@ -363,13 +378,65 @@ export function NotesSection({
         <section className="vtm-panel" aria-label="Записи журнала">
           <div className="vtm-panel-head">
             <span className="vtm-label text-[0.7rem] text-[#d6a840]">Записи</span>
-            <span className="vtm-hint !text-[0.6rem] ml-auto">{data.notes.entries.length}</span>
+            <span className="vtm-hint !text-[0.6rem] ml-auto">
+              {(query.trim() || filter !== "all")
+                ? `${filtered.length} из ${entries.length}`
+                : entries.length}
+            </span>
+          </div>
+          {/* Поиск + фильтр */}
+          <div className="vtm-jsearch-bar">
+            <div className="vtm-jsearch-wrap">
+              <span className="vtm-jsearch-icon" aria-hidden>⌕</span>
+              <input
+                className="vtm-jsearch"
+                value={query}
+                onChange={(e) => setQuery(e.target.value.slice(0, 80))}
+                placeholder="найти ночь: имя, догадка, долг…"
+                aria-label="Поиск по журналу ночи"
+              />
+              {query && (
+                <button className="vtm-jsearch-clear" onClick={() => setQuery("")} aria-label="Очистить поиск">
+                  ✕
+                </button>
+              )}
+            </div>
+            <div className="vtm-jchips" role="group" aria-label="Фильтр записей">
+              <button
+                className={`vtm-jchip ${filter === "all" ? "active" : ""}`}
+                onClick={() => setFilter("all")}
+                aria-pressed={filter === "all"}
+              >
+                все
+              </button>
+              <button
+                className={`vtm-jchip ${filter === "hunt" ? "active" : ""}`}
+                onClick={() => setFilter("hunt")}
+                aria-pressed={filter === "hunt"}
+                title="Только охоты"
+              >
+                🌙 охоты
+              </button>
+              <button
+                className={`vtm-jchip ${filter === "note" ? "active" : ""}`}
+                onClick={() => setFilter("note")}
+                aria-pressed={filter === "note"}
+                title="Только записи"
+              >
+                🖋 записи
+              </button>
+            </div>
           </div>
           <div className="p-3 space-y-2 max-h-[620px] overflow-y-auto vtm-scroll">
-            {data.notes.entries.length === 0 && (
+            {entries.length === 0 && (
               <p className="vtm-hint text-center py-6">Журнал чист. Ночь только началась.</p>
             )}
-            {data.notes.entries.map((note) => (
+            {entries.length > 0 && filtered.length === 0 && (
+              <p className="vtm-hint text-center py-6">
+                На эту нить не намотано ничего. Кровь подсказывает: попробуй другой запрос.
+              </p>
+            )}
+            {filtered.map((note) => (
               <article key={note.id} className="vtm-frame rounded-md p-3 space-y-1.5">
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">

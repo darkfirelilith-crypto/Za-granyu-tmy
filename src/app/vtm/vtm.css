@@ -1801,3 +1801,443 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
   .vtm-formula-pick { padding: 0.45rem 0.5rem; gap: 0.45rem; }
   .vtm-formula-pick .vtm-formula-vial { width: 23px; height: 26px; font-size: 0.75rem; }
 }
+
+/* ============================================================
+   РАУНД 9 — ПОРТРЕТНАЯ СТУДИЯ, ВОССТАНОВЛЕНИЕ (JSON/MARKDOWN),
+   ПОИСК ПО ЖУРНАЛУ НОЧИ
+   ============================================================ */
+
+/* ---------- Портретная студия ---------- */
+
+.vtm-pstudio {
+  position: relative;
+  background: linear-gradient(160deg, #1f0e12 0%, #170a0d 55%, #120609 100%);
+  border: 1px solid var(--vtm-line);
+  border-radius: 10px;
+  box-shadow:
+    0 1px 0 rgba(217, 199, 182, 0.05) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    0 0 46px rgba(138, 26, 29, 0.17);
+  animation: vtm-studio-in 0.38s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  outline: none;
+}
+
+@keyframes vtm-studio-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.965); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.vtm-pstudio-head {
+  position: relative;
+  padding: 1rem 1.1rem 0.85rem;
+  border-bottom: 1px solid var(--vtm-line);
+  background:
+    radial-gradient(ellipse 90% 130% at 12% 0%, rgba(138, 26, 29, 0.14), transparent 60%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.28), transparent);
+  border-radius: 10px 10px 0 0;
+}
+
+.vtm-pstudio-close {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--vtm-line);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--vtm-bone-dim);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.vtm-pstudio-close:hover,
+.vtm-pstudio-close:focus-visible {
+  color: var(--vtm-bone);
+  border-color: var(--vtm-blood-bright);
+  transform: rotate(90deg);
+  box-shadow: 0 0 12px rgba(194, 43, 48, 0.35);
+}
+
+/* Кадр 7:9 — оклад с двойной кромкой и готическими углами */
+.vtm-pstudio-frame {
+  position: relative;
+  width: 280px;
+  height: 360px;
+  border: 1px solid var(--vtm-line);
+  outline: 1px solid rgba(168, 134, 61, 0.35);
+  outline-offset: 5px;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: grab;
+  background: #0a0506;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6), 0 0 22px rgba(138, 26, 29, 0.14);
+  touch-action: none; /* перетаскивание пальцем работает, страница не скроллит */
+  user-select: none;
+}
+.vtm-pstudio-frame.is-drag {
+  cursor: grabbing;
+  outline-color: rgba(214, 168, 64, 0.6);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6), 0 0 30px rgba(194, 43, 48, 0.3);
+}
+.vtm-pstudio-frame:focus-within {
+  outline-color: rgba(214, 168, 64, 0.55);
+}
+
+.vtm-pstudio-canvas {
+  display: block;
+  width: 280px;
+  height: 360px;
+}
+
+/* Готические уголки оклада */
+.vtm-pstudio-corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  border-color: var(--vtm-gold-bright);
+  border-style: solid;
+  border-width: 0;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 4px rgba(214, 168, 64, 0.45));
+}
+.vtm-pstudio-corner.tl { top: 5px; left: 5px; border-top-width: 2px; border-left-width: 2px; }
+.vtm-pstudio-corner.tr { top: 5px; right: 5px; border-top-width: 2px; border-right-width: 2px; }
+.vtm-pstudio-corner.bl { bottom: 5px; left: 5px; border-bottom-width: 2px; border-left-width: 2px; }
+.vtm-pstudio-corner.br { bottom: 5px; right: 5px; border-bottom-width: 2px; border-right-width: 2px; }
+
+.vtm-pstudio-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--vtm-ash);
+  animation: vtm-flicker 1.6s ease-in-out infinite;
+}
+
+/* Слайдер зума — дорожка крови, капля-бегунок */
+.vtm-pstudio-zoom {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--vtm-blood-deep), var(--vtm-blood-bright));
+  outline: none;
+  cursor: pointer;
+}
+.vtm-pstudio-zoom::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50% 50% 50% 0;
+  background: radial-gradient(circle at 35% 35%, #e8636b, var(--vtm-blood) 60%);
+  border: 1px solid rgba(217, 199, 182, 0.35);
+  transform: rotate(-45deg);
+  box-shadow: 0 0 10px rgba(194, 43, 48, 0.55);
+  cursor: grab;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.vtm-pstudio-zoom::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 16px rgba(232, 99, 107, 0.75);
+  transform: rotate(-45deg) scale(1.12);
+}
+.vtm-pstudio-zoom::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50% 50% 50% 0;
+  background: radial-gradient(circle at 35% 35%, #e8636b, var(--vtm-blood) 60%);
+  border: 1px solid rgba(217, 199, 182, 0.35);
+  transform: rotate(-45deg);
+  box-shadow: 0 0 10px rgba(194, 43, 48, 0.55);
+  cursor: grab;
+}
+.vtm-pstudio-zoom:focus-visible {
+  box-shadow: 0 0 0 2px rgba(214, 168, 64, 0.4);
+}
+
+/* ---------- Диалог «Восстановить» (JSON / Markdown) ---------- */
+
+.vtm-import-dlg {
+  position: relative;
+  background: linear-gradient(160deg, #1f0e12 0%, #170a0d 55%, #120609 100%);
+  border: 1px solid var(--vtm-line);
+  border-radius: 10px;
+  box-shadow:
+    0 1px 0 rgba(217, 199, 182, 0.05) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    0 0 46px rgba(122, 74, 140, 0.14);
+  animation: vtm-studio-in 0.38s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.vtm-import-head {
+  position: relative;
+  padding: 1rem 1.1rem 0.85rem;
+  border-bottom: 1px solid var(--vtm-line);
+  background:
+    radial-gradient(ellipse 90% 130% at 88% 0%, rgba(122, 74, 140, 0.14), transparent 60%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.28), transparent);
+  border-radius: 10px 10px 0 0;
+}
+
+.vtm-import-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--vtm-line);
+  background: rgba(0, 0, 0, 0.3);
+}
+.vtm-import-tab {
+  flex: 1;
+  padding: 0.65rem 0.5rem;
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vtm-bone-dim);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.vtm-import-tab:hover { color: var(--vtm-bone); background: rgba(138, 26, 29, 0.08); }
+.vtm-import-tab.active {
+  color: var(--vtm-gold-bright);
+  border-bottom-color: var(--vtm-blood-bright);
+  background: linear-gradient(to bottom, rgba(138, 26, 29, 0.14), transparent);
+  text-shadow: 0 0 10px rgba(214, 168, 64, 0.35);
+}
+
+/* Зона броска файла */
+.vtm-import-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 2rem 1rem;
+  border: 1px dashed var(--vtm-line);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+}
+.vtm-import-drop.over {
+  border-color: var(--vtm-gold-bright);
+  background: rgba(214, 168, 64, 0.06);
+  box-shadow: 0 0 26px rgba(214, 168, 64, 0.22) inset;
+}
+
+/* Поле вставки Markdown */
+.vtm-import-md {
+  width: 100%;
+  min-height: 200px;
+  resize: vertical;
+  background: rgba(0, 0, 0, 0.44);
+  border: 1px solid var(--vtm-line);
+  border-radius: 6px;
+  color: var(--vtm-bone);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.74rem;
+  line-height: 1.55;
+  padding: 0.6rem 0.7rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.vtm-import-md:focus {
+  border-color: var(--vtm-violet);
+  box-shadow: 0 0 0 1px rgba(122, 74, 140, 0.4), 0 0 18px rgba(122, 74, 140, 0.18);
+}
+.vtm-import-md::placeholder { color: rgba(110, 90, 83, 0.75); }
+
+.vtm-btn-md-chip {
+  display: inline-block;
+  padding: 0.05em 0.45em;
+  border: 1px solid rgba(122, 74, 140, 0.55);
+  border-radius: 3px;
+  color: var(--vtm-violet-bright);
+  font-size: 0.9em;
+}
+
+/* Превью разбора */
+.vtm-import-preview {
+  border: 1px solid var(--vtm-line);
+  border-left: 3px solid var(--vtm-blood);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.28);
+  padding: 0.85rem 0.9rem;
+  animation: vtm-studio-in 0.3s ease-out;
+}
+.vtm-import-preview-head {
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--vtm-gold);
+  margin: 0 0 0.45rem;
+}
+.vtm-import-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.vtm-import-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.14em 0.6em;
+  border: 1px solid rgba(138, 26, 29, 0.65);
+  border-radius: 999px;
+  background: linear-gradient(to bottom, rgba(138, 26, 29, 0.22), rgba(92, 16, 20, 0.22));
+  color: var(--vtm-bone);
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  animation: vtm-chip-in 0.3s ease-out backwards;
+}
+.vtm-import-chip:nth-child(2n) { border-color: rgba(168, 134, 61, 0.5); background: linear-gradient(to bottom, rgba(168, 134, 61, 0.16), rgba(92, 16, 20, 0.18)); }
+.vtm-import-chip.unknown {
+  border-color: rgba(122, 74, 140, 0.65);
+  background: linear-gradient(to bottom, rgba(122, 74, 140, 0.2), rgba(58, 34, 70, 0.2));
+  color: var(--vtm-violet-bright);
+}
+@keyframes vtm-chip-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.vtm-import-warn {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  color: var(--vtm-bone-dim);
+  font-size: 0.72rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* ---------- Поиск по журналу ночи ---------- */
+
+.vtm-jsearch-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem 0.55rem;
+  border-bottom: 1px solid var(--vtm-line-soft);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.22), transparent);
+}
+
+.vtm-jsearch-wrap {
+  position: relative;
+  flex: 1 1 150px;
+  min-width: 130px;
+}
+.vtm-jsearch-icon {
+  position: absolute;
+  left: 0.55rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--vtm-ash);
+  font-size: 0.85rem;
+  pointer-events: none;
+  transition: color 0.2s;
+}
+.vtm-jsearch {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid var(--vtm-line);
+  border-radius: 4px;
+  color: var(--vtm-bone);
+  font-family: var(--vtm-font-body), Georgia, serif;
+  font-size: 0.8rem;
+  padding: 0.38rem 1.7rem 0.38rem 1.8rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.vtm-jsearch::placeholder { color: rgba(110, 90, 83, 0.8); font-style: italic; }
+.vtm-jsearch:focus {
+  border-color: var(--vtm-blood-bright);
+  box-shadow: 0 0 0 1px rgba(194, 43, 48, 0.35), 0 0 14px rgba(194, 43, 48, 0.16);
+}
+.vtm-jsearch:focus ~ .vtm-jsearch-icon,
+.vtm-jsearch-wrap:focus-within .vtm-jsearch-icon { color: var(--vtm-blood-bright); }
+
+.vtm-jsearch-clear {
+  position: absolute;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--vtm-bone-dim);
+  font-size: 0.55rem;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+.vtm-jsearch-clear:hover { color: var(--vtm-bone); background: rgba(138, 26, 29, 0.5); }
+
+.vtm-jchips {
+  display: flex;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+.vtm-jchip {
+  padding: 0.22em 0.66em;
+  border: 1px solid var(--vtm-line);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--vtm-bone-dim);
+  font-family: var(--vtm-font-labels), sans-serif;
+  font-size: 0.56rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.vtm-jchip:hover {
+  color: var(--vtm-bone);
+  border-color: var(--vtm-gold);
+  transform: translateY(-1px);
+}
+.vtm-jchip.active {
+  color: var(--vtm-gold-bright);
+  border-color: var(--vtm-blood-bright);
+  background: linear-gradient(to bottom, rgba(138, 26, 29, 0.3), rgba(92, 16, 20, 0.3));
+  box-shadow: 0 0 12px rgba(194, 43, 48, 0.3), 0 1px 0 rgba(217, 199, 182, 0.08) inset;
+  text-shadow: 0 0 8px rgba(214, 168, 64, 0.3);
+}
+.vtm-jchip:focus-visible {
+  outline: 1px solid rgba(214, 168, 64, 0.6);
+  outline-offset: 2px;
+}
+
+/* ---------- Мобильная адаптация раунда 9 ---------- */
+
+@media (max-width: 640px) {
+  .vtm-pstudio-frame { width: 218px; height: 280px; }
+  .vtm-pstudio-canvas { width: 218px; height: 280px; }
+  .vtm-pstudio-corner { width: 12px; height: 12px; }
+  .vtm-import-tab { font-size: 0.55rem; letter-spacing: 0.08em; padding: 0.55rem 0.35rem; }
+  .vtm-jsearch-bar { padding: 0.5rem 0.6rem 0.5rem; }
+  .vtm-jsearch-wrap { flex-basis: 100%; }
+  .vtm-jchip { padding: 0.26em 0.6em; font-size: 0.54rem; }
+}
+
+/* ---------- Reduced motion (раунд 9) ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .vtm-pstudio, .vtm-import-dlg, .vtm-import-preview, .vtm-import-chip { animation: none !important; }
+  .vtm-pstudio-close, .vtm-jchip, .vtm-import-chip { transition: none !important; }
+  .vtm-pstudio-loading { animation: none !important; }
+}

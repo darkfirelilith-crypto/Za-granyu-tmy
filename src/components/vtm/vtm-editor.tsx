@@ -11,6 +11,8 @@ import { DisciplinesSection, AdvantagesSection } from "@/components/vtm/vtm-sect
 import { GearSection, NotesSection } from "@/components/vtm/vtm-sections3";
 import { CodexSection } from "@/components/vtm/vtm-codex";
 import { VtmDicePanel, setVtmSheetHooks, vtmRollAndShow } from "@/components/vtm/vtm-dice";
+import { VtmImportDialog } from "@/components/vtm/vtm-import-dialog";
+import { applyParsedMd, MdParseResult } from "@/lib/vtm-md-import";
 import { VtmReturnPortal } from "@/components/vtm/portal-transition";
 import { VtmPrintSheet } from "@/components/vtm/vtm-print-sheet";
 import { VtmPrintSummary } from "@/components/vtm/vtm-print-summary";
@@ -84,7 +86,6 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
   const statusRef = useRef<SaveStatus>("idle");
   const conflictRef = useRef<ConflictInfo | null>(null);
   const syncedAtRef = useRef<string | null>(null);
-  const importRef = useRef<HTMLInputElement>(null);
   // были ли локальные правки с момента открытия листа (для принятия фоновой догрузки)
   const localEditRef = useRef(false);
   // Сериализация автосейва: пока один PUT в полёте, следующие правки копятся в
@@ -324,12 +325,27 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
         localEditRef.current = true; // данные заменены вручную — фоновой догрузке не верим
         setData(normalized);
         save(normalized, normalized.info.name || "Безымянный Сородич");
+        setImportOpen(false);
         toast.success("Лист восстановлен из архива", { description: "Проверь данные — ночь не прощает описок." });
       } catch (e: any) {
         toast.error("Свиток повреждён", { description: e.message });
       }
     };
     reader.readAsText(file);
+  };
+
+  // ===== Диалог восстановления (JSON-файл / Markdown-сводка) =====
+  const [importOpen, setImportOpen] = useState(false);
+  const applyMarkdown = (result: MdParseResult) => {
+    if (!data) return;
+    localEditRef.current = true;
+    mutate((draft) => {
+      applyParsedMd(draft, result.fields);
+    });
+    setImportOpen(false);
+    toast.success("Сводка влилась в лист", {
+      description: `Обновлено полей: ${result.found.length}. Кровь помнит оба источника.`,
+    });
   };
 
   if (isLoading || !data || !derived) {
@@ -397,6 +413,12 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
           </div>
         </div>
       )}
+      <VtmImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onJsonFile={(file) => importSheet(file)}
+        onApplyMarkdown={applyMarkdown}
+      />
       <div className="vtm-screen">
       <div className="max-w-7xl mx-auto px-3 md:px-6 py-6 md:py-8 space-y-4">
         {/* Шапка листа */}
@@ -473,17 +495,10 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
             >
               Ⓜ<span className="hidden min-[480px]:inline"> МД</span>
             </button>
-            <input
-              ref={importRef}
-              type="file"
-              accept="application/json,.json"
-              className="hidden"
-              onChange={(e) => importSheet(e.target.files?.[0])}
-            />
             <button
-              onClick={() => importRef.current?.click()}
+              onClick={() => setImportOpen(true)}
               className="vtm-btn vtm-btn-ghost !py-1.5 !px-2 text-xs"
-              title="Восстановить лист из файла (текущие данные будут заменены)"
+              title="Восстановить из файла (JSON) или влить «Сводку» из Obsidian (Markdown)"
               aria-label="Импорт листа"
             >
               ⇧<span className="hidden min-[480px]:inline"> Восстановить</span>

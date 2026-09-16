@@ -24,6 +24,8 @@ import {
 } from "@/lib/vtm-data";
 import { DerivedStats, bpHint } from "@/lib/vtm-calc";
 import { rollRouse, useVtmDice } from "@/components/vtm/vtm-dice";
+import { VtmPortraitStudio } from "@/components/vtm/vtm-portrait-studio";
+import { CharCount } from "@/components/vtm/vtm-sections3";
 
 export function AutoTextarea({
   value,
@@ -32,6 +34,7 @@ export function AutoTextarea({
   placeholder,
   ariaLabel,
   minHeight = 80,
+  maxLength,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -39,6 +42,7 @@ export function AutoTextarea({
   placeholder?: string;
   ariaLabel?: string;
   minHeight?: number;
+  maxLength?: number;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -63,6 +67,7 @@ export function AutoTextarea({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       aria-label={ariaLabel}
+      maxLength={maxLength}
       className={`vtm-input vtm-autogrow ${className}`}
       style={{ minHeight: 0 }}
       rows={1}
@@ -122,6 +127,10 @@ function Dots({
 // ДОСЬЕ
 // ============================================================
 
+// Лимиты полей биографии (счётчики единообразны с журналом ночи)
+const BIO_DESC_LIMIT = 700;
+const BIO_HISTORY_LIMIT = 2000;
+
 export function DossierSection({
   data,
   mutate,
@@ -135,37 +144,22 @@ export function DossierSection({
   const clan = CLAN_BY_ID.get(info.clan);
   const predator = PREDATOR_BY_ID.get(info.predator);
 
-  // Портрет: сжатие до 480px + миниатюра 96px
+  // Портрет: файл → Портретная студия (зум/кадрирование) → оклад 7:9 + миниатюра
   const fileRef = useRef<HTMLInputElement>(null);
+  const [studioImage, setStudioImage] = useState<string | null>(null);
   const onPortrait = (file: File | undefined) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast.error("Это не изображение");
       return;
     }
+    if (file.size > 12 * 1024 * 1024) {
+      toast.error("Слишком тяжёлый негатив", { description: "До 12 МБ — Кровь хранит бережно, но не бесконечно." });
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const scale = Math.min(1, 480 / Math.max(img.width, img.height));
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const portrait = canvas.toDataURL("image/jpeg", 0.82);
-        const tCanvas = document.createElement("canvas");
-        const tScale = Math.min(1, 96 / Math.max(img.width, img.height));
-        tCanvas.width = Math.round(img.width * tScale);
-        tCanvas.height = Math.round(img.height * tScale);
-        tCanvas.getContext("2d")?.drawImage(img, 0, 0, tCanvas.width, tCanvas.height);
-        const thumb = tCanvas.toDataURL("image/jpeg", 0.7);
-        mutate((d) => {
-          d.info.portrait = portrait;
-          d.info.portraitThumb = thumb;
-        });
-      };
-      img.src = reader.result as string;
-    };
+    reader.onload = () => setStudioImage(reader.result as string);
+    reader.onerror = () => toast.error("Не удалось прочитать файл");
     reader.readAsDataURL(file);
   };
 
@@ -204,8 +198,20 @@ export function DossierSection({
                 className="absolute inset-0 flex items-end justify-center pb-1.5 bg-gradient-to-t from-black/80 via-transparent opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                 aria-label="Вклеить портрет"
               >
-                <span className="vtm-label text-[0.55rem] text-[#d9c7b6]">Вклеить фото</span>
+                <span className="vtm-label text-[0.55rem] text-[#d9c7b6]">
+                  {info.portrait ? "Переснять" : "Вклеить фото"}
+                </span>
               </button>
+              {info.portrait && (
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="absolute top-1 left-1 vtm-btn vtm-btn-ghost !p-1 !text-[0.6rem] opacity-0 group-hover:opacity-100"
+                  aria-label="Кадрировать заново"
+                  title="Кадрировать заново"
+                >
+                  ⛶
+                </button>
+              )}
               {info.portrait && (
                 <button
                   onClick={() => mutate((d) => { d.info.portrait = ""; d.info.portraitThumb = ""; })}
@@ -588,30 +594,53 @@ export function DossierSection({
           </div>
           <div className="p-4 space-y-3">
             <div>
-              <span className="vtm-label text-[0.6rem] text-[#a68d80]">Внешность</span>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Внешность</span>
+                <CharCount value={info.description} limit={BIO_DESC_LIMIT} />
+              </div>
               <div className="mt-1">
                 <AutoTextarea
                   value={info.description}
-                  onChange={(v) => mutate((d) => { d.info.description = v; })}
+                  onChange={(v) => mutate((d) => { d.info.description = v.slice(0, BIO_DESC_LIMIT); })}
                   placeholder="что видят смертные, когда ты позволяешь себя рассмотреть"
                   ariaLabel="Внешность"
+                  maxLength={BIO_DESC_LIMIT}
                 />
               </div>
             </div>
             <div>
-              <span className="vtm-label text-[0.6rem] text-[#a68d80]">Предыстория</span>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="vtm-label text-[0.6rem] text-[#a68d80]">Предыстория</span>
+                <CharCount value={info.history} limit={BIO_HISTORY_LIMIT} />
+              </div>
               <div className="mt-1">
                 <AutoTextarea
                   value={info.history}
-                  onChange={(v) => mutate((d) => { d.info.history = v; })}
+                  onChange={(v) => mutate((d) => { d.info.history = v.slice(0, BIO_HISTORY_LIMIT); })}
                   placeholder="смертная жизнь, Становление и всё, что после"
                   ariaLabel="Предыстория"
+                  maxLength={BIO_HISTORY_LIMIT}
                 />
               </div>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Портретная студия: зум, перетаскивание, повороты, виньетка */}
+      <VtmPortraitStudio
+        imageDataUrl={studioImage}
+        characterName={info.name}
+        onApply={(portrait, thumb) => {
+          mutate((d) => {
+            d.info.portrait = portrait;
+            d.info.portraitThumb = thumb;
+          });
+          setStudioImage(null);
+          toast.success("Портрет вклеен в досье", { description: "Оклад вырезан, миниатюра для архива готова." });
+        }}
+        onClose={() => setStudioImage(null)}
+      />
     </div>
   );
 }
