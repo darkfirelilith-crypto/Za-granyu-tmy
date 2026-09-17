@@ -285,3 +285,92 @@ export function W5PrintSummary({ data }: { data: W5SheetData }) {
     </div>
   );
 }
+
+/**
+ * «Досье для стола» (раунд 23) — печатная карточка из поповера «Досье Гароу»:
+ * одна страница, только то, что Рассказчику нужно под рукой — витальные треки,
+ * Слава с рангом, девять лун, Дары/Обряды, стремления и памятка обликов.
+ */
+export function W5PrintDossier({ data }: { data: W5SheetData }) {
+  const info = data.info;
+  const tribe = W5_TRIBE_BY_ID.get(info.tribe);
+  const auspice = W5_AUSPICE_BY_ID.get(info.auspice);
+  const breed = W5_BREEDS.find((b) => b.id === info.breed);
+  const healthMax = w5HealthMax(data);
+  const wpMax = w5WillpowerMax(data);
+  const rank = w5Rank(data.trackers.glory, data.trackers.honor, data.trackers.wisdom);
+  const renown = data.trackers.glory + data.trackers.honor + data.trackers.wisdom;
+  const attrPairs: { key: keyof W5SheetData["attributes"]; label: string }[] = [
+    { key: "str", label: "Сила" }, { key: "dex", label: "Ловкость" }, { key: "sta", label: "Стойкость" },
+    { key: "cha", label: "Обаяние" }, { key: "man", label: "Манипуляция" }, { key: "com", label: "Самообладание" },
+    { key: "int", label: "Интеллект" }, { key: "wit", label: "Смекалка" }, { key: "res", label: "Упорство" },
+  ];
+  const aspirations = data.aspirations.filter((a) => a.text);
+  const pack = info.pack || "";
+  return (
+    <div className="vtm-print-doc vtm-print-sum">
+      <div className="vtm-print-head">
+        {info.portrait && <img src={info.portrait} alt="" className="vtm-print-portrait" />}
+        <div>
+          <p style={{ fontSize: "7.5pt", letterSpacing: "0.35em", margin: "0 0 4px" }}>ЛУННЫЙ НАРОД · ДОСЬЕ ДЛЯ СТОЛА</p>
+          <h1 className="vtm-print-title">Досье Гароу</h1>
+          <p className="vtm-print-name">{info.name || "Безымянный Гароу"}</p>
+          <p className="vtm-print-line">
+            {tribe ? tribe.name : "племя не выбрано"}
+            {auspice ? ` · ${auspice.name}` : ""}
+            {breed ? ` · ${breed.name}` : ""}
+            {pack ? ` · стая: ${pack}` : ""}
+            {info.concept ? ` · ${info.concept}` : ""}
+          </p>
+        </div>
+      </div>
+
+      <p className="vtm-print-section">Витальное</p>
+      <p className="vtm-print-line">
+        <b>Ярость:</b> {data.trackers.rage}/5{data.trackers.wolfLost ? " · ВОЛК ПОТЕРЯН" : ""}{data.trackers.harano ? " · харано" : ""}
+      </p>
+      <p className="vtm-print-line">
+        <b>Здоровье:</b> {trackBoxes(healthMax, data.trackers.healthSup, data.trackers.healthAgg)}
+      </p>
+      <p className="vtm-print-line">
+        <b>Воля:</b> {trackBoxes(wpMax, data.trackers.wpSup, 0)}
+      </p>
+      <p className="vtm-print-line">
+        <b>Слава {renown} — {rank.title}:</b> Гордец {dots(data.trackers.glory)} · Честь {dots(data.trackers.honor)} · Мудрость {dots(data.trackers.wisdom)}
+      </p>
+
+      <p className="vtm-print-section">Девять лун</p>
+      <div className="vtm-print-grid">
+        {attrPairs.map(({ key, label }) => (
+          <span key={key} className="vtm-print-item"><b>{label}</b> {dots(data.attributes[key])}</span>
+        ))}
+      </div>
+
+      {data.gifts.length > 0 && (
+        <>
+          <p className="vtm-print-section">Дары</p>
+          <p className="vtm-print-line">
+            {data.gifts.map((g) => `${g.name} (${g.level} ур.)`).join(" · ")}
+          </p>
+        </>
+      )}
+      {data.rites.length > 0 && (
+        <p className="vtm-print-line" style={{ marginTop: 4 }}>
+          <b>Обряды:</b> {data.rites.map((r) => `${r.name} (${r.level} ур.)`).join(" · ")}
+        </p>
+      )}
+
+      {aspirations.length > 0 && (
+        <p className="vtm-print-line" style={{ marginTop: 4 }}>
+          <b>Стремления:</b> {aspirations.map((a) => a.text).join(" | ")}
+        </p>
+      )}
+      {info.quote && <p className="vtm-print-line" style={{ fontStyle: "italic", marginTop: 4 }}>{info.quote}</p>}
+
+      <div className="vtm-print-footer">
+        <span>Памятка пяти обликов: Хишу — человек; Глабро — почти человек (−1 Воля за ход); Крим — волк (−2 Воли, но Ярость лечит); Хиспо — зверь-предок (−1); Урхан — воин Луны (−1 за ход, 1 Воля за ход в Криносе). · </span>
+        <span>«Колесо повернётся, как должно.»</span>
+      </div>
+    </div>
+  );
+}

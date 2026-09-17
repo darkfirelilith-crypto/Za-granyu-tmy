@@ -10,7 +10,7 @@ import { DossierSection, AttributesSection, SkillsSection } from "@/components/v
 import { DisciplinesSection, AdvantagesSection, HistoriesSection } from "@/components/vtm/vtm-sections2";
 import { GearSection, NotesSection } from "@/components/vtm/vtm-sections3";
 import { CodexSection } from "@/components/vtm/vtm-codex";
-import { VtmDicePanel, setVtmSheetHooks, vtmRollAndShow } from "@/components/vtm/vtm-dice";
+import { VtmDicePanel, setVtmSheetHooks, vtmRollAndShow, useVtmDice } from "@/components/vtm/vtm-dice";
 import { VtmImportDialog } from "@/components/vtm/vtm-import-dialog";
 import { VtmHelpDialog } from "@/components/vtm/vtm-help";
 import { applyParsedMd, MdParseResult } from "@/lib/vtm-md-import";
@@ -20,6 +20,7 @@ import { VtmPrintSummary } from "@/components/vtm/vtm-print-summary";
 import { buildSummaryText } from "@/lib/vtm-summary-text";
 import { buildSummaryMarkdown } from "@/lib/vtm-summary-md";
 import { vtmFetch } from "@/lib/vtm-api";
+import { vtmUid } from "@/lib/vtm-id";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error" | "conflict";
 
@@ -226,10 +227,17 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
     [scheduleSave]
   );
 
+  // Сцена панели костей живёт per-sheet: прячем/достаём счётчики сцены
+  // (Голод/Воля) по id листа — уход в архив и вкладки её не стирают.
+  useEffect(() => {
+    useVtmDice.getState().bindSheet(sheetId);
+    return () => useVtmDice.getState().bindSheet(null);
+  }, [sheetId]);
+
   // Хуки для панели костей: журнал бросков и Голод
   useEffect(() => {
     setVtmSheetHooks({
-      logRoll: (text) => mutate((d) => { d.rollLog = [{ id: `roll-${Date.now().toString(36)}`, text, ts: new Date().toISOString() }, ...d.rollLog].slice(0, 60); }),
+      logRoll: (text) => mutate((d) => { d.rollLog = [{ id: vtmUid("roll"), text, ts: new Date().toISOString() }, ...d.rollLog].slice(0, 60); }),
       addHunger: (n = 1) => mutate((d) => { d.trackers.hunger = Math.min(5, d.trackers.hunger + n); }),
       spendWillpower: () => {
         if (!data) return false;

@@ -5,6 +5,7 @@
 // ============================================================
 
 import { LORESHEET_BY_ID } from "./vtm-histories";
+import { vtmUid } from "./vtm-id";
 
 // ---------- Типы ----------
 
@@ -1401,7 +1402,7 @@ export const XP_COSTS = {
 export function pushXpLog(d: VtmSheetData, text: string): void {
   if (d.xpLog[0]?.text === text) return; // без дублей подряд
   d.xpLog = [
-    { id: `xp-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e5).toString(36)}`, text, ts: new Date().toISOString() },
+    { id: vtmUid("xp"), text, ts: new Date().toISOString() },
     ...d.xpLog,
   ].slice(0, 40);
 }
@@ -1572,7 +1573,7 @@ export function normalizeSheet(input: unknown): VtmSheetData {
     base.advantages = raw.advantages
       .filter((a: any) => a && typeof a === "object")
       .map((a: any, idx: number) => ({
-        id: asString(a.id) || `adv-${idx}-${Date.now().toString(36)}`,
+        id: asString(a.id) || vtmUid(`adv-${idx}`),
         name: asString(a.name) || "Преимущество",
         kind: (["background", "merit", "flaw", "thinblood"].includes(a.kind) ? a.kind : "merit") as VtmAdvantageEntry["kind"],
         rating: clampInt(a.rating, 0, 5),
@@ -1626,7 +1627,7 @@ export function normalizeSheet(input: unknown): VtmSheetData {
       base.gear.items = g.items
         .filter((it: any) => it && typeof it === "object")
         .map((it: any, idx: number) => ({
-          id: asString(it.id) || `item-${idx}-${Date.now().toString(36)}`,
+          id: asString(it.id) || vtmUid(`item-${idx}`),
           name: asString(it.name),
           count: asString(it.count),
           note: asString(it.note),
@@ -1642,7 +1643,7 @@ export function normalizeSheet(input: unknown): VtmSheetData {
       base.notes.entries = n.entries
         .filter((e: any) => e && typeof e === "object")
         .map((e: any, idx: number) => ({
-          id: asString(e.id) || `note-${idx}-${Date.now().toString(36)}`,
+          id: asString(e.id) || vtmUid(`note-${idx}`),
           title: asString(e.title),
           content: asString(e.content),
           date: asString(e.date),

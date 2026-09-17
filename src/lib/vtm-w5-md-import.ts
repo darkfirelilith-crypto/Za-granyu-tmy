@@ -21,6 +21,7 @@ import {
   W5_FORM_BY_ID,
 } from "./vtm-w5data";
 import { SKILL_LIBRARY } from "./vtm-data";
+import { vtmUid } from "./vtm-id";
 
 // ---------- Типы результата ----------
 
@@ -500,7 +501,7 @@ export function applyParsedW5Md(draft: W5SheetData, p: ParsedW5MdSheet): void {
   // Дары — замена целиком
   if (p.gifts && p.gifts.length > 0) {
     draft.gifts = p.gifts.slice(0, 40).map((g, i) => ({
-      id: `g-md-${Date.now().toString(36)}-${i}`,
+      id: vtmUid("g-md"),
       name: g.name.slice(0, 80) || "Дар",
       level: clamp05(g.level) || 1,
       note: (g.note || "").slice(0, 400),
@@ -510,7 +511,7 @@ export function applyParsedW5Md(draft: W5SheetData, p: ParsedW5MdSheet): void {
   // Обряды — замена целиком
   if (p.rites && p.rites.length > 0) {
     draft.rites = p.rites.slice(0, 30).map((r, i) => ({
-      id: `r-md-${Date.now().toString(36)}-${i}`,
+      id: vtmUid("r-md"),
       name: r.name.slice(0, 80) || "Обряд",
       level: Math.max(0, Math.min(4, Math.floor(Number(r.level) || 0))),
       note: (r.note || "").slice(0, 400),
@@ -543,7 +544,7 @@ export function applyParsedW5Md(draft: W5SheetData, p: ParsedW5MdSheet): void {
       .filter((n) => !existing.has(key(n)))
       .slice(0, 12)
       .map((n, i) => ({
-        id: `note-md-${Date.now().toString(36)}-${i}`,
+        id: vtmUid("note-md"),
         title: n.title.slice(0, 120) || "Запись",
         content: n.content.slice(0, 4000),
         date: n.date.slice(0, 40),
@@ -558,7 +559,7 @@ export function applyParsedW5Md(draft: W5SheetData, p: ParsedW5MdSheet): void {
       .filter((e) => !existingTexts.has(e.text))
       .slice(0, 20)
       .map((e, i) => ({
-        id: `wxp-md-${Date.now().toString(36)}-${i}`,
+        id: vtmUid("wxp-md"),
         text: e.text.slice(0, 300),
         ts: e.ts,
       }));

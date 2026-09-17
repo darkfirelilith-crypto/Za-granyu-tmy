@@ -43,8 +43,75 @@ function SheetEditorGate({ sheetId, onBack }: { sheetId: string; onBack: () => v
       return r.json();
     }),
   });
-  if (raw?.data?.kind === "werewolf") return <W5Editor sheetId={sheetId} onBack={onBack} />;
-  return <VtmEditor sheetId={sheetId} onBack={onBack} />;
+  const isW5 = raw?.data?.kind === "werewolf";
+  return (
+    <>
+      {isW5 ? <W5Editor sheetId={sheetId} onBack={onBack} /> : <VtmEditor sheetId={sheetId} onBack={onBack} />}
+      <VtmFirstNightTour isW5={isW5} />
+    </>
+  );
+}
+
+// ============================================================
+// «ПЕРВАЯ НОЧЬ» (раунд 23) — лёгкая шпаргалка для свежепробуждённого:
+// один раз на браузер (localStorage), не мешает — карточка снизу справа,
+// закрывается кнопкой. Уважает reduced-motion (анимация — CSS-фоллбек).
+// ============================================================
+const VTM_TOUR_KEY = "vtm-tour-done-v1";
+
+function VtmFirstNightTour({ isW5 }: { isW5: boolean }) {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    let done = false;
+    try {
+      done = window.localStorage.getItem(VTM_TOUR_KEY) === "1";
+    } catch {
+      // приватный режим — просто не показываем
+      done = true;
+    }
+    if (!done) {
+      const t = setTimeout(() => setShow(true), 1400); // даём листу раскрыться
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  const dismiss = () => {
+    setShow(false);
+    try {
+      window.localStorage.setItem(VTM_TOUR_KEY, "1");
+    } catch {
+      // приватный режим — тур просто закроется до следующей перезагрузки
+    }
+  };
+
+  if (!show) return null;
+  return (
+    <div className="vtm-tour-wrap" role="dialog" aria-label={isW5 ? "Первая ночь Гароу — подсказки листа" : "Первая ночь Сородича — подсказки листа"}>
+      <div className="vtm-tour-card">
+        <p className="vtm-tour-head">
+          <span aria-hidden>{isW5 ? "🐺" : "🩸"}</span>{" "}
+          {isW5 ? "Первая ночь под Луной" : "Первая ночь Бессмертия"}
+        </p>
+        <ul className="vtm-tour-list">
+          <li>
+            <b>Кости — с листа:</b> клик по названию характеристики или строки навыка бросает пул{" "}
+            {isW5 ? "с красными костями Ярости" : "с костью Голода"}; панель раскроется внизу.
+          </li>
+          <li>
+            <b>{isW5 ? "Витальная строка — это досье:" : "Витальная строка — это Досье:"}</b> клик откроет{" "}
+            {isW5 ? "Славу, ранг и Дары" : "сводку тренировок"} не уходя со вкладки.
+          </li>
+          <li>
+            <b>Всё записывается само:</b> статус у имени («Записано») — Кровь{isW5 ? " и Луна" : ""} уже сохранили лист.
+          </li>
+        </ul>
+        <button className="vtm-btn vtm-tour-btn" onClick={dismiss}>
+          Понятно — ночь началась
+        </button>
+      </div>
+    </div>
+  );
 }
 
 /** Русское склонение: 1 ночь / 2 ночи / 5 ночей. */

@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { VtmSheetData, VtmGearItem, VtmNote } from "@/lib/vtm-data";
 import { DerivedStats } from "@/lib/vtm-calc";
 import { buildChronicleMarkdown, chronicleFileName } from "@/lib/vtm-chronicle-md";
+import { vtmUid } from "@/lib/vtm-id";
 
 /** Авторасширяющаяся textarea: текст растягивает поле. */
 export function AutoTextarea({
@@ -79,7 +80,7 @@ export function GearSection({
     const name = newItem.trim();
     if (!name) return;
     const item: VtmGearItem = {
-      id: `item-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e5).toString(36)}`,
+      id: vtmUid("item"),
       name,
       count: "",
       note: "",
@@ -314,7 +315,7 @@ export function NotesSection({
     const c = content.trim();
     if (!c) return;
     const note: VtmNote = {
-      id: `note-${Date.now().toString(36)}`,
+      id: vtmUid("note"),
       title: title.trim(),
       content: c,
       date: new Date().toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }),

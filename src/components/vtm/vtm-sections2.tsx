@@ -25,6 +25,7 @@ import {
 import { LORESHEETS, LORESHEET_BY_ID, LORESHEET_RULES } from "@/lib/vtm-histories";
 import { POWER_SYSTEMS, DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
 import { DerivedStats } from "@/lib/vtm-calc";
+import { vtmUid } from "@/lib/vtm-id";
 
 // ============================================================
 // ДИСЦИПЛИНЫ
@@ -635,7 +636,7 @@ export function AdvantagesSection({
     }
     mutate((d) => {
       d.advantages.push({
-        id: `bg-${Date.now().toString(36)}-${defId}`,
+        id: vtmUid(`bg-${defId}`),
         name: defName,
         kind: "background",
         rating: 1,
@@ -660,7 +661,7 @@ export function AdvantagesSection({
     }
     mutate((d) => {
       d.advantages.push({
-        id: `adv-${Date.now().toString(36)}-${defId}`,
+        id: vtmUid(`adv-${defId}`),
         name: def.name,
         kind: def.kind,
         rating: 1, // rating = уровень (точки); цена = уровень × def.cost
@@ -674,7 +675,7 @@ export function AdvantagesSection({
     if (!trimmed) return;
     mutate((d) => {
       d.advantages.push({
-        id: `custom-${Date.now().toString(36)}`,
+        id: vtmUid("custom"),
         name: trimmed,
         kind: customKind,
         rating: Math.max(1, Math.min(5, customLvl)),

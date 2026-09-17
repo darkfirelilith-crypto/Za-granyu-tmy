@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireLiveUser } from "@/lib/session";
-import { MAX_SHEETS, normalizeSheet } from "@/lib/vtm-data";
+import { MAX_SHEETS, normalizeSheet, emptySheet, pushXpLog } from "@/lib/vtm-data";
 import { VTM_TEMPLATES, buildTemplateSheet } from "@/lib/vtm-templates";
 import { buildRandomSheet } from "@/lib/vtm-random";
-import { buildRandomWerewolf, emptyW5Sheet, normalizeW5 } from "@/lib/vtm-w5data";
+import { buildRandomWerewolf, emptyW5Sheet, normalizeW5, pushW5XpLog } from "@/lib/vtm-w5data";
 
 const UNAUTHORIZED = { error: "Сессия недействительна — войдите заново" };
 
@@ -116,25 +116,40 @@ export async function POST(req: NextRequest) {
   const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : undefined;
   let data: unknown = undefined;
   let tplName: string | undefined = undefined;
+  // Раунд 23: первое рождение листа само попадает в журнал опыта —
+  // архив помнит, КАК Сородич или Гароу вошёл в ночь (по Крови, по Луне,
+  // по заготовке или чистым листом). Очки не списываются — это летопись.
   if (body.template === "random") {
     // принимаем решение Крови: либо присланный preset (предпросмотр), либо свежий бросок
     const parsed = body.preset ? normalizeSheet(body.preset) : buildRandomSheet();
+    pushXpLog(parsed, `лист пробуждён по решению Крови — «${parsed.info.name || "Сородич"}»`);
     data = parsed;
     tplName = parsed.info.name || "Случайный Сородич";
   } else if (body.template === "werewolf-random") {
     // Луна решает: либо присланный preset (предпросмотр), либо свежий бросок
     const parsed = body.preset ? normalizeW5(body.preset) : buildRandomWerewolf();
+    pushW5XpLog(parsed, `волк рождён по решению Луны — «${parsed.info.name || "Гароу"}»`);
     data = parsed;
     tplName = parsed.info.name || "Случайный Гароу";
   } else if (body.template === "werewolf-blank") {
     // чистый лист Гароу (W5)
-    data = emptyW5Sheet();
+    const w5 = emptyW5Sheet();
+    pushW5XpLog(w5, "чистый лист Гароу открыт — пусть стая запомнит первую ночь");
+    data = w5;
     tplName = "Безымянный Гароу";
   } else if (body.template) {
     const tpl = VTM_TEMPLATES.find((t) => t.id === body.template);
     if (!tpl) return NextResponse.json({ error: "Неизвестная заготовка" }, { status: 400 });
     data = buildTemplateSheet(tpl.id);
+    if (data && typeof data === "object") pushXpLog(data as Parameters<typeof pushXpLog>[0], `лист пробуждён по заготовке «${tpl.title}»`);
     tplName = tpl.sheet.info.name || tpl.title;
+  } else {
+    // лист без заготовки: раньше на сервер уезжал голый JSON «{}» —
+    // теперь это честный пустой лист с записью о рождении.
+    const blank = emptySheet();
+    pushXpLog(blank, "лист пробуждён без заготовки — чистая ночь");
+    data = blank;
+    tplName = "Новая ночь";
   }
 
   const minSort = await db.vtmSheet.aggregate({

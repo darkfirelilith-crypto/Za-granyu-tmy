@@ -8,6 +8,7 @@
 // ============================================================
 
 import { SKILL_LIBRARY } from "./vtm-data";
+import { vtmUid } from "./vtm-id";
 
 // ---------- Племена ----------
 
@@ -370,7 +371,7 @@ export function pushW5XpLog(d: W5SheetData, text: string): void {
   if (!Array.isArray(d.xpLog)) d.xpLog = [];
   if (d.xpLog[0]?.text === text) return; // без дублей подряд
   d.xpLog = [
-    { id: `wxp-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e5).toString(36)}`, text, ts: new Date().toISOString() },
+    { id: vtmUid("wxp"), text, ts: new Date().toISOString() },
     ...d.xpLog,
   ].slice(0, 40);
 }
@@ -449,7 +450,7 @@ export function normalizeW5(raw: any): W5SheetData {
   };
   base.gifts = Array.isArray(raw.gifts)
     ? raw.gifts.slice(0, 40).map((g: any, i: number) => ({
-        id: str(g.id, 60) || `gift-${i}-${Date.now().toString(36)}`,
+        id: str(g.id, 60) || vtmUid(`gift-${i}`),
         name: str(g.name, 80) || "Дар",
         level: clamp05(g.level) || 1,
         note: str(g.note, 400),
@@ -457,7 +458,7 @@ export function normalizeW5(raw: any): W5SheetData {
     : [];
   base.rites = Array.isArray(raw.rites)
     ? raw.rites.slice(0, 30).map((r: any, i: number) => ({
-        id: str(r.id, 60) || `rite-${i}-${Date.now().toString(36)}`,
+        id: str(r.id, 60) || vtmUid(`rite-${i}`),
         name: str(r.name, 80) || "Обряд",
         level: Math.max(0, Math.min(4, Math.floor(Number(r.level) || 0))),
         note: str(r.note, 400),
@@ -515,14 +516,14 @@ export function buildRandomWerewolf(): W5SheetData {
   const nativeGifts = W5_GIFT_LIBRARY.filter((g) => g.source === "native");
   const giftPool = [...pickN(moonGifts, Math.min(2, moonGifts.length)), ...pickN(nativeGifts, 1)];
   const gifts: W5GiftEntry[] = giftPool.map((g) => ({
-    id: `g-${Date.now().toString(36)}-${g.id}`,
+    id: vtmUid(`g-${g.id}`),
     name: g.name,
     level: g.level,
     note: g.desc,
   }));
   const rite = pick(W5_RITE_LIBRARY.filter((r) => r.level <= 2));
   const rites: W5RiteEntry[] = [
-    { id: `r-${Date.now().toString(36)}-${rite.id}`, name: rite.name, level: rite.level, note: rite.desc },
+    { id: vtmUid(`r-${rite.id}`), name: rite.name, level: rite.level, note: rite.desc },
   ];
 
   const name = `${pick(["Радомир", "Тагир", "Велеса", "Марта", "Снит", "Кайран", "Одри", "Хольгер", "Эмбер", "Ярополк", "Лунни", "Гарри"])} «${pick(["Серый Шёпот", "Красный Клык", "Тихий Гон", "Пепельный Вой", "Северный Гнев", "Последний Ухо", "Хрустальный След", "Лунный Крюк"])}» ${pick(["Крат", "Велесов", "Стальбок", "Лисицын", "Дурманов", "Хольм", "Гроза"])}`;

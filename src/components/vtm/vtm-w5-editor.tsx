@@ -12,12 +12,13 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { VtmReturnPortal } from "@/components/vtm/portal-transition";
 import { vtmFetch } from "@/lib/vtm-api";
+import { vtmUid } from "@/lib/vtm-id";
 import { SKILL_LIBRARY } from "@/lib/vtm-data";
 import { buildW5SummaryMarkdown } from "@/lib/vtm-w5-summary-md";
 import { applyParsedW5Md, W5MdParseResult } from "@/lib/vtm-w5-md-import";
 import { W5ImportDialog } from "@/components/vtm/vtm-w5-import-dialog";
 import { VtmDicePanel, setVtmSheetHooks, useVtmDice, vtmW5RollAndShow, vtmW5RageCheckAndShow, W5RollResult } from "@/components/vtm/vtm-dice";
-import { W5PrintDoc, W5PrintSummary } from "@/components/vtm/vtm-w5-print";
+import { W5PrintDoc, W5PrintSummary, W5PrintDossier } from "@/components/vtm/vtm-w5-print";
 import { W5HelpDialog } from "@/components/vtm/vtm-help";
 import {
   W5SheetData,
@@ -100,9 +101,10 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
     };
   }, [dossierOpen]);
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
-  // Режим печати: «лист» — полный бланк; «сводка» — одна страница для стола
-  const [printMode, setPrintMode] = useState<"sheet" | "summary">("sheet");
-  const printDoc = useCallback((mode: "sheet" | "summary") => {
+  // Режим печати: «лист» — полный бланк; «сводка» — одна страница для стола;
+  // «досье» — карточка из поповера Досье (витальное/Слава/Дары) — раунд 23.
+  const [printMode, setPrintMode] = useState<"sheet" | "summary" | "dossier">("sheet");
+  const printDoc = useCallback((mode: "sheet" | "summary" | "dossier") => {
     setPrintMode(mode);
     setTimeout(() => window.print(), 60);
   }, []);
@@ -188,14 +190,20 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
     });
   }, []);
 
-  // Кости Луны: режим панели и хуки листа Гароу (хроника, Ярость, Воля)
+  // Кости Луны: режим панели и хуки листа Гароу (хроника, Ярость, Воля).
+  // Сцена (счётчики воли/ярости) живёт per-sheet: bindSheet прячет её в карту
+  // по id листа и достаёт сцену этого листа при возврате.
   useEffect(() => {
     useVtmDice.getState().setMode("werewolf");
-    return () => useVtmDice.getState().setMode("vampire");
-  }, []);
+    useVtmDice.getState().bindSheet(sheetId);
+    return () => {
+      useVtmDice.getState().bindSheet(null);
+      useVtmDice.getState().setMode("vampire");
+    };
+  }, [sheetId]);
   useEffect(() => {
     setVtmSheetHooks({
-      logRoll: (text) => mutate((d) => { d.rollLog = [{ id: `roll-${Date.now().toString(36)}`, text, ts: new Date().toISOString() }, ...d.rollLog].slice(0, 60); }),
+      logRoll: (text) => mutate((d) => { d.rollLog = [{ id: vtmUid("roll"), text, ts: new Date().toISOString() }, ...d.rollLog].slice(0, 60); }),
       addRage: (n) => mutate((d) => {
         const next = Math.max(0, Math.min(5, d.trackers.rage + n));
         d.trackers.rage = next;
@@ -475,6 +483,7 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
                 renownTotal={renownTotal}
                 onClose={() => setDossierOpen(false)}
                 onGo={(t) => { setTab(t); setDossierOpen(false); }}
+                onPrint={() => { setDossierOpen(false); printDoc("dossier"); }}
               />
             )}
           </div>
@@ -538,7 +547,7 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
 
       {/* Печатная версия листа Гароу — видна только при печати / сохранении в PDF */}
       <div className="vtm-print-only" aria-hidden="true">
-        {printMode === "summary" ? <W5PrintSummary data={data} /> : <W5PrintDoc data={data} />}
+        {printMode === "summary" ? <W5PrintSummary data={data} /> : printMode === "dossier" ? <W5PrintDossier data={data} /> : <W5PrintDoc data={data} />}
       </div>
 
       <VtmDicePanel />
@@ -617,12 +626,14 @@ function W5DossierPop({
   renownTotal,
   onClose,
   onGo,
+  onPrint,
 }: {
   data: W5SheetData;
   rank: { rank: number; title: string };
   renownTotal: number;
   onClose: () => void;
   onGo: (tab: W5Tab) => void;
+  onPrint: () => void;
 }) {
   const dots = (n: number) => "●".repeat(Math.max(0, n)) + "○".repeat(Math.max(0, 5 - n));
   const gifts = data.gifts;
@@ -710,6 +721,14 @@ function W5DossierPop({
         </button>
         <button className="vtm-btn vtm-btn-ghost !py-1 !px-2.5 !text-[0.72rem]" onClick={() => onGo("gifts")}>
           ◈ Дары и Обряды →
+        </button>
+        <button
+          className="vtm-btn vtm-btn-ghost !py-1 !px-2.5 !text-[0.72rem] vtm-dossier-print"
+          onClick={onPrint}
+          title="Печать досье на одну страницу — карточку для стола Рассказчика"
+          aria-label="Печать досье для стола"
+        >
+          🖨 Досье для стола
         </button>
       </div>
     </motion.div>
@@ -809,7 +828,7 @@ function W5IdentityTab({
                   onChange={(e) => mutate((d) => {
                     const list = [...d.aspirations];
                     if (list[i]) list[i] = { ...list[i], text: e.target.value.slice(0, 200) };
-                    else list[i] = { id: `asp-${Date.now().toString(36)}-${i}`, text: e.target.value.slice(0, 200) };
+                    else list[i] = { id: vtmUid("asp"), text: e.target.value.slice(0, 200) };
                     d.aspirations = list.filter((x) => x.text);
                   })}
                   placeholder={["отмстить за сожжённую рощу", "защитить сестру-кинфолк", "доказать стае, что город можно спасти"][i]}
@@ -835,7 +854,7 @@ function W5IdentityTab({
                   onChange={(e) => mutate((d) => {
                     const list = [...d.touchstones];
                     if (list[i]) list[i] = { ...list[i], text: e.target.value.slice(0, 200) };
-                    else list[i] = { id: `tst-${Date.now().toString(36)}-${i}`, text: e.target.value.slice(0, 200) };
+                    else list[i] = { id: vtmUid("tst"), text: e.target.value.slice(0, 200) };
                     d.touchstones = list.filter((x) => x.text);
                   })}
                   placeholder={["младшая сестра", "старый учитель в лесу", "бар на окраине"][i]}
@@ -1124,7 +1143,7 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
       return;
     }
     mutate((d) => {
-      d.gifts.push({ id: `g-lib-${Date.now().toString(36)}-${def.id}`, name: def.name, level: def.level, note: def.desc });
+      d.gifts.push({ id: vtmUid(`g-lib-${def.id}`), name: def.name, level: def.level, note: def.desc });
       pushW5XpLog(d, `Дар «${def.name}» (${def.level} ур.) вырван у духов — цена ${W5_XP_COSTS.gift(def.level)} опыта (сверься с Рассказчиком)`);
     });
     if (def.level > giftCap) {
@@ -1143,7 +1162,7 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
     }
     const lvl = Math.max(1, Math.min(5, customGiftLvl));
     mutate((d) => {
-      d.gifts.push({ id: `g-custom-${Date.now().toString(36)}`, name, level: lvl, note: "" });
+      d.gifts.push({ id: vtmUid("g-custom"), name, level: lvl, note: "" });
       pushW5XpLog(d, `свой Дар «${name}» (${lvl} ур.) — цена ${W5_XP_COSTS.gift(lvl)} опыта (сверься с Рассказчиком)`);
     });
     if (lvl > giftCap) {
@@ -1161,7 +1180,7 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
       return;
     }
     mutate((d) => {
-      d.rites.push({ id: `r-lib-${Date.now().toString(36)}-${def.id}`, name: def.name, level: def.level, note: def.desc });
+      d.rites.push({ id: vtmUid(`r-lib-${def.id}`), name: def.name, level: def.level, note: def.desc });
       pushW5XpLog(d, `Обряд «${def.name}» (${def.level} ур.) — цена ${W5_XP_COSTS.rite(def.level)} опыта (сверься с Рассказчиком)`);
     });
   };
@@ -1352,7 +1371,7 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
                   const rn = customRiteName.trim();
                   const rl = customRiteLvl;
                   mutate((d) => {
-                    d.rites.push({ id: `r-custom-${Date.now().toString(36)}`, name: rn, level: rl, note: "" });
+                    d.rites.push({ id: vtmUid("r-custom"), name: rn, level: rl, note: "" });
                     pushW5XpLog(d, `свой Обряд «${rn}» (${rl} ур.) — цена ${W5_XP_COSTS.rite(rl)} опыта`);
                   });
                   setCustomRiteName("");
@@ -1374,7 +1393,7 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
                 if (!rn) return;
                 const rl = customRiteLvl;
                 mutate((d) => {
-                  d.rites.push({ id: `r-custom-${Date.now().toString(36)}`, name: rn, level: rl, note: "" });
+                  d.rites.push({ id: vtmUid("r-custom"), name: rn, level: rl, note: "" });
                   pushW5XpLog(d, `свой Обряд «${rn}» (${rl} ур.) — цена ${W5_XP_COSTS.rite(rl)} опыта`);
                 });
                 setCustomRiteName("");
@@ -1670,7 +1689,7 @@ function W5DamageBar({
         d.trackers.healthAgg = Math.min(d.trackers.healthAgg + n, max - d.trackers.healthSup);
       }
       d.rollLog = [{
-        id: `roll-${Date.now().toString(36)}`,
+        id: vtmUid("roll"),
         text: `Урон «${last.label}${rerollsHappened ? " ⟲волей" : ""}» → ${applied < n ? `+${applied} из ${n}` : `+${n}`} ${kind === "sup" ? "поверхностных" : "тяжёлых"} ран (свободно клеток было ${freeBefore})`,
         ts: new Date().toISOString(),
       }, ...d.rollLog].slice(0, 60);
@@ -1760,7 +1779,7 @@ function W5GearTab({ data, mutate }: { data: W5SheetData; mutate: (fn: (d: W5She
   const add = () => {
     const n = name.trim();
     if (!n) return;
-    mutate((d) => { d.gear.push({ id: `gear-${Date.now().toString(36)}`, name: n, count: "1", note: "" }); });
+    mutate((d) => { d.gear.push({ id: vtmUid("gear"), name: n, count: "1", note: "" }); });
     setName("");
   };
   return (
@@ -1822,7 +1841,7 @@ function W5NotesTab({ data, mutate }: { data: W5SheetData; mutate: (fn: (d: W5Sh
     if (!content.trim()) return;
     mutate((d) => {
       d.notes.unshift({
-        id: `note-${Date.now().toString(36)}`,
+        id: vtmUid("note"),
         title: title.trim() || "Запись",
         content: content.trim().slice(0, 4000),
         date: new Date().toLocaleDateString("ru-RU"),

@@ -29,6 +29,7 @@ import {
   RESONANCE_INTENSITY_LABELS,
 } from "./vtm-data";
 import { LORESHEET_BY_ID } from "./vtm-histories";
+import { vtmUid } from "./vtm-id";
 
 // ---------- Типы результата ----------
 
@@ -346,7 +347,7 @@ export function parseSummaryMarkdown(md: string): MdParseResult {
           const lib = ADVANTAGE_LIBRARY.find((a) => a.name.toLowerCase() === nv.name.toLowerCase());
           if (!fields.advantages) fields.advantages = [];
           fields.advantages.push({
-            id: lib?.id || `custom-${Date.now().toString(36)}-${fields.advantages.length}`,
+            id: lib?.id || vtmUid("custom"),
             name: lib?.name || nv.name,
             kind,
             rating: clamp(nv.value, 0, 5),
@@ -435,7 +436,7 @@ export function parseSummaryMarkdown(md: string): MdParseResult {
           if (!fields.gear) fields.gear = {};
           if (!fields.gear.items) fields.gear.items = [];
           fields.gear.items.push({
-            id: `md-item-${Date.now().toString(36)}-${fields.gear.items.length}`,
+            id: vtmUid("md-item"),
             name,
             count,
             note,
@@ -471,7 +472,7 @@ export function parseSummaryMarkdown(md: string): MdParseResult {
       const entryM = line.match(/^-(?:\s+)(🌙|🖋️?)\s*\*\*(.+?)\*\*\s*—\s*\*(.+)\*\s*$/);
       if (entryM) {
         currentNote = {
-          id: `md-note-${Date.now().toString(36)}-${(fields.notes?.length || 0)}`,
+          id: vtmUid("md-note"),
           title: stripItalic(stripBold(entryM[2])),
           content: "",
           date: stripItalic(entryM[3]),
@@ -680,7 +681,7 @@ export function applyParsedMd(draft: VtmSheetData, p: ParsedMdSheet): void {
       .filter((e) => !existingTexts.has(e.text))
       .slice(0, 20)
       .map((e, i) => ({
-        id: `xp-md-${Date.now().toString(36)}-${i}`,
+        id: vtmUid("xp-md"),
         text: e.text.slice(0, 300),
         ts: e.ts,
       }));

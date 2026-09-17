@@ -3,6 +3,7 @@
 // ============================================================
 
 import { VtmSheetData, VtmSkillState, bloodPotencyByGeneration, BLOOD_POTENCY_TABLE, CLAN_BY_ID, ADVANTAGE_LIBRARY, ADVANTAGE_BY_ID } from "./vtm-data";
+import { vtmUid } from "./vtm-id";
 
 export interface DerivedStats {
   healthMax: number;    // Здоровье = Выносливость + 3
@@ -101,7 +102,7 @@ export function findSkill(sheet: VtmSheetData, keyOrName: string): VtmSkillState
 /** Краткий журнал: добавить бросок (максимум 60 записей). */
 export function pushRoll(sheet: VtmSheetData, text: string): void {
   sheet.rollLog = [
-    { id: `roll-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`, text, ts: new Date().toISOString() },
+    { id: vtmUid("roll"), text, ts: new Date().toISOString() },
     ...sheet.rollLog,
   ].slice(0, 60);
 }

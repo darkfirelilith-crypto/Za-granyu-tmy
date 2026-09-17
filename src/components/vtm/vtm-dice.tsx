@@ -7,10 +7,11 @@
 // Голода = ЗВЕРСКИЙ ПРОВАЛ. Плюс испытания Крови (1 кость, успех 6+).
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { create } from "zustand";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
+import { vtmUid } from "@/lib/vtm-id";
 
 // ---------- Кости Гароу (W5): Ярость заменяет кости пула ----------
 // По правилам W5: успех на 6+, пара десяток — критический; кость Ярости
@@ -44,13 +45,9 @@ export interface W5RollResult {
   uid?: string;
 }
 
-// Монотонный счётчик + случайный хвост: две кости за одну миллисекунду
-// (быстрые клики, авто-повтор) больше не сталкиваются ключами хроники.
-let vtmIdSeq = 0;
-function vtmHistId(prefix: string): string {
-  vtmIdSeq += 1;
-  return `${prefix}-${Date.now().toString(36)}-${vtmIdSeq.toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-}
+// vtmHistId — единый генератор vtmUid из @/lib/vtm-id (монотонный счётчик
+// + случайный хвост): быстрые клики больше не сталкиваются ключами хроники.
+const vtmHistId = vtmUid;
 
 /** Бросок пула Гароу: rage — сколько костей пула являются костями Ярости. */
 export function rollW5Pool(pool: number, rage: number, label: string, opts?: { damage?: boolean; difficulty?: number }): W5RollResult {
@@ -234,6 +231,12 @@ export interface RollHistoryItem {
   wrage?: { ok: boolean; value: number };
 }
 
+interface SceneTally {
+  h: number; // Голод +N за сцену
+  w: number; // Воля −N за сцену
+  r: number; // Ярость −N за сцену
+}
+
 interface DiceState {
   mode: "vampire" | "werewolf";   // какой лист открыт — какая терминология у панели
   open: boolean;
@@ -247,7 +250,12 @@ interface DiceState {
   sceneHunger: number; // провалы Испытаний Крови → +1 Голод каждый
   sceneWp: number;     // потраченные пункты Воли (перебросы + «⚡ Тратить волю»)
   sceneRage: number;   // провалы Проверок Ярости → −1 Ярость каждая
+  // Раунд 23: счётчики сцены живут per-sheet — переключение вкладок и уход
+  // в архив больше не стирают сцену; «↺ новая сцена» обнуляет только её.
+  sceneKey: string | null;
+  sceneMap: Record<string, SceneTally>;
   setMode: (m: "vampire" | "werewolf") => void;
+  bindSheet: (sheetId: string | null) => void;
   toggle: () => void;
   setOpen: (v: boolean) => void;
   pushRoll: (r: VtmRollResult) => void;
@@ -270,7 +278,29 @@ export const useVtmDice = create<DiceState>((set) => ({
   sceneHunger: 0,
   sceneWp: 0,
   sceneRage: 0,
-  setMode: (m) => set({ mode: m, last: null, rouse: null, w5last: null, wrage: null, sceneHunger: 0, sceneWp: 0, sceneRage: 0 }),
+  sceneKey: null,
+  sceneMap: {},
+  setMode: (m) => set({ mode: m, last: null, rouse: null, w5last: null, wrage: null }),
+  // Привязка панели к листу: текущая сцена прячется в карту (по id листа),
+  // на её место встаёт сцена нового листа. bindSheet(null) — просто спрятать.
+  bindSheet: (sheetId) =>
+    set((s) => {
+      const map = { ...s.sceneMap };
+      if (s.sceneKey) {
+        map[s.sceneKey] = { h: s.sceneHunger, w: s.sceneWp, r: s.sceneRage };
+        // хранить сцены имеет смысл лишь для живых листов — шапку карты подрезаем
+        const keys = Object.keys(map);
+        if (keys.length > 24) delete map[keys[0]];
+      }
+      const next = sheetId && map[sheetId] ? map[sheetId] : { h: 0, w: 0, r: 0 };
+      return {
+        sceneMap: map,
+        sceneKey: sheetId,
+        sceneHunger: next.h,
+        sceneWp: next.w,
+        sceneRage: next.r,
+      };
+    }),
   toggle: () => set((s) => ({ open: !s.open })),
   setOpen: (v) => set({ open: v }),
   pushRoll: (r) =>
@@ -312,7 +342,13 @@ export const useVtmDice = create<DiceState>((set) => ({
       ].slice(0, HISTORY_CAP),
     })),
   spendSceneWp: () => set((s) => ({ sceneWp: s.sceneWp + 1 })),
-  resetScene: () => set({ sceneHunger: 0, sceneWp: 0, sceneRage: 0 }),
+  resetScene: () =>
+    set((s) => {
+      // «↺ новая сцена» закрывает сцену ТЕКУЩЕГО листа — карта обновляется,
+      // чтобы при возврате на лист не воскресла закрытая сцена.
+      const map = s.sceneKey ? { ...s.sceneMap, [s.sceneKey]: { h: 0, w: 0, r: 0 } } : s.sceneMap;
+      return { sceneMap: map, sceneHunger: 0, sceneWp: 0, sceneRage: 0 };
+    }),
   clearHistory: () => set({ history: [] }),
 }));
 
@@ -381,6 +417,22 @@ export function VtmDicePanel() {
   const [rollBtnArmed, setRollBtnArmed] = useState(false);
   const [histOpen, setHistOpen] = useState(true);
   const isW5 = mode === "werewolf";
+  // «Смыть хронику» требует второго клика за 3 секунды (паритет «✕ в землю»
+  // карточки архива): один мисклик больше не стирает дюжину бросков.
+  const [wipeArmed, setWipeArmed] = useState(false);
+  const wipeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (wipeTimerRef.current) clearTimeout(wipeTimerRef.current); }, []);
+  const onWipeClick = () => {
+    if (!wipeArmed) {
+      setWipeArmed(true);
+      if (wipeTimerRef.current) clearTimeout(wipeTimerRef.current);
+      wipeTimerRef.current = setTimeout(() => setWipeArmed(false), 3000);
+      return;
+    }
+    if (wipeTimerRef.current) clearTimeout(wipeTimerRef.current);
+    setWipeArmed(false);
+    clearHistory();
+  };
 
   // Переброс волей: выбор костей (до 3) привязан к конкретному броску —
   // новый бросок автоматически сбрасывает выбор (сравнение по ссылке, без эффектов).
@@ -749,11 +801,12 @@ export function VtmDicePanel() {
                       ))}
                     </ol>
                     <button
-                      className="vtm-roll-hist-clear"
-                      onClick={clearHistory}
-                      title="Смыть хронику бросков"
+                      className={`vtm-roll-hist-clear ${wipeArmed ? "armed" : ""}`}
+                      onClick={onWipeClick}
+                      title={wipeArmed ? "Ещё один клик — хроника смыта" : "Смыть хронику бросков (клик дважды)"}
+                      aria-label={wipeArmed ? "Подтвердить смыв хроники бросков" : "Смыть хронику бросков — потребуется подтверждение"}
                     >
-                      ✕ смыть хронику
+                      {wipeArmed ? "✕ смыть хронику?!" : "✕ смыть хронику"}
                     </button>
                   </>
                 )}
