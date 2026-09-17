@@ -187,6 +187,19 @@ function W5PrintBody({ data }: { data: W5SheetData }) {
           {data.rollLog.length > 12 && <p className="vtm-print-line">…и ещё {data.rollLog.length - 12} бросков в онлайн-архиве.</p>}
         </>
       )}
+
+      {/* Журнал опыта — последние 6 на бумаге */}
+      {(data.xpLog?.length || 0) > 0 && (
+        <>
+          <p className="vtm-print-section">Журнал опыта</p>
+          {data.xpLog!.slice(0, 6).map((e) => (
+            <p className="vtm-print-line vtm-print-roll" key={e.id}>
+              {new Date(e.ts).toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · {e.text}
+            </p>
+          ))}
+          {data.xpLog!.length > 6 && <p className="vtm-print-line">…и ещё {data.xpLog!.length - 6} записей в онлайн-архиве.</p>}
+        </>
+      )}
     </>
   );
 }

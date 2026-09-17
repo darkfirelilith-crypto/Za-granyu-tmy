@@ -38,6 +38,9 @@ import {
   w5WillpowerMax,
   w5HealthMax,
   w5Rank,
+  w5GiftLevelCap,
+  pushW5XpLog,
+  W5_XP_COSTS,
 } from "@/lib/vtm-w5data";
 
 type W5Tab = "identity" | "nature" | "skills" | "gifts" | "tracks" | "gear" | "notes" | "codex";
@@ -401,8 +404,14 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
             </button>
           </div>
 
-          {/* Витальная строка */}
-          <div className="vtm-panel vtm-w5-vitals p-2.5 md:p-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
+          {/* Витальная строка — клик открывает «Треки» (Досье Гароу) */}
+          <button
+            type="button"
+            onClick={() => setTab("tracks")}
+            className="vtm-panel vtm-w5-vitals p-2.5 md:p-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 w-full text-left"
+            title="Витальная сводка Гароу — клик откроет Треки: Ярость, Здоровье, Воля, Слава, Опыт"
+            aria-label="Витальная сводка Гароу — открыть Треки"
+          >
             <span className="vtm-hint !text-[0.78rem]">Ярость <b className="text-[#e8636b] not-italic">{data.trackers.rage}</b>/5</span>
             <span className="vtm-hint !text-[0.78rem]">Здоровье <b className="text-[#d9c7b6] not-italic">{data.trackers.healthSup + data.trackers.healthAgg}/{healthMax}</b></span>
             <span className="vtm-hint !text-[0.78rem]">Воля <b className="text-[#d9c7b6] not-italic">{data.trackers.wpSup}/{wpMax}</b></span>
@@ -414,7 +423,8 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
             )}
             {data.trackers.wolfLost && <span className="vtm-label text-[0.68rem] text-[#e8636b] uppercase">волк потерян</span>}
             {data.trackers.harano && <span className="vtm-label text-[0.68rem] text-[#8ea6c9] uppercase">харано</span>}
-          </div>
+            <span className="vtm-w5-vitals-go" aria-hidden>треки →</span>
+          </button>
         </motion.header>
 
         {/* Вкладки */}
@@ -762,7 +772,11 @@ function W5NatureTab({
                 >
                   {label}{mod !== 0 && <span className="vtm-form-mod-mark" aria-hidden> {mod > 0 ? `+${mod}` : mod}</span>}
                 </button>
-                <Dots value={data.attributes[key]} color="moon" onChange={(n) => mutate((d) => { d.attributes[key] = n; })} ariaLabel={`${label}: уровень ${data.attributes[key]}`} />
+                <Dots value={data.attributes[key]} color="moon" onChange={(n) => mutate((d) => {
+                  const prev = d.attributes[key];
+                  if (n > prev) pushW5XpLog(d, `покупка: «${label}» ↑ до ${n} — цена ${W5_XP_COSTS.attribute(n)} опыта (сверься с Рассказчиком)`);
+                  d.attributes[key] = n;
+                })} ariaLabel={`${label}: уровень ${data.attributes[key]}`} />
                 {mod !== 0 && <span className="vtm-hint !text-[0.66rem] not-italic text-[#8ea6c9]">в облике: {eff}</span>}
               </div>
             );
@@ -813,9 +827,23 @@ function W5SkillsTab({
   const skillValue = (id: string) => data.skills.find((s) => s.id === id);
   const setSkill = (id: string, patch: Partial<{ value: number; spec: string }>) => {
     mutate((d) => {
+      const def = SKILL_LIBRARY.find((s) => s.id === id);
+      const skillName = def?.name || id;
       const existing = d.skills.find((s) => s.id === id);
-      if (existing) Object.assign(existing, patch);
-      else d.skills.push({ id, value: 0, spec: "", ...patch });
+      if (existing) {
+        if (patch.value !== undefined && patch.value > existing.value) {
+          pushW5XpLog(d, `покупка: «${skillName}» ↑ до ${patch.value} — цена ${W5_XP_COSTS.skill(patch.value)} опыта (сверься с Рассказчиком)`);
+        }
+        if (patch.spec !== undefined && patch.spec.trim() && !(existing.spec || "").trim()) {
+          pushW5XpLog(d, `специализация: «${patch.spec.trim()}» (${skillName}) — цена ${W5_XP_COSTS.specialization} опыта`);
+        }
+        Object.assign(existing, patch);
+      } else {
+        if (patch.value !== undefined && patch.value > 0) {
+          pushW5XpLog(d, `покупка: «${skillName}» ↑ до ${patch.value} — цена ${W5_XP_COSTS.skill(patch.value)} опыта (сверься с Рассказчиком)`);
+        }
+        d.skills.push({ id, value: 0, spec: "", ...patch });
+      }
     });
   };
   // Пара по умолчанию для проверки (упрощённо: ментальные от Интеллекта и т.д.)
@@ -912,6 +940,10 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
 
   const hasGift = (id: string) => data.gifts.some((g) => g.id.startsWith("g-lib-") && g.id.includes(id));
 
+  // Ранг по Славе и потолок Даров: уровень Дара ≈ рангу (щенок — только 1-й уровень)
+  const rank = w5Rank(data.trackers.glory, data.trackers.honor, data.trackers.wisdom);
+  const giftCap = w5GiftLevelCap(rank.rank);
+
   const addGift = (defId: string) => {
     const def = W5_GIFT_LIBRARY.find((g) => g.id === defId);
     if (!def) return;
@@ -921,8 +953,13 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
     }
     mutate((d) => {
       d.gifts.push({ id: `g-lib-${Date.now().toString(36)}-${def.id}`, name: def.name, level: def.level, note: def.desc });
+      pushW5XpLog(d, `Дар «${def.name}» (${def.level} ур.) вырван у духов — цена ${W5_XP_COSTS.gift(def.level)} опыта (сверься с Рассказчиком)`);
     });
-    toast(`Дар «${def.name}» вырван у духов`);
+    if (def.level > giftCap) {
+      toast.warning(`Дар ${def.level} ур. выше ранга (${rank.title}) — духи могут не отвечать`, { description: "Обучение таких Даров требует Славы: сверься с Рассказчиком." });
+    } else {
+      toast(`Дар «${def.name}» вырван у духов`);
+    }
   };
 
   const addCustomGift = () => {
@@ -932,9 +969,14 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
       toast.error("Такой Дар уже есть");
       return;
     }
+    const lvl = Math.max(1, Math.min(5, customGiftLvl));
     mutate((d) => {
-      d.gifts.push({ id: `g-custom-${Date.now().toString(36)}`, name, level: Math.max(1, Math.min(5, customGiftLvl)), note: "" });
+      d.gifts.push({ id: `g-custom-${Date.now().toString(36)}`, name, level: lvl, note: "" });
+      pushW5XpLog(d, `свой Дар «${name}» (${lvl} ур.) — цена ${W5_XP_COSTS.gift(lvl)} опыта (сверься с Рассказчиком)`);
     });
+    if (lvl > giftCap) {
+      toast.warning(`Дар ${lvl} ур. выше ранга (${rank.title}) — сверься с Рассказчиком`);
+    }
     setCustomGiftName("");
     setCustomGiftLvl(1);
   };
@@ -948,6 +990,7 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
     }
     mutate((d) => {
       d.rites.push({ id: `r-lib-${Date.now().toString(36)}-${def.id}`, name: def.name, level: def.level, note: def.desc });
+      pushW5XpLog(d, `Обряд «${def.name}» (${def.level} ур.) — цена ${W5_XP_COSTS.rite(def.level)} опыта (сверься с Рассказчиком)`);
     });
   };
 
@@ -957,14 +1000,16 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
       <section className="vtm-panel" aria-label="Дары на листе">
         <div className="vtm-panel-head">
           <span className="vtm-label text-[0.81rem] text-[#c9d3e8]">Мои Дары</span>
-          <span className="vtm-hint !text-[0.72rem] ml-auto">{data.gifts.length} даров · 🎲 — проверка Дара (кости уровня + Ярость), если Рассказчик запросил</span>
+          <span className="vtm-hint !text-[0.72rem] ml-auto">
+            {data.gifts.length} даров · ранг «{rank.title}» — Дары до {giftCap} ур. · 🎲 — проверка Дара
+          </span>
         </div>
         <div className="p-3 space-y-2 max-h-[420px] overflow-y-auto overflow-x-hidden vtm-scroll">
           {data.gifts.length === 0 && (
             <p className="vtm-hint text-center py-3">Духов ещё не задобрил. Возьми из каталога ниже — или впиши свой.</p>
           )}
           {data.gifts.map((g) => (
-            <div key={g.id} className="vtm-frame rounded-md p-2.5 space-y-1.5" style={{ background: "rgba(0,0,0,0.22)" }}>
+            <div key={g.id} className={`vtm-frame rounded-md p-2.5 space-y-1.5 ${g.level > giftCap ? "vtm-gift-above-rank" : ""}`} style={{ background: "rgba(0,0,0,0.22)" }}>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="vtm-label text-[0.66rem] text-[#8ea6c9] shrink-0">{g.level} ур.</span>
                 <span className="text-[0.9rem] text-[#d9c7b6] flex-1 min-w-[120px]">{g.name}</span>
@@ -976,9 +1021,19 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
                 >
                   🎲
                 </button>
-                <Dots value={g.level} max={5} color="moon" onChange={(n) => mutate((d) => { const x = d.gifts.find((y) => y.id === g.id); if (x) x.level = n; })} ariaLabel={`${g.name}: уровень ${g.level}`} />
+                <Dots value={g.level} max={5} color="moon" onChange={(n) => mutate((d) => {
+                  const x = d.gifts.find((y) => y.id === g.id);
+                  if (!x) return;
+                  if (n > x.level) pushW5XpLog(d, `Дар «${x.name}» ↑ до ${n} ур. — цена ${W5_XP_COSTS.gift(n)} опыта (сверься с Рассказчиком)`);
+                  x.level = n;
+                })} ariaLabel={`${g.name}: уровень ${g.level}`} />
                 <button className="vtm-btn vtm-btn-ghost !p-1 !text-[0.72rem] vtm-confirm-del" onClick={() => mutate((d) => { d.gifts = d.gifts.filter((y) => y.id !== g.id); })} aria-label={`Убрать дар ${g.name}`}>✕</button>
               </div>
+              {g.level > giftCap && (
+                <p className="vtm-gift-rank-warn" role="note">
+                  ⚠ {g.level} ур. выше ранга «{rank.title}» (Слава {data.trackers.glory + data.trackers.honor + data.trackers.wisdom}): духи требуют Славы — сверься с Рассказчиком.
+                </p>
+              )}
               <input
                 className="vtm-input !py-1 !text-[0.8rem]"
                 value={g.note}
@@ -1033,12 +1088,14 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
           />
           {pool.map((g) => {
             const taken = hasGift(g.id) || data.gifts.some((x) => x.name === g.name);
+            const aboveRank = g.level > giftCap;
             return (
-              <div key={g.id} className={`vtm-disc-cat ${taken ? "taken" : ""}`}>
+              <div key={g.id} className={`vtm-disc-cat ${taken ? "taken" : ""} ${aboveRank ? "above-rank" : ""}`}>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="vtm-label text-[0.66rem] text-[#8ea6c9] shrink-0">{g.level} ур.</span>
                   <span className="vtm-label text-[0.8rem] flex-1 min-w-[120px]">{g.name}</span>
                   <span className="vtm-hint !text-[0.64rem] not-italic">{sourceLabel(g.source)}</span>
+                  {aboveRank && <span className="vtm-w5-rank-chip" title={`Ранг «${rank.title}» положен Дары до ${giftCap} ур.`}>выше ранга</span>}
                   {taken ? (
                     <span className="vtm-stamp !text-[0.62rem] !py-0.5 shrink-0">на листе</span>
                   ) : (
@@ -1078,7 +1135,12 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
                 />
                 <span className="vtm-hint !text-[0.7rem] flex items-center gap-1.5">
                   ур.:
-                  <Dots value={r.level} max={4} color="moon" onChange={(n) => mutate((d) => { const x = d.rites.find((y) => y.id === r.id); if (x) x.level = n; })} ariaLabel={`Уровень обряда ${r.name}`} />
+                  <Dots value={r.level} max={4} color="moon" onChange={(n) => mutate((d) => {
+                    const x = d.rites.find((y) => y.id === r.id);
+                    if (!x) return;
+                    if (n > x.level) pushW5XpLog(d, `Обряд «${x.name}» ↑ до ${n} ур. — цена ${W5_XP_COSTS.rite(n)} опыта (сверься с Рассказчиком)`);
+                    x.level = n;
+                  })} ariaLabel={`Уровень обряда ${r.name}`} />
                 </span>
                 <button className="vtm-btn vtm-btn-ghost !p-1 !text-[0.72rem] vtm-confirm-del" onClick={() => mutate((d) => { d.rites = d.rites.filter((y) => y.id !== r.id); })} aria-label={`Убрать обряд ${r.name}`}>✕</button>
               </div>
@@ -1115,7 +1177,12 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
               onChange={(e) => setCustomRiteName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && customRiteName.trim()) {
-                  mutate((d) => { d.rites.push({ id: `r-custom-${Date.now().toString(36)}`, name: customRiteName.trim(), level: customRiteLvl, note: "" }); });
+                  const rn = customRiteName.trim();
+                  const rl = customRiteLvl;
+                  mutate((d) => {
+                    d.rites.push({ id: `r-custom-${Date.now().toString(36)}`, name: rn, level: rl, note: "" });
+                    pushW5XpLog(d, `свой Обряд «${rn}» (${rl} ур.) — цена ${W5_XP_COSTS.rite(rl)} опыта`);
+                  });
                   setCustomRiteName("");
                   setCustomRiteLvl(1);
                 }
@@ -1131,7 +1198,13 @@ function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: 
               className="vtm-btn shrink-0"
               disabled={!customRiteName.trim()}
               onClick={() => {
-                mutate((d) => { d.rites.push({ id: `r-custom-${Date.now().toString(36)}`, name: customRiteName.trim(), level: customRiteLvl, note: "" }); });
+                const rn = customRiteName.trim();
+                if (!rn) return;
+                const rl = customRiteLvl;
+                mutate((d) => {
+                  d.rites.push({ id: `r-custom-${Date.now().toString(36)}`, name: rn, level: rl, note: "" });
+                  pushW5XpLog(d, `свой Обряд «${rn}» (${rl} ур.) — цена ${W5_XP_COSTS.rite(rl)} опыта`);
+                });
                 setCustomRiteName("");
                 setCustomRiteLvl(1);
               }}
@@ -1243,7 +1316,11 @@ function W5TracksTab({
             ]).map(({ key, label, hint }) => (
               <div key={key} className="vtm-frame rounded-md p-2.5 flex items-center gap-3 flex-wrap" style={{ background: "rgba(0,0,0,0.22)" }}>
                 <span className="vtm-label text-[0.76rem] text-[#c9d3e8] w-36 shrink-0">{label}</span>
-                <Dots value={data.trackers[key]} color="moon" onChange={(n) => mutate((d) => { d.trackers[key] = n; })} ariaLabel={`${label}: ${data.trackers[key]}`} />
+                <Dots value={data.trackers[key]} color="moon" onChange={(n) => mutate((d) => {
+                  const prev = d.trackers[key];
+                  if (n > prev) pushW5XpLog(d, `Слава «${label}» ↑ до ${n} — по решению Рассказчика (Славой не торгуют)`);
+                  d.trackers[key] = n;
+                })} ariaLabel={`${label}: ${data.trackers[key]}`} />
                 <span className="vtm-hint !text-[0.7rem] flex-1">{hint}</span>
               </div>
             ))}
@@ -1254,19 +1331,106 @@ function W5TracksTab({
         </section>
 
         <section className="vtm-panel" aria-label="Опыт">
-          <div className="vtm-panel-head"><span className="vtm-label text-[0.81rem] text-[#c9d3e8]">Опыт</span></div>
-          <div className="p-3 grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="vtm-label text-[0.68rem] uppercase text-[#9c8072]">Свободный</span>
-              <input type="number" min={0} max={999} className="vtm-input !py-1.5" value={data.trackers.xp} onChange={(e) => mutate((d) => { d.trackers.xp = Math.max(0, Math.min(999, Math.floor(Number(e.target.value) || 0))); })} aria-label="Свободный опыт" />
-            </label>
-            <label className="block">
-              <span className="vtm-label text-[0.68rem] uppercase text-[#9c8072]">Вложено всего</span>
-              <input type="number" min={0} max={999} className="vtm-input !py-1.5" value={data.trackers.xpSpent} onChange={(e) => mutate((d) => { d.trackers.xpSpent = Math.max(0, Math.min(999, Math.floor(Number(e.target.value) || 0))); })} aria-label="Вложенный опыт" />
-            </label>
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.81rem] text-[#c9d3e8]">Опыт</span>
+            <span className="vtm-hint !text-[0.72rem] ml-auto">свободно {data.trackers.xp} · вложено {data.trackers.xpSpent}</span>
+          </div>
+          <div className="p-3 md:p-4">
+            <W5XpBlock data={data} mutate={mutate} />
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// ОПЫТ ГАРОУ — счётчики + журнал покупок (pushW5XpLog).
+// Покупки характеристик/навыков/Даров/Обрядов падают в журнал сами,
+// очки не списываются — цену сверяет Рассказчик.
+// ============================================================
+
+function W5XpBtn({ onClick, title, disabled, children }: { onClick: () => void; title: string; disabled?: boolean; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className="vtm-btn vtm-btn-ghost !py-1 !px-2 !text-[0.72rem] vtm-xp-btn"
+    >
+      {children}
+    </button>
+  );
+}
+
+function W5XpBlock({
+  data,
+  mutate,
+}: {
+  data: W5SheetData;
+  mutate: (fn: (draft: W5SheetData) => void) => void;
+}) {
+  const gain = (n: number) =>
+    mutate((d) => {
+      d.trackers.xp = Math.max(0, Math.min(999, d.trackers.xp + n));
+      pushW5XpLog(d, `+${n} опыта — свободно ${d.trackers.xp}`);
+    });
+
+  const refund = (n: number) =>
+    mutate((d) => {
+      d.trackers.xp = Math.max(0, d.trackers.xp - n);
+      pushW5XpLog(d, `−${n} свободного опыта (возврат/ошибка) — свободно ${d.trackers.xp}`);
+    });
+
+  const spend = (n: number) =>
+    mutate((d) => {
+      if (d.trackers.xp < n) return;
+      d.trackers.xp -= n;
+      d.trackers.xpSpent = Math.min(999, d.trackers.xpSpent + n);
+      pushW5XpLog(d, `потрачено ${n} опыта — впиши покупку в Заметки · свободно ${d.trackers.xp}, вложено ${d.trackers.xpSpent}`);
+    });
+
+  const unspend = (n: number) =>
+    mutate((d) => {
+      d.trackers.xpSpent = Math.max(0, d.trackers.xpSpent - n);
+      d.trackers.xp = Math.min(999, d.trackers.xp + n);
+      pushW5XpLog(d, `возврат ${n} опыта из вложенного — свободно ${d.trackers.xp}, вложено ${d.trackers.xpSpent}`);
+    });
+
+  const log = data.xpLog || [];
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-1">
+        <W5XpBtn onClick={() => gain(1)} title="Получен 1 опыт">+1</W5XpBtn>
+        <W5XpBtn onClick={() => gain(3)} title="Получено 3 опыта">+3</W5XpBtn>
+        <W5XpBtn onClick={() => gain(5)} title="Получено 5 опыта">+5</W5XpBtn>
+        <span className="text-[#23303f] select-none" aria-hidden>|</span>
+        <W5XpBtn onClick={() => spend(1)} title="Потратить 1 опыта" disabled={data.trackers.xp < 1}>−1</W5XpBtn>
+        <W5XpBtn onClick={() => spend(5)} title="Потратить 5 опыта" disabled={data.trackers.xp < 5}>−5</W5XpBtn>
+        <W5XpBtn onClick={() => spend(10)} title="Потратить 10 опыта" disabled={data.trackers.xp < 10}>−10</W5XpBtn>
+        <span className="text-[#23303f] select-none" aria-hidden>|</span>
+        <W5XpBtn onClick={() => refund(1)} title="Откатить 1 свободного" disabled={data.trackers.xp < 1}>↺1</W5XpBtn>
+        <W5XpBtn onClick={() => unspend(5)} title="Вернуть 5 вложенных в свободные" disabled={data.trackers.xpSpent < 5}>⌂5</W5XpBtn>
+      </div>
+      {log.length > 0 && (
+        <div className="vtm-xp-log mt-2.5" aria-label="Журнал опыта">
+          <p className="vtm-xp-log-head vtm-label !text-[0.66rem] uppercase tracking-[0.2em]">Журнал опыта</p>
+          <div className="max-h-28 overflow-y-auto vtm-scroll pr-1">
+            {log.slice(0, 10).map((e) => (
+              <p key={e.id} className="vtm-xp-log-row !text-[0.73rem]">
+                {new Date(e.ts).toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · {e.text}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+      <p className="vtm-hint mt-2 !text-[0.73rem]">
+        Цены: луна 5×ур · навык 3×ур · специализация 3 · Дар 3×ур · Обряд 2×ур.
+        Покупки лун, навыков, специализаций, Даров и Обрядов сами падают в журнал — очки не списываются, цену сверяет Рассказчик.
+        Слава опытом не покупается — только подвигами.
+      </p>
     </div>
   );
 }

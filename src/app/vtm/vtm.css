@@ -3239,3 +3239,120 @@ button.vtm-die.vtm-die-selectable.selected {
   .vtm-form-card,
   .vtm-damage-bar .vtm-btn { transition: none !important; }
 }
+
+/* ============================================================
+   vtm-20: журнал опыта Гароу · ранг vs уровень Дара · кликабельная
+   витальная строка («Досье Гароу» → Треки)
+   ============================================================ */
+
+/* Кнопки счётчиков опыта — лунное серебро вместо крови */
+.vtm-xp-btn {
+  color: #c9d3e8;
+  border-color: rgba(142, 166, 201, 0.28);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+}
+.vtm-xp-btn:hover:not(:disabled) {
+  color: #dce6f5;
+  border-color: rgba(142, 166, 201, 0.6);
+  box-shadow: 0 0 8px rgba(142, 166, 201, 0.22), inset 0 0 6px rgba(142, 166, 201, 0.08);
+}
+.vtm-xp-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Журнал опыта: лунная свитковая рамка */
+.vtm-xp-log {
+  border: 1px solid rgba(142, 166, 201, 0.22);
+  border-radius: 5px;
+  background: linear-gradient(180deg, rgba(19, 27, 40, 0.4), rgba(10, 14, 22, 0.4));
+  padding: 0.5rem 0.6rem;
+}
+.vtm-xp-log-head {
+  color: #8ea6c9;
+  margin-bottom: 0.3rem;
+}
+.vtm-xp-log-row {
+  color: #b9c4d6;
+  line-height: 1.5;
+  border-bottom: 1px dashed rgba(142, 166, 201, 0.14);
+  padding: 0.18rem 0;
+}
+.vtm-xp-log-row:last-child { border-bottom: 0; }
+
+/* Дар выше ранга: рамка-предупреждение (фарфор + лунное серебро) */
+.vtm-gift-above-rank {
+  border: 1px solid rgba(201, 169, 106, 0.4) !important;
+  box-shadow: inset 0 0 12px rgba(201, 169, 106, 0.08);
+}
+.vtm-gift-rank-warn {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #cbb27f;
+  border: 1px dashed rgba(201, 169, 106, 0.45);
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  background: rgba(201, 169, 106, 0.07);
+}
+
+/* Чип «выше ранга» в каталоге Даров */
+.vtm-w5-rank-chip {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #cbb27f;
+  border: 1px solid rgba(201, 169, 106, 0.5);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  white-space: nowrap;
+  background: rgba(201, 169, 106, 0.1);
+}
+
+/* Карточка каталога с Даром выше ранга — тонкая золотая кромка */
+.vtm-disc-cat.above-rank {
+  border-color: rgba(201, 169, 106, 0.35);
+}
+
+/* Витальная строка Гароу теперь кнопка: курсор, свечение, фокус */
+.vtm-w5-vitals {
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.15s ease;
+}
+.vtm-w5-vitals:hover {
+  border-color: rgba(142, 166, 201, 0.45);
+  box-shadow: 0 0 14px rgba(142, 166, 201, 0.16), inset 0 0 18px rgba(142, 166, 201, 0.05);
+}
+.vtm-w5-vitals:active { transform: translateY(1px); }
+.vtm-w5-vitals:focus-visible {
+  outline: 2px solid rgba(142, 166, 201, 0.7);
+  outline-offset: 2px;
+}
+.vtm-w5-vitals-go {
+  margin-left: auto;
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #8ea6c9;
+  opacity: 0.75;
+  transition: opacity 0.25s ease, letter-spacing 0.25s ease;
+}
+.vtm-w5-vitals:hover .vtm-w5-vitals-go {
+  opacity: 1;
+  letter-spacing: 0.28em;
+}
+
+/* Мобайл: тач-цели кнопок опыта 40px, чипы не ломают строку витальной */
+@media (max-width: 640px) {
+  .vtm-xp-btn { min-height: 40px; min-width: 40px; }
+  .vtm-w5-vitals-go { width: 100%; text-align: right; }
+}
+
+/* Reduced-motion: без движения */
+@media (prefers-reduced-motion: reduce) {
+  .vtm-xp-btn,
+  .vtm-w5-vitals,
+  .vtm-w5-vitals-go { transition: none !important; }
+  .vtm-w5-vitals:active { transform: none; }
+}

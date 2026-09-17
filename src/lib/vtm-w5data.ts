@@ -263,6 +263,13 @@ export interface W5RollLogItem {
   ts: string;
 }
 
+/** Запись журнала опыта Гароу (как у вампиров, но в лунном листе). */
+export interface W5XpLogItem {
+  id: string;
+  text: string;
+  ts: string;
+}
+
 export interface W5Attributes {
   str: number; dex: number; sta: number;
   cha: number; man: number; com: number;
@@ -311,6 +318,7 @@ export interface W5SheetData {
   gear: W5GearItem[];
   notes: W5Note[];
   rollLog: W5RollLogItem[];   // хроника бросков (кости Луны)
+  xpLog?: W5XpLogItem[];      // журнал опыта: покупки падают сами, очки не списываются
 }
 
 export const W5_MAX_HEALTH_BASE = 3; // Здоровье = Стойкость + 3
@@ -334,6 +342,37 @@ export function w5Rank(glory: number, honor: number, wisdom: number): { rank: nu
   if (total >= 3) return { rank: 2, title: "Фостерн" };
   if (total >= 1) return { rank: 1, title: "Клиаит" };
   return { rank: 0, title: "Щенок" };
+}
+
+/**
+ * Верхний уровень Дара, который рангу положен (W5: уровень Дара ≈ рангу;
+ * щенок с нулевой Славой может учить только Дары 1-го уровня).
+ */
+export function w5GiftLevelCap(rank: number): number {
+  return Math.max(1, Math.min(5, rank));
+}
+
+// ---------- Стоимость прокачки Гароу (опыт, вкладка «Треки») ----------
+
+export const W5_XP_COSTS = {
+  attribute: (next: number) => next * 5,  // девять лун: 5 × новый уровень
+  skill: (next: number) => next * 3,      // навыки: 3 × новый уровень
+  specialization: 3,                       // специализация
+  gift: (level: number) => level * 3,      // Дар: 3 × уровень Дара
+  rite: (level: number) => level * 2,      // Обряд: 2 × уровень обряда
+} as const;
+
+/**
+ * Авто-запись в журнал опыта Гароу (внутри mutate-черновика): покупка/подъём
+ * НЕ списывает очки — цену сверяет Рассказчик. Дубли подряд гасятся.
+ */
+export function pushW5XpLog(d: W5SheetData, text: string): void {
+  if (!Array.isArray(d.xpLog)) d.xpLog = [];
+  if (d.xpLog[0]?.text === text) return; // без дублей подряд
+  d.xpLog = [
+    { id: `wxp-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e5).toString(36)}`, text, ts: new Date().toISOString() },
+    ...d.xpLog,
+  ].slice(0, 40);
 }
 
 /** Пустой лист Гароу. */
@@ -379,6 +418,16 @@ export function normalizeW5(raw: any): W5SheetData {
     portrait: typeof info.portrait === "string" ? info.portrait : undefined,
     portraitThumb: typeof info.portraitThumb === "string" ? info.portraitThumb : undefined,
   };
+  base.xpLog = Array.isArray(raw.xpLog)
+    ? raw.xpLog
+        .slice(0, 40)
+        .map((e: any) => ({
+          id: str(e?.id, 60) || `wxp-${Math.random().toString(36).slice(2, 10)}`,
+          text: str(e?.text, 220),
+          ts: str(e?.ts, 40) || new Date().toISOString(),
+        }))
+        .filter((e: W5XpLogItem) => e.text)
+    : undefined;
   base.attributes = {
     str: clamp05(a.str), dex: clamp05(a.dex), sta: clamp05(a.sta),
     cha: clamp05(a.cha), man: clamp05(a.man), com: clamp05(a.com),
