@@ -56,6 +56,7 @@ export interface ParsedW5MdSheet {
   touchstones?: string[];
   gear?: { name: string; count: string; note: string }[];
   notes?: { title: string; content: string; date: string }[];
+  xpLog?: { text: string; ts: string }[];
 }
 
 export interface W5MdParseResult {
@@ -124,6 +125,7 @@ export function parseW5SummaryMarkdown(md: string): W5MdParseResult {
       else if (title.includes("Стремления")) { section = "fire"; listKind = ""; }
       else if (title.includes("Пять обликов")) section = "forms";
       else if (title.includes("Снаряжение")) section = "gear";
+      else if (title.includes("Журнал")) section = "xplog";
       else if (title.includes("дневник")) section = "notes";
       else section = "";
       continue;
@@ -392,6 +394,25 @@ export function parseW5SummaryMarkdown(md: string): W5MdParseResult {
       continue;
     }
 
+    // ── Журнал опыта: «- **дата** — текст» (обратная вливалка xpLog-строк) ──
+    if (section === "xplog") {
+      const m = t.match(/^-\s+(.+)$/);
+      if (m) {
+        const body = m[1];
+        if (/ещё \d+ запис/.test(body)) continue; // хвост «…и ещё N записей в журнале листа»
+        const dateM = body.match(/^\*\*(.+?)\*\*\s*—\s*(.+)$/);
+        const stamp = dateM ? stripBold(dateM[1]).trim() : "";
+        const text = dateM ? stripBold(dateM[2]).trim() : stripBold(body).trim();
+        if (text) {
+          const ts = stamp ? (Date.parse(stamp) || 0) : 0;
+          fields.xpLog = fields.xpLog || [];
+          fields.xpLog.push({ text, ts: ts ? new Date(ts).toISOString() : new Date().toISOString() });
+          if (!found.includes("журнал опыта")) found.push("журнал опыта");
+        }
+      }
+      continue;
+    }
+
     // ── Лунный дневник: «- **дата** — текст» ──
     if (section === "notes") {
       const m = t.match(/^-\s+(.+)$/);
@@ -528,5 +549,19 @@ export function applyParsedW5Md(draft: W5SheetData, p: ParsedW5MdSheet): void {
         date: n.date.slice(0, 40),
       }));
     draft.notes = [...fresh, ...draft.notes].slice(0, 100);
+  }
+
+  // Журнал опыта — добавить сверху, пропустив записи, что уже есть на листе (по тексту)
+  if (p.xpLog && p.xpLog.length > 0) {
+    const existingTexts = new Set((draft.xpLog || []).map((e) => e.text));
+    const fresh = p.xpLog
+      .filter((e) => !existingTexts.has(e.text))
+      .slice(0, 20)
+      .map((e, i) => ({
+        id: `wxp-md-${Date.now().toString(36)}-${i}`,
+        text: e.text.slice(0, 300),
+        ts: e.ts,
+      }));
+    draft.xpLog = [...fresh, ...(draft.xpLog || [])].slice(0, 40);
   }
 }

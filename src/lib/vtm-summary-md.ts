@@ -207,6 +207,21 @@ export function buildSummaryMarkdown(data: VtmSheetData, derived: DerivedStats):
     }
   }
 
+  // ── Журнал опыта (последние 8 записей — покупки падают сами) ──
+  if (data.xpLog?.length) {
+    out.push("");
+    out.push("## ⛁ Журнал опыта");
+    out.push("");
+    for (const e of data.xpLog.slice(0, 8)) {
+      const when = new Date(e.ts);
+      const stamp = Number.isNaN(when.getTime())
+        ? ""
+        : when.toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+      out.push(`- ${stamp ? `**${stamp}** — ` : ""}${e.text.replace(/\|/g, "\\|")}`);
+    }
+    if (data.xpLog.length > 8) out.push(`- …и ещё ${data.xpLog.length - 8} записей в архиве Крови`);
+  }
+
   // ── Хроника ночей (последние 5 записей) ──
   if (data.notes.entries.length > 0) {
     out.push("");

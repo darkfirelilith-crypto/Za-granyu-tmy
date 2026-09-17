@@ -16,7 +16,7 @@ import { SKILL_LIBRARY } from "@/lib/vtm-data";
 import { buildW5SummaryMarkdown } from "@/lib/vtm-w5-summary-md";
 import { applyParsedW5Md, W5MdParseResult } from "@/lib/vtm-w5-md-import";
 import { W5ImportDialog } from "@/components/vtm/vtm-w5-import-dialog";
-import { VtmDicePanel, setVtmSheetHooks, useVtmDice, vtmW5RollAndShow, vtmW5RageCheckAndShow } from "@/components/vtm/vtm-dice";
+import { VtmDicePanel, setVtmSheetHooks, useVtmDice, vtmW5RollAndShow, vtmW5RageCheckAndShow, W5RollResult } from "@/components/vtm/vtm-dice";
 import { W5PrintDoc, W5PrintSummary } from "@/components/vtm/vtm-w5-print";
 import { W5HelpDialog } from "@/components/vtm/vtm-help";
 import {
@@ -81,6 +81,24 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
   const [conflict, setConflict] = useState<{ serverData: W5SheetData; serverUpdatedAt: string } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  // Досье Гароу: карточка-поповер из витальной строки (Слава/Дары/Ранг — без ухода со вкладки)
+  const [dossierOpen, setDossierOpen] = useState(false);
+  const dossierRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!dossierOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setDossierOpen(false); };
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (dossierRef.current && !dossierRef.current.contains(e.target as Node)) setDossierOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [dossierOpen]);
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
   // Режим печати: «лист» — полный бланк; «сводка» — одна страница для стола
   const [printMode, setPrintMode] = useState<"sheet" | "summary">("sheet");
@@ -236,11 +254,20 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
     lines.push(`Ярость ${data.trackers.rage}/5 · Здоровье ${data.trackers.healthSup + data.trackers.healthAgg}/${healthMax} · Воля ${data.trackers.wpSup}/${wpMax}`);
     // Слава чипами с рангом: Гордец 2 · Честь 1 · Мудрость 1 — Клиаит
     lines.push(`Слава [Гордец ${data.trackers.glory}] [Честь ${data.trackers.honor}] [Мудрость ${data.trackers.wisdom}] — ${rank.title}${data.trackers.wolfLost ? " ⚠ волк потерян" : ""}${data.trackers.harano ? " · харано" : ""}`);
+    lines.push(`Опыт: свободно ${data.trackers.xp} · вложено ${data.trackers.xpSpent}`);
     if (data.gifts.length) lines.push(`Дары: ${data.gifts.map((g) => `${g.name} (${g.level})`).join(", ")}`);
     if (data.rites.length) lines.push(`Обряды: ${data.rites.map((r) => `${r.name} (${r.level})`).join(", ")}`);
     if (data.aspirations.length) lines.push(`Стремления: ${data.aspirations.map((a) => a.text).filter(Boolean).join(" | ")}`);
+    // Журнал опыта — последние 3 записи (покупки падают сами)
+    const xpTail = (data.xpLog || []).slice(0, 3);
+    if (xpTail.length) {
+      lines.push("Журнал опыта:");
+      for (const e of xpTail) lines.push(`  · ${e.text}`);
+      const rest = (data.xpLog || []).length - xpTail.length;
+      if (rest > 0) lines.push(`  …и ещё ${rest} записей на листе`);
+    }
     try {
-      await navigator.clipboard.writeText(lines.join("\n"));
+      await copyText(lines.join("\n"));
       toast.success("Сводка Гароу в буфере");
     } catch {
       toast.error("Браузер не отдал буфер — скопируй вручную");
@@ -404,27 +431,44 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
             </button>
           </div>
 
-          {/* Витальная строка — клик открывает «Треки» (Досье Гароу) */}
-          <button
-            type="button"
-            onClick={() => setTab("tracks")}
-            className="vtm-panel vtm-w5-vitals p-2.5 md:p-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 w-full text-left"
-            title="Витальная сводка Гароу — клик откроет Треки: Ярость, Здоровье, Воля, Слава, Опыт"
-            aria-label="Витальная сводка Гароу — открыть Треки"
-          >
-            <span className="vtm-hint !text-[0.78rem]">Ярость <b className="text-[#e8636b] not-italic">{data.trackers.rage}</b>/5</span>
-            <span className="vtm-hint !text-[0.78rem]">Здоровье <b className="text-[#d9c7b6] not-italic">{data.trackers.healthSup + data.trackers.healthAgg}/{healthMax}</b></span>
-            <span className="vtm-hint !text-[0.78rem]">Воля <b className="text-[#d9c7b6] not-italic">{data.trackers.wpSup}/{wpMax}</b></span>
-            <span className="vtm-hint !text-[0.78rem]">Слава <b className="text-[#c9d3e8] not-italic">{renownTotal}</b> — {rank.title}</span>
-            {activeForm && activeForm.id !== "hishu" && (
-              <span className="vtm-form-badge" title={`Облик дня: ${activeForm.name} — модификаторы применяются к броскам`}>
-                🐾 {activeForm.name}
-              </span>
+          {/* Витальная строка — клик раскрывает «Досье Гароу» (карточка-поповер) */}
+          <div className="relative" ref={dossierRef}>
+            <button
+              type="button"
+              onClick={() => {
+                // Досье и панель костей — два нижних листа на мобайле: открываем по одному
+                useVtmDice.getState().setOpen(false);
+                setDossierOpen((v) => !v);
+              }}
+              aria-expanded={dossierOpen}
+              aria-haspopup="dialog"
+              className={`vtm-panel vtm-w5-vitals p-2.5 md:p-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 w-full text-left ${dossierOpen ? "vtm-w5-vitals-open" : ""}`}
+              title="Витальная сводка Гароу — клик раскроет Досье: Слава, Ранг, Дары, Опыт"
+              aria-label="Витальная сводка Гароу — открыть Досье"
+            >
+              <span className="vtm-hint !text-[0.78rem]">Ярость <b className="text-[#e8636b] not-italic">{data.trackers.rage}</b>/5</span>
+              <span className="vtm-hint !text-[0.78rem]">Здоровье <b className="text-[#d9c7b6] not-italic">{data.trackers.healthSup + data.trackers.healthAgg}/{healthMax}</b></span>
+              <span className="vtm-hint !text-[0.78rem]">Воля <b className="text-[#d9c7b6] not-italic">{data.trackers.wpSup}/{wpMax}</b></span>
+              <span className="vtm-hint !text-[0.78rem]">Слава <b className="text-[#c9d3e8] not-italic">{renownTotal}</b> — {rank.title}</span>
+              {activeForm && activeForm.id !== "hishu" && (
+                <span className="vtm-form-badge" title={`Облик дня: ${activeForm.name} — модификаторы применяются к броскам`}>
+                  🐾 {activeForm.name}
+                </span>
+              )}
+              {data.trackers.wolfLost && <span className="vtm-label text-[0.68rem] text-[#e8636b] uppercase">волк потерян</span>}
+              {data.trackers.harano && <span className="vtm-label text-[0.68rem] text-[#8ea6c9] uppercase">харано</span>}
+              <span className="vtm-w5-vitals-go" aria-hidden>{dossierOpen ? "свернуть ▲" : "досье ▼"}</span>
+            </button>
+            {dossierOpen && (
+              <W5DossierPop
+                data={data}
+                rank={rank}
+                renownTotal={renownTotal}
+                onClose={() => setDossierOpen(false)}
+                onGo={(t) => { setTab(t); setDossierOpen(false); }}
+              />
             )}
-            {data.trackers.wolfLost && <span className="vtm-label text-[0.68rem] text-[#e8636b] uppercase">волк потерян</span>}
-            {data.trackers.harano && <span className="vtm-label text-[0.68rem] text-[#8ea6c9] uppercase">харано</span>}
-            <span className="vtm-w5-vitals-go" aria-hidden>треки →</span>
-          </button>
+          </div>
         </motion.header>
 
         {/* Вкладки */}
@@ -541,6 +585,125 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
         </div>
       )}
     </main>
+  );
+}
+
+// ============================================================
+// ДОСЬЕ ГАРОУ — карточка-поповер из витальной строки: Слава/Ранг,
+// Дары и Обряды, Опыт — одним взглядом, без ухода со вкладки.
+// ============================================================
+
+const W5_RANK_LADDER: { min: number; title: string }[] = [
+  { min: 0, title: "Щенок" },
+  { min: 1, title: "Клиаит" },
+  { min: 3, title: "Фостерн" },
+  { min: 6, title: "Адурен" },
+  { min: 9, title: "Старейшина" },
+  { min: 12, title: "Старейшина вождей" },
+];
+
+function W5DossierPop({
+  data,
+  rank,
+  renownTotal,
+  onClose,
+  onGo,
+}: {
+  data: W5SheetData;
+  rank: { rank: number; title: string };
+  renownTotal: number;
+  onClose: () => void;
+  onGo: (tab: W5Tab) => void;
+}) {
+  const dots = (n: number) => "●".repeat(Math.max(0, n)) + "○".repeat(Math.max(0, 5 - n));
+  const gifts = data.gifts;
+  const giftsAbove = gifts.filter((g) => g.level > w5GiftLevelCap(rank.rank)).length;
+  const lastXp = (data.xpLog || [])[0];
+  const xpLogCount = (data.xpLog || []).length;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="vtm-dossier-pop"
+      role="dialog"
+      aria-label="Досье Гароу — сводка Славы, Даров и опыта"
+    >
+      <div className="vtm-dossier-pop-head">
+        <span className="vtm-label !text-[0.7rem] uppercase tracking-[0.24em] text-[#c9d3e8]">🐺 Досье Гароу</span>
+        <span className="vtm-w5-rank-chip" title="Ранг растёт со Славой (1+3+…+3)">
+          Слава {renownTotal} — {rank.title}
+        </span>
+        <button className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.72rem]" onClick={onClose} aria-label="Свернуть досье">✕</button>
+      </div>
+
+      <div className="vtm-dossier-pop-grid">
+        {/* Слава: три линии точками */}
+        <div className="vtm-dossier-pop-cell">
+          <p className="vtm-dossier-pop-label">Слава</p>
+          <p className="vtm-dossier-pop-row" title="Гордец: подвиги, охота, боевые деяния">
+            <span>Гордец</span> <b>{dots(data.trackers.glory)}</b>
+          </p>
+          <p className="vtm-dossier-pop-row" title="Честь: слово, долг, справедливость">
+            <span>Честь</span> <b>{dots(data.trackers.honor)}</b>
+          </p>
+          <p className="vtm-dossier-pop-row" title="Мудрость: духи, сдержанность, знание">
+            <span>Мудрость</span> <b>{dots(data.trackers.wisdom)}</b>
+          </p>
+          <p className="vtm-dossier-pop-ladder">
+            {W5_RANK_LADDER.map((s, i) => (
+              <span key={s.title} className={i === rank.rank ? "cur" : i < rank.rank ? "past" : ""}>{s.title}</span>
+            ))}
+          </p>
+        </div>
+
+        {/* Дары и Обряды */}
+        <div className="vtm-dossier-pop-cell">
+          <p className="vtm-dossier-pop-label">Дары и духи</p>
+          {gifts.length ? (
+            <>
+              {gifts.slice(0, 4).map((g) => (
+                <p key={g.id} className="vtm-dossier-pop-row" title={g.note || undefined}>
+                  <span className="truncate">{g.name}</span> <b>{g.level} ур.</b>
+                </p>
+              ))}
+              {gifts.length > 4 && <p className="vtm-dossier-pop-more">…и ещё {gifts.length - 4} {gifts.length - 4 === 1 ? "дар" : "даров"}</p>}
+              {giftsAbove > 0 && <p className="vtm-dossier-pop-warn">⚠ {giftsAbove} {giftsAbove === 1 ? "Дар выше" : "Даров выше"} ранга — духи потребуют Славы</p>}
+            </>
+          ) : (
+            <p className="vtm-dossier-pop-more">духов пока никто не просил</p>
+          )}
+          {data.rites.length > 0 && <p className="vtm-dossier-pop-more">⚱ Обряды: {data.rites.length}</p>}
+        </div>
+
+        {/* Опыт */}
+        <div className="vtm-dossier-pop-cell">
+          <p className="vtm-dossier-pop-label">Опыт</p>
+          <p className="vtm-dossier-pop-row">
+            <span>свободно</span> <b>{data.trackers.xp}</b>
+          </p>
+          <p className="vtm-dossier-pop-row">
+            <span>вложено</span> <b>{data.trackers.xpSpent}</b>
+          </p>
+          {lastXp && (
+            <p className="vtm-dossier-pop-more" title={lastXp.text}>
+              ↳ {lastXp.text.length > 44 ? `${lastXp.text.slice(0, 44)}…` : lastXp.text}
+              {xpLogCount > 1 && ` (в журнале ${xpLogCount})`}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="vtm-dossier-pop-foot">
+        <button className="vtm-btn vtm-btn-ghost !py-1 !px-2.5 !text-[0.72rem]" onClick={() => onGo("tracks")}>
+          🩸 Все треки →
+        </button>
+        <button className="vtm-btn vtm-btn-ghost !py-1 !px-2.5 !text-[0.72rem]" onClick={() => onGo("gifts")}>
+          ◈ Дары и Обряды →
+        </button>
+      </div>
+    </motion.div>
   );
 }
 
@@ -1442,8 +1605,7 @@ function W5XpBlock({
 
 interface W5DamageResult {
   label: string;
-  successes: number;     // итог с учётом Жестокого исхода
-  brutalDamage: boolean; // был ли Жестокий исход на уроне
+  roll: W5RollResult;    // полный бросок: перебросы волей из панели обновляют его по uid
   total: number;         // пул
   ts: number;
 }
@@ -1459,6 +1621,15 @@ function W5DamageBar({
 }) {
   const [last, setLast] = useState<W5DamageResult | null>(null);
   const [custom, setCustom] = useState("");
+  // Живой итог: если в панели костей перебросили волей именно ЭТОТ бросок
+  // (uid сохраняется при перебросе — «каждая кость один раз» по правилам W5),
+  // серия урона честно берёт свежий итог. Иначе — свой последний результат.
+  const panelRoll = useVtmDice((s) => s.w5last);
+  const live = last && panelRoll && last.roll.uid && panelRoll.uid === last.roll.uid ? panelRoll : last?.roll;
+  const successes = live?.totalSuccesses ?? 0;
+  const brutalDamage = !!live?.brutalDamage;
+  const rerollsHappened = !!live?.dice.some((d) => d.rerolled);
+  const rerollable = !!live?.dice.some((d) => !d.rage && !d.rerolled);
 
   const brawlVal = data.skills.find((s) => s.id === "brawl")?.value || 0;
   const meleeVal = data.skills.find((s) => s.id === "melee")?.value || 0;
@@ -1468,7 +1639,7 @@ function W5DamageBar({
 
   const doRoll = (pool: number, label: string) => {
     const r = vtmW5RollAndShow(Math.max(1, pool), data.trackers.rage, label, { damage: true });
-    setLast({ label, successes: r.totalSuccesses, brutalDamage: r.brutalDamage, total: pool, ts: Date.now() });
+    setLast({ label, roll: r, total: pool, ts: Date.now() });
   };
 
   const rollCustom = () => {
@@ -1478,8 +1649,8 @@ function W5DamageBar({
   };
 
   const applyDamage = (kind: "sup" | "agg") => {
-    if (!last || last.successes <= 0) return;
-    const n = last.successes;
+    if (!last || successes <= 0) return;
+    const n = successes;
     const freeBefore = Math.max(0, healthMax - data.trackers.healthSup - data.trackers.healthAgg);
     const applied = Math.min(n, freeBefore);
     mutate((d) => {
@@ -1491,7 +1662,7 @@ function W5DamageBar({
       }
       d.rollLog = [{
         id: `roll-${Date.now().toString(36)}`,
-        text: `Урон «${last.label}» → ${applied < n ? `+${applied} из ${n}` : `+${n}`} ${kind === "sup" ? "поверхностных" : "тяжёлых"} ран (свободно клеток было ${freeBefore})`,
+        text: `Урон «${last.label}${rerollsHappened ? " ⟲волей" : ""}» → ${applied < n ? `+${applied} из ${n}` : `+${n}`} ${kind === "sup" ? "поверхностных" : "тяжёлых"} ран (свободно клеток было ${freeBefore})`,
         ts: new Date().toISOString(),
       }, ...d.rollLog].slice(0, 60);
     });
@@ -1531,32 +1702,41 @@ function W5DamageBar({
       </div>
       {last && (
         <div className="vtm-damage-result">
-          <span className={`vtm-label text-[0.78rem] ${last.successes > 0 ? "text-[#d6a840]" : "text-[#c4ac9d]"}`}>
-            {last.label}: {last.brutalDamage ? "ЖЕСТОКИЙ УСПЕХ · " : ""}{last.successes} успехов
+          <span className={`vtm-label text-[0.78rem] ${successes > 0 ? "text-[#d6a840]" : "text-[#c4ac9d]"}`}>
+            {last.label}{rerollsHappened ? " ⟲волей" : ""}: {brutalDamage ? "ЖЕСТОКИЙ УСПЕХ · " : ""}{successes} успехов
           </span>
           <span className="flex gap-1.5 flex-wrap">
             <button
               className="vtm-btn !py-1 !px-2.5 !text-[0.72rem]"
               onClick={() => applyDamage("sup")}
-              disabled={last.successes <= 0}
-              title={`Добавить ${last.successes} поверхностных ран (свободно ${freeCap})`}
+              disabled={successes <= 0}
+              title={`Добавить ${successes} поверхностных ран (свободно ${freeCap})`}
             >
               + поверхностный
             </button>
             <button
               className="vtm-btn vtm-btn-blood !py-1 !px-2.5 !text-[0.72rem]"
               onClick={() => applyDamage("agg")}
-              disabled={last.successes <= 0}
-              title={`Добавить ${last.successes} тяжёлых ран (свободно ${freeCap})`}
+              disabled={successes <= 0}
+              title={`Добавить ${successes} тяжёлых ран (свободно ${freeCap})`}
             >
               + тяжёлый
             </button>
+            {rerollable && (
+              <button
+                className="vtm-btn vtm-btn-ghost !py-1 !px-2.5 !text-[0.72rem] vtm-damage-reroll"
+                onClick={() => useVtmDice.getState().setOpen(true)}
+                title="Перебросить кости волей (1 пункт): выбери до 3 обычных костей в панели «Кости Луны» — кости Ярости и уже переброшенные волей не берутся"
+              >
+                ⟲ волей
+              </button>
+            )}
             <button className="vtm-btn vtm-btn-ghost !py-1 !px-2 !text-[0.72rem]" onClick={() => setLast(null)} aria-label="Сбросить бросок урона">✕</button>
           </span>
         </div>
       )}
       <p className="vtm-hint !text-[0.7rem]">
-        Успех на 6+; две десятки — крит; Жестокий исход (2+ кости Ярости на 1–2) на уроне даёт +4 успеха. Пустых клеток: {freeCap}.
+        Успех на 6+; две десятки — крит; Жестокий исход (2+ кости Ярости на 1–2) на уроне даёт +4 успеха. «⟲ волей» — до 3 обычных костей за пункт Воли, каждая кость перебрасывается один раз за серию. Пустых клеток: {freeCap}.
       </p>
     </div>
   );

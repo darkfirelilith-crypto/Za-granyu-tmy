@@ -71,6 +71,7 @@ export interface ParsedMdSheet {
   diablerie?: { count: number; notes: string };
   gear?: { haven?: string; resources?: string; items?: VtmGearItem[] };
   notes?: VtmNote[];
+  xpLog?: { text: string; ts: string }[];
 }
 
 export interface MdParseResult {
@@ -141,6 +142,7 @@ export function parseSummaryMarkdown(md: string): MdParseResult {
       else if (t.startsWith("Истории")) section = "loresheets";
       else if (t.startsWith("Столкновения")) section = "conv";
       else if (t.startsWith("Убежище")) section = "gear";
+      else if (t.includes("Журнал опыта") || t.includes("Журнал")) section = "xplog";
       else if (t.startsWith("Хроника ночей")) section = "notes";
       else section = "";
       continue;
@@ -444,6 +446,25 @@ export function parseSummaryMarkdown(md: string): MdParseResult {
       continue;
     }
 
+    // ── Журнал опыта: «- **дата** — текст» (обратная вливалка xpLog-строк) ──
+    if (section === "xplog") {
+      const m = line.match(/^-(?:\s+)(.+)$/);
+      if (m) {
+        const body = m[1];
+        if (/ещё \d+ запис/.test(body)) continue; // хвост «…и ещё N записей в архиве Крови»
+        const dateM = body.match(/^\*\*(.+?)\*\*\s*—\s*(.+)$/);
+        const stamp = dateM ? stripBold(dateM[1]).trim() : "";
+        const text = dateM ? stripBold(dateM[2]).trim() : stripBold(body).trim();
+        if (text) {
+          const ts = stamp ? (Date.parse(stamp) || 0) : 0;
+          fields.xpLog = fields.xpLog || [];
+          fields.xpLog.push({ text, ts: ts ? new Date(ts).toISOString() : new Date().toISOString() });
+          if (!found.includes("журнал опыта")) found.push("журнал опыта");
+        }
+      }
+      continue;
+    }
+
     // ── Хроника ночей ──
     if (section === "notes") {
       if (line === "") continue;
@@ -650,5 +671,19 @@ export function applyParsedMd(draft: VtmSheetData, p: ParsedMdSheet): void {
     const existing = new Set(draft.notes.entries.map(key));
     const fresh = p.notes.filter((n) => !existing.has(key(n)));
     draft.notes.entries = [...fresh, ...draft.notes.entries];
+  }
+
+  // Журнал опыта — добавить сверху, пропустив записи, что уже есть на листе (по тексту)
+  if (p.xpLog && p.xpLog.length > 0) {
+    const existingTexts = new Set((draft.xpLog || []).map((e) => e.text));
+    const fresh = p.xpLog
+      .filter((e) => !existingTexts.has(e.text))
+      .slice(0, 20)
+      .map((e, i) => ({
+        id: `xp-md-${Date.now().toString(36)}-${i}`,
+        text: e.text.slice(0, 300),
+        ts: e.ts,
+      }));
+    draft.xpLog = [...fresh, ...(draft.xpLog || [])].slice(0, 40);
   }
 }

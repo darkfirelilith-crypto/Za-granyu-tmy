@@ -3356,3 +3356,157 @@ button.vtm-die.vtm-die-selectable.selected {
   .vtm-w5-vitals-go { transition: none !important; }
   .vtm-w5-vitals:active { transform: none; }
 }
+
+/* ============================================================
+   vtm-21: Досье Гароу — карточка-поповер из витальной строки;
+   переброс волей в серии урона; журнал опыта в сводках
+   ============================================================ */
+
+/* Витальная строка в открытом состоянии — лунная кромка держит контекст */
+.vtm-w5-vitals-open {
+  border-color: rgba(142, 166, 201, 0.55) !important;
+  box-shadow: 0 0 16px rgba(142, 166, 201, 0.2), inset 0 0 20px rgba(142, 166, 201, 0.06);
+}
+
+/* Карточка «Досье Гароу»: восковой свиток с серебряной кромкой и лунной печатью */
+.vtm-dossier-pop {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border: 1px solid rgba(142, 166, 201, 0.4);
+  border-radius: 0.5rem;
+  background: linear-gradient(165deg, rgba(19, 26, 40, 0.97), rgba(10, 13, 21, 0.97));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6), 0 0 22px rgba(142, 166, 201, 0.12), inset 0 0 30px rgba(142, 166, 201, 0.04);
+  padding: 0.7rem 0.85rem 0.75rem;
+  transform-origin: top center;
+}
+.vtm-dossier-pop::before {
+  content: "☾";
+  position: absolute;
+  top: 0.35rem;
+  right: 0.75rem;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: rgba(142, 166, 201, 0.14);
+  pointer-events: none;
+}
+.vtm-dossier-pop-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.55rem;
+  border-bottom: 1px dashed rgba(142, 166, 201, 0.25);
+}
+.vtm-dossier-pop-head .vtm-btn { margin-left: auto; }
+.vtm-dossier-pop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.65rem;
+}
+.vtm-dossier-pop-cell {
+  border: 1px solid rgba(142, 166, 201, 0.16);
+  border-radius: 5px;
+  background: rgba(8, 11, 18, 0.5);
+  padding: 0.5rem 0.6rem;
+  min-width: 0;
+}
+.vtm-dossier-pop-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #8ea6c9;
+  margin-bottom: 0.3rem;
+}
+.vtm-dossier-pop-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.76rem;
+  color: #c4cddd;
+  line-height: 1.65;
+}
+.vtm-dossier-pop-row b {
+  font-weight: 600;
+  color: #c9d3e8;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+.vtm-dossier-pop-more {
+  font-size: 0.7rem;
+  color: #8b98ad;
+  line-height: 1.5;
+  margin-top: 0.25rem;
+}
+.vtm-dossier-pop-warn {
+  font-size: 0.68rem;
+  line-height: 1.45;
+  color: #cbb27f;
+  border-top: 1px dashed rgba(201, 169, 106, 0.3);
+  margin-top: 0.35rem;
+  padding-top: 0.3rem;
+}
+/* Лестница рангов: пройдено — серебро, текущий — светится, впереди — тень */
+.vtm-dossier-pop-ladder {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.45rem;
+  margin-top: 0.4rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed rgba(142, 166, 201, 0.14);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+}
+.vtm-dossier-pop-ladder span { color: #5a6478; }
+.vtm-dossier-pop-ladder span.past { color: #8b98ad; }
+.vtm-dossier-pop-ladder span.cur {
+  color: #e5ecf7;
+  text-shadow: 0 0 8px rgba(142, 166, 201, 0.55);
+}
+.vtm-dossier-pop-foot {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed rgba(142, 166, 201, 0.22);
+}
+
+/* Кнопка переброса волей в серии урона — тлеющий уголь в алом */
+.vtm-damage-reroll {
+  color: #e0a9ac;
+  border-color: rgba(232, 99, 107, 0.4);
+  transition: border-color 0.22s ease, box-shadow 0.22s ease, text-shadow 0.22s ease, color 0.22s ease;
+}
+.vtm-damage-reroll:hover {
+  color: #f2c4c6;
+  border-color: rgba(232, 99, 107, 0.7);
+  box-shadow: 0 0 10px rgba(232, 99, 107, 0.28);
+  text-shadow: 0 0 8px rgba(232, 99, 107, 0.5);
+}
+
+/* Мобайл: досье — на всю ширину с прокруткой, тач-цели не ниже 40px */
+@media (max-width: 640px) {
+  .vtm-dossier-pop {
+    position: fixed;
+    top: auto;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    max-height: 72vh;
+    overflow-y: auto;
+    box-shadow: 0 -14px 44px rgba(0, 0, 0, 0.7), 0 0 22px rgba(142, 166, 201, 0.12);
+  }
+  .vtm-dossier-pop-foot .vtm-btn { min-height: 40px; }
+  .vtm-damage-reroll { min-height: 36px; }
+}
+
+/* Reduced-motion: появление досье без сдвига и масштаба */
+@media (prefers-reduced-motion: reduce) {
+  .vtm-dossier-pop,
+  .vtm-damage-reroll { transition: none !important; animation: none !important; transform: none !important; }
+}

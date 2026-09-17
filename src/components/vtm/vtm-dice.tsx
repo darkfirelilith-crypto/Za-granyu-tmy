@@ -39,12 +39,16 @@ export interface W5RollResult {
   rageDice: number;
   label: string;
   difficulty?: number;
+  /** Личность броска: перебросы волей сохраняют uid — по нему серия урона
+   *  подхватывает свежий итог из панели костей (каждая кость — один раз). */
+  uid?: string;
 }
 
 /** Бросок пула Гароу: rage — сколько костей пула являются костями Ярости. */
 export function rollW5Pool(pool: number, rage: number, label: string, opts?: { damage?: boolean; difficulty?: number }): W5RollResult {
   const p = Math.max(1, Math.min(40, Math.floor(pool)));
   const r = Math.max(0, Math.min(p, Math.min(5, Math.floor(rage))));
+  const uid = `w5-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
   const dice: W5Die[] = [];
   for (let i = 0; i < p; i++) {
     const value = 1 + Math.floor(Math.random() * 10);
@@ -73,6 +77,7 @@ export function rollW5Pool(pool: number, rage: number, label: string, opts?: { d
     rageDice: r,
     label,
     difficulty: opts?.difficulty,
+    uid,
   };
 }
 

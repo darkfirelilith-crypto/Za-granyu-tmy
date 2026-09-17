@@ -161,6 +161,22 @@ export function buildW5SummaryMarkdown(data: W5SheetData): string {
     }
   }
 
+  // ── Журнал опыта (последние 8 записей — покупки падают сами) ──
+  const xpLog = data.xpLog || [];
+  if (xpLog.length) {
+    out.push("");
+    out.push("## ⛁ Журнал опыта");
+    out.push("");
+    for (const e of xpLog.slice(0, 8)) {
+      const when = new Date(e.ts);
+      const stamp = Number.isNaN(when.getTime())
+        ? ""
+        : when.toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+      out.push(`- ${stamp ? `**${stamp}** — ` : ""}${cell(e.text)}`);
+    }
+    if (xpLog.length > 8) out.push(`- …и ещё ${xpLog.length - 8} записей в журнале листа`);
+  }
+
   // ── Лунный дневник ──
   const notes = data.notes.filter((n) => n.content.trim());
   if (notes.length) {

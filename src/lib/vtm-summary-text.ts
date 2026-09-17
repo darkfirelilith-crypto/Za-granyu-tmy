@@ -68,6 +68,12 @@ export function buildSummaryText(data: VtmSheetData, derived: DerivedStats): str
     out.push(`Резонанс крови: ${res.name}, ${RESONANCE_INTENSITY_LABELS[data.resonance.intensity] || data.resonance.intensity}`);
   }
   out.push(`Опыт: свободно ${data.trackers.xp}, вложено ${data.trackers.xpSpent}`);
+  // Журнал опыта — последние 3 записи (покупки падают сами)
+  for (const e of (data.xpLog || []).slice(0, 3)) {
+    out.push(`  ↳ ${e.text}`);
+  }
+  const xpRest = (data.xpLog || []).length - Math.min(3, (data.xpLog || []).length);
+  if (xpRest > 0) out.push(`  …и ещё ${xpRest} записей в архиве Крови`);
   if (data.trackers.huntCount > 0) {
     out.push(`Ночей в хронике: ${data.trackers.huntCount} · последняя охота: ${data.trackers.lastHunt || "—"}`);
   }
