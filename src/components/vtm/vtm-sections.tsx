@@ -21,6 +21,8 @@ import {
   RESONANCES,
   RESONANCE_BY_ID,
   RESONANCE_INTENSITY_LABELS,
+  XP_COSTS,
+  pushXpLog,
 } from "@/lib/vtm-data";
 import { DerivedStats, bpHint } from "@/lib/vtm-calc";
 import { rollRouse, useVtmDice } from "@/components/vtm/vtm-dice";
@@ -552,7 +554,13 @@ export function DossierSection({
                       key={n}
                       className={`vtm-humanity-cell ${filled ? "filled" : ""} ${isStain ? "stain" : ""}`}
                       onClick={() => {
-                        mutate((d) => { d.trackers.humanity = n === d.trackers.humanity ? n - 1 : n; if (d.trackers.stains > 10 - d.trackers.humanity) d.trackers.stains = 10 - d.trackers.humanity; });
+                        const prev = data.trackers.humanity;
+                        mutate((d) => {
+                          d.trackers.humanity = n === d.trackers.humanity ? n - 1 : n;
+                          if (d.trackers.stains > 10 - d.trackers.humanity) d.trackers.stains = 10 - d.trackers.humanity;
+                          // автозапись цены в журнал опыта (не списывает очки — сверяет Рассказчик)
+                          if (d.trackers.humanity > prev) pushXpLog(d, `покупка: «Человечность» ↑ до ${d.trackers.humanity} — цена ${XP_COSTS.humanity(d.trackers.humanity)} опыта (сверься с Рассказчиком)`);
+                        });
                       }}
                       aria-label={`Человечность ${n}`}
                       title={filled ? "звено Человечности" : isStain ? "пятно" : ""}
@@ -752,7 +760,12 @@ export function AttributesSection({
                     <Dots
                       value={value}
                       ariaLabel={`${attr.name}: уровень ${value}`}
-                      onChange={(n) => mutate((d) => { d.attributes[attr.key] = n; })}
+                      onChange={(n) => mutate((d) => {
+                        const prev = d.attributes[attr.key];
+                        d.attributes[attr.key] = n;
+                        // автозапись цены в журнал опыта (не списывает очки — сверяет Рассказчик)
+                        if (n > prev) pushXpLog(d, `покупка: «${attr.name}» ↑ до ${n} — цена ${XP_COSTS.attribute(n)} опыта (сверься с Рассказчиком)`);
+                      })}
                       onRoll={() => {}}
                     />
                   </div>
@@ -800,9 +813,19 @@ export function SkillsSection({
     mutate((d) => {
       const existing = d.skills.find((s) => s.key === key);
       if (existing) {
+        // автозапись цен в журнал опыта (не списывает очки — сверяет Рассказчик)
+        if (patch.value !== undefined && patch.value > existing.value) {
+          pushXpLog(d, `покупка: «${name}» ↑ до ${patch.value} — цена ${XP_COSTS.skill(patch.value)} опыта (сверься с Рассказчиком)`);
+        }
+        if (patch.spec !== undefined && !existing.spec && patch.spec.trim()) {
+          pushXpLog(d, `специализация: «${patch.spec.trim()}» (${name}) — цена ${XP_COSTS.specialization} опыта (сверься с Рассказчиком)`);
+        }
         Object.assign(existing, patch);
       } else {
         d.skills.push({ key, name, value: 0, spec: "", xp: 0, ...patch });
+        if (patch.value && patch.value > 0) {
+          pushXpLog(d, `покупка: «${name}» ↑ до ${patch.value} — цена ${XP_COSTS.skill(patch.value)} опыта (сверься с Рассказчиком)`);
+        }
       }
     });
   };
@@ -975,7 +998,7 @@ function CustomSkills({
                 <span className="vtm-label text-[0.73rem] text-[#9c8072]">{data.attributes.wit + s.value}🞄</span>
               </div>
               <div className="flex items-center gap-1">
-                <Dots value={s.value} color="gold" ariaLabel={`${s.name}: уровень`} onChange={(n) => mutate((d) => { const cs = d.skills.filter((x) => x.key === null); cs[i].value = n; })} onRoll={() => {}} />
+                <Dots value={s.value} color="gold" ariaLabel={`${s.name}: уровень`} onChange={(n) => mutate((d) => { const cs = d.skills.filter((x) => x.key === null); if (n > cs[i].value) pushXpLog(d, `покупка: «${cs[i].name}» ↑ до ${n} — цена ${XP_COSTS.skill(n)} опыта (сверься с Рассказчиком)`); cs[i].value = n; })} onRoll={() => {}} />
                 <button
                   className="vtm-btn vtm-btn-ghost !p-1 !text-[0.73rem]"
                   onClick={(e) => { e.stopPropagation(); mutate((d) => { d.skills = d.skills.filter((x) => !(x.key === null && x.name === s.name)); }); }}
@@ -1279,12 +1302,8 @@ function XpBlock({
   data: VtmSheetData;
   mutate: (fn: (draft: VtmSheetData) => void) => void;
 }) {
-  const logXp = (d: VtmSheetData, text: string) => {
-    d.xpLog = [
-      { id: `xp-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e5).toString(36)}`, text, ts: new Date().toISOString() },
-      ...d.xpLog,
-    ].slice(0, 40);
-  };
+  // журнал опыта общий: pushXpLog из vtm-data (без дублей подряд)
+  const logXp = pushXpLog;
 
   const gain = (n: number) =>
     mutate((d) => {
@@ -1343,7 +1362,8 @@ function XpBlock({
         </div>
       )}
       <p className="vtm-hint mt-1.5 !text-[0.73rem]">
-        Цены: характеристика 5×ур · навык 3×ур · специализация 3 · Дисциплина 6×ур · сила Дисциплины 3×ур · Человечность 2×ур.
+        Цены: характеристика 5×ур · навык 3×ур · специализация 3 · Дисциплина 6×ур · сила Дисциплины 3×ур · Человечность 2×ур · достоинство 3×ур.
+        Покупки точек, сил, специализаций и уровней преимуществ сами падают в журнал — очки не списываются, цену сверяет Рассказчик.
       </p>
     </div>
   );

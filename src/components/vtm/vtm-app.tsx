@@ -12,7 +12,7 @@ import { MAX_SHEETS, CLAN_BY_ID, SECT_BY_ID, PREDATOR_BY_ID, RESONANCES, VtmShee
 import { deriveStats } from "@/lib/vtm-calc";
 import { VTM_TEMPLATES } from "@/lib/vtm-templates";
 import { vtmFetch } from "@/lib/vtm-api";
-import { W5_TRIBE_BY_ID, W5_AUSPICE_BY_ID } from "@/lib/vtm-w5data";
+import { W5SheetData, W5_TRIBE_BY_ID, W5_AUSPICE_BY_ID, W5_BREEDS, normalizeW5, buildRandomWerewolf, w5HealthMax, w5WillpowerMax, w5Rank } from "@/lib/vtm-w5data";
 
 interface SheetMeta {
   id: string;
@@ -625,9 +625,10 @@ function TemplateChooser({
   pending: boolean;
 }) {
   const clanName = (id: string) => CLAN_BY_ID.get(id)?.name || "";
-  // undefined — предпросмотр не запрашивался; null — Кровь решает; object — решение Крови
+  // undefined — предпросмотр не запрашивался; null — Кровь/Луна решает; object — решение
   const [fate, setFate] = useState<VtmSheetData | null | undefined>(undefined);
   const [fateError, setFateError] = useState<string | null>(null);
+  const [moon, setMoon] = useState<W5SheetData | null | undefined>(undefined);
 
   const castFate = async () => {
     setFate(null);
@@ -640,6 +641,19 @@ function TemplateChooser({
     } catch (e) {
       setFate(undefined);
       setFateError(e instanceof Error ? e.message : "Кровь запнулась");
+    }
+  };
+
+  // Луна решает: генератор чистый — бросает прямо в браузере, переброс бесплатен
+  const castMoon = () => {
+    setFate(undefined);
+    setFateError(null);
+    setMoon(null);
+    try {
+      setMoon(normalizeW5(buildRandomWerewolf()));
+    } catch {
+      setMoon(undefined);
+      setFateError("Луна скрылась за тучами — попробуй ещё раз");
     }
   };
 
@@ -669,7 +683,7 @@ function TemplateChooser({
           </button>
         </div>
 
-        {fate === undefined && (
+        {fate === undefined && moon === undefined && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* Пусть Кровь решит — случайный Сородич с предпросмотром */}
             <button
@@ -713,7 +727,7 @@ function TemplateChooser({
 
             {/* ОБОРОТНИ (W5): чистый лист Гароу и «пусть Луна решит» */}
             <button
-              onClick={() => onPick("werewolf-random")}
+              onClick={castMoon}
               disabled={pending}
               className="vtm-template-card vtm-w5-template"
               aria-label="Случайный Гароу — пусть Луна решит"
@@ -727,6 +741,7 @@ function TemplateChooser({
               <span className="vtm-template-title">Случайный Гароу (W5)</span>
               <span className="vtm-template-tagline">
                 Луна бросит кости характеристик, выберет племя и ауспицию, вложит навыки, Дары и Обряды.
+                Ты увидишь её решение до записи в архив.
               </span>
             </button>
             <button
@@ -800,6 +815,30 @@ function TemplateChooser({
           />
         )}
 
+        {/* Луна решает: бросок и предпросмотр Гароу до записи в архив */}
+        {moon === null && (
+          <div className="py-14 text-center space-y-4" role="status" aria-live="polite">
+            <span className="vtm-random-dice" aria-hidden="true">
+              <i className="die die-a">🐺</i>
+              <i className="die die-b">🌕</i>
+              <i className="drop">🐾</i>
+            </span>
+            <p className="vtm-display text-sm tracking-[0.35em] uppercase text-[#c9d3e8] vtm-flicker">
+              Луна решает…
+            </p>
+          </div>
+        )}
+
+        {moon && (
+          <MoonPreview
+            data={moon}
+            pending={pending}
+            onReroll={castMoon}
+            onAccept={() => onPick("werewolf-random", moon)}
+            onBack={() => { setMoon(undefined); setFateError(null); }}
+          />
+        )}
+
         {pending && (
           <p className="vtm-display text-xs tracking-[0.3em] uppercase text-[#e8636b] text-center vtm-flicker">
             Пробуждаем…
@@ -807,6 +846,140 @@ function TemplateChooser({
         )}
       </div>
     </div>
+  );
+}
+
+/** Предпросмотр решения Луны: Гароу до записи в архив — принять, перебросить или отпустить. */
+function MoonPreview({
+  data,
+  pending,
+  onReroll,
+  onAccept,
+  onBack,
+}: {
+  data: W5SheetData;
+  pending: boolean;
+  onReroll: () => void;
+  onAccept: () => void;
+  onBack: () => void;
+}) {
+  const c = data.attributes;
+  const tribe = W5_TRIBE_BY_ID.get(data.info.tribe);
+  const auspice = W5_AUSPICE_BY_ID.get(data.info.auspice);
+  const breed = W5_BREEDS.find((b) => b.id === data.info.breed);
+  const healthMax = w5HealthMax(data);
+  const wpMax = w5WillpowerMax(data);
+  const rank = w5Rank(data.trackers.glory, data.trackers.honor, data.trackers.wisdom);
+  const renown = data.trackers.glory + data.trackers.honor + data.trackers.wisdom;
+  const stats: { label: string; value: number; hint: string }[] = [
+    { label: "СИЛ", value: c.str, hint: "Сила" },
+    { label: "ЛОВ", value: c.dex, hint: "Ловкость" },
+    { label: "ВЫН", value: c.sta, hint: "Выносливость" },
+    { label: "ОБА", value: c.cha, hint: "Обаяние" },
+    { label: "МАН", value: c.man, hint: "Манипуляция" },
+    { label: "САМ", value: c.com, hint: "Самообладание" },
+    { label: "ИНТ", value: c.int, hint: "Интеллект" },
+    { label: "СМК", value: c.wit, hint: "Смекалка" },
+    { label: "УПР", value: c.res, hint: "Упорство" },
+  ];
+  const giftLine = data.gifts.map((g) => g.name).join(" · ");
+  const riteLine = data.rites.map((r) => r.name).join(" · ");
+  const aspLine = data.aspirations.map((a) => a.text).filter(Boolean).join(" · ");
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="vtm-fate-panel vtm-moon-panel space-y-4"
+      aria-live="polite"
+    >
+      <div className="vtm-fate-head">
+        <div className="text-center space-y-1.5 flex-1 min-w-[200px]">
+          <span className="vtm-stamp vtm-w5-stamp">Решение Луны</span>
+          <h3 className="vtm-display text-2xl text-[#d9c7b6] tracking-[0.08em]">{data.info.name}</h3>
+          <p className="vtm-label text-[0.77rem] text-[#c9d3e8] flex flex-wrap items-center justify-center gap-x-2">
+            {tribe && <span>🐺 {tribe.name}</span>}
+            {auspice && <span>· {auspice.name}</span>}
+            {breed && <span>· {breed.name}</span>}
+            <span>· Слава {renown} — {rank.title}</span>
+          </p>
+          <p className="vtm-hint !text-[0.79rem]">{data.info.concept}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-5 sm:grid-cols-9 gap-1.5">
+        {stats.map((s) => (
+          <div key={s.label} className="vtm-fate-stat" title={s.hint}>
+            <span className="vtm-label !text-[0.67rem]">{s.label}</span>
+            <span className="vtm-label text-base font-bold text-[#d9c7b6]">{s.value}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 vtm-label text-[0.75rem] text-[#c4ac9d]">
+        <span>Ярость <b className="text-[#e8636b]">{data.trackers.rage}/5</b></span>
+        <span>Здоровье <b className="text-[#e8636b]">{healthMax}</b></span>
+        <span>Воля <b className="text-[#e8636b]">{wpMax}</b></span>
+        <span>Гордец <b className="text-[#d6a840]">{data.trackers.glory}</b></span>
+        <span>Честь <b className="text-[#d6a840]">{data.trackers.honor}</b></span>
+        <span>Мудрость <b className="text-[#d6a840]">{data.trackers.wisdom}</b></span>
+      </div>
+
+      {giftLine && (
+        <div className="vtm-fate-row">
+          <span className="vtm-label shrink-0">Дары</span>
+          <span className="vtm-label text-[0.76rem] text-[#8ea6c9]">{giftLine}</span>
+        </div>
+      )}
+      {riteLine && (
+        <div className="vtm-fate-row">
+          <span className="vtm-label shrink-0">Обряды</span>
+          <span className="vtm-label text-[0.76rem] text-[#8ea6c9]">{riteLine}</span>
+        </div>
+      )}
+      {aspLine && (
+        <div className="vtm-fate-row">
+          <span className="vtm-label shrink-0">Стремления</span>
+          <span className="text-[0.79rem] italic leading-relaxed text-[#c4ac9d]">{aspLine}</span>
+        </div>
+      )}
+      {data.info.quote && (
+        <div className="vtm-fate-row">
+          <span className="vtm-label shrink-0">Вой</span>
+          <span className="text-[0.79rem] italic leading-relaxed text-[#c4ac9d]">{data.info.quote}</span>
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 pt-1">
+        <button
+          onClick={onReroll}
+          disabled={pending}
+          className="vtm-btn vtm-btn-ghost !py-2 !px-4 justify-center"
+          title="Луна решит заново"
+        >
+          ⟲ Перебросить луну
+        </button>
+        <button
+          onClick={onAccept}
+          disabled={pending}
+          className="vtm-btn vtm-btn-blood !py-2 !px-5 justify-center"
+          title="Записать этого Гароу в архив"
+        >
+          ✓ Принять луну
+        </button>
+        <button
+          onClick={onBack}
+          disabled={pending}
+          className="vtm-btn vtm-btn-ghost !py-2 !px-4 justify-center"
+          title="Вернуться к выбору"
+        >
+          ✕ Отпустить
+        </button>
+      </div>
+      <p className="vtm-hint text-center !text-[0.73rem]">
+        Переброс не записывается в архив — Луну можно трогать, пока не сказано «да».
+      </p>
+    </motion.div>
   );
 }
 

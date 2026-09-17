@@ -321,7 +321,7 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
             <W5SkillsTab data={data} mutate={mutate} attrPairs={attrPairs} onRoll={rollCheck} />
           )}
           {tab === "gifts" && (
-            <W5GiftsTab data={data} mutate={mutate} />
+            <W5GiftsTab data={data} mutate={mutate} onRoll={rollCheck} />
           )}
           {tab === "tracks" && (
             <W5TracksTab data={data} mutate={mutate} healthMax={healthMax} wpMax={wpMax} />
@@ -691,7 +691,7 @@ function W5SkillsTab({
 // Вкладка ДАРЫ И ОБРЯДЫ
 // ============================================================
 
-function W5GiftsTab({ data, mutate }: { data: W5SheetData; mutate: (fn: (d: W5SheetData) => void) => void }) {
+function W5GiftsTab({ data, mutate, onRoll }: { data: W5SheetData; mutate: (fn: (d: W5SheetData) => void) => void; onRoll: (pool: number, label: string, opts?: { damage?: boolean }) => void }) {
   const [source, setSource] = useState<"all" | "native" | "moon" | "tribe">("all");
   const [query, setQuery] = useState("");
   const [customGiftName, setCustomGiftName] = useState("");
@@ -770,7 +770,7 @@ function W5GiftsTab({ data, mutate }: { data: W5SheetData; mutate: (fn: (d: W5Sh
       <section className="vtm-panel" aria-label="Дары на листе">
         <div className="vtm-panel-head">
           <span className="vtm-label text-[0.81rem] text-[#c9d3e8]">Мои Дары</span>
-          <span className="vtm-hint !text-[0.72rem] ml-auto">{data.gifts.length} даров</span>
+          <span className="vtm-hint !text-[0.72rem] ml-auto">{data.gifts.length} даров · 🎲 — проверка Дара (кости уровня + Ярость), если Рассказчик запросил</span>
         </div>
         <div className="p-3 space-y-2 max-h-[420px] overflow-y-auto overflow-x-hidden vtm-scroll">
           {data.gifts.length === 0 && (
@@ -781,6 +781,14 @@ function W5GiftsTab({ data, mutate }: { data: W5SheetData; mutate: (fn: (d: W5Sh
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="vtm-label text-[0.66rem] text-[#8ea6c9] shrink-0">{g.level} ур.</span>
                 <span className="text-[0.9rem] text-[#d9c7b6] flex-1 min-w-[120px]">{g.name}</span>
+                <button
+                  className="vtm-btn vtm-btn-ghost !p-1 !text-[0.72rem] vtm-w5-gift-roll"
+                  onClick={() => onRoll(g.level, `Дар: «${g.name}» (${g.level} ур.)`)}
+                  aria-label={`Бросок для дара ${g.name}`}
+                  title={`Проверка Дара, если Рассказчик запросил: ${g.level} костей + ${data.trackers.rage} костей Ярости`}
+                >
+                  🎲
+                </button>
                 <Dots value={g.level} max={5} color="moon" onChange={(n) => mutate((d) => { const x = d.gifts.find((y) => y.id === g.id); if (x) x.level = n; })} ariaLabel={`${g.name}: уровень ${g.level}`} />
                 <button className="vtm-btn vtm-btn-ghost !p-1 !text-[0.72rem] vtm-confirm-del" onClick={() => mutate((d) => { d.gifts = d.gifts.filter((y) => y.id !== g.id); })} aria-label={`Убрать дар ${g.name}`}>✕</button>
               </div>

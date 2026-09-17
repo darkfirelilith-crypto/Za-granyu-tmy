@@ -170,6 +170,20 @@ function W5PrintBody({ data }: { data: W5SheetData }) {
           {data.notes.length > 10 && <p className="vtm-print-line">…и ещё {data.notes.length - 10} записей в онлайн-архиве.</p>}
         </>
       )}
+
+      {/* Хроника бросков (Кости Луны) — последние 12 на бумаге */}
+      {data.rollLog.length > 0 && (
+        <>
+          <p className="vtm-print-section">Хроника бросков</p>
+          {data.rollLog.slice(0, 12).map((r) => (
+            <p className="vtm-print-line vtm-print-roll" key={r.id}>
+              {r.ts ? new Date(r.ts).toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) + " · " : ""}
+              {r.text}
+            </p>
+          ))}
+          {data.rollLog.length > 12 && <p className="vtm-print-line">…и ещё {data.rollLog.length - 12} бросков в онлайн-архиве.</p>}
+        </>
+      )}
     </>
   );
 }

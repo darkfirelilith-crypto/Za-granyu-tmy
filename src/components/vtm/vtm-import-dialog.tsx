@@ -204,6 +204,17 @@ export function VtmImportDialog({ open, onClose, onJsonFile, onApplyMarkdown }: 
                     <p className="vtm-import-warn">Ни одно поле не опознано — вливать нечего.</p>
                   )}
 
+                  {parsed.rareDisciplines.length > 0 && (
+                    <>
+                      <p className="vtm-import-preview-head mt-3">Редкая Кровь в свитке (Дисциплины кровных линий):</p>
+                      <div className="vtm-import-chips">
+                        {parsed.rareDisciplines.map((r) => (
+                          <span key={r} className="vtm-import-chip rare" title="Редкая Дисциплина кровной линии — доступна не всем Сородичам, Рассказчик решает, откуда она у персонажа">{r}</span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
                   {parsed.unknown.length > 0 && (
                     <>
                       <p className="vtm-import-preview-head mt-3">Не из справочников (войдут как «редкие»):</p>

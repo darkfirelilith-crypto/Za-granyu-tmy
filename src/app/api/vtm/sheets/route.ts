@@ -4,7 +4,7 @@ import { requireLiveUser } from "@/lib/session";
 import { MAX_SHEETS, normalizeSheet } from "@/lib/vtm-data";
 import { VTM_TEMPLATES, buildTemplateSheet } from "@/lib/vtm-templates";
 import { buildRandomSheet } from "@/lib/vtm-random";
-import { buildRandomWerewolf, emptyW5Sheet } from "@/lib/vtm-w5data";
+import { buildRandomWerewolf, emptyW5Sheet, normalizeW5 } from "@/lib/vtm-w5data";
 
 const UNAUTHORIZED = { error: "Сессия недействительна — войдите заново" };
 
@@ -122,8 +122,8 @@ export async function POST(req: NextRequest) {
     data = parsed;
     tplName = parsed.info.name || "Случайный Сородич";
   } else if (body.template === "werewolf-random") {
-    // Луна решает: случайный Гароу (W5)
-    const parsed = buildRandomWerewolf();
+    // Луна решает: либо присланный preset (предпросмотр), либо свежий бросок
+    const parsed = body.preset ? normalizeW5(body.preset) : buildRandomWerewolf();
     data = parsed;
     tplName = parsed.info.name || "Случайный Гароу";
   } else if (body.template === "werewolf-blank") {

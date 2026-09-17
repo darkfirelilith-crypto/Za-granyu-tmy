@@ -1394,6 +1394,18 @@ export const XP_COSTS = {
   meritRaise: (next: number) => next * 3,      // новые достоинства: договорная цена, 3 × уровень
 } as const;
 
+/**
+ * Авто-запись в журнал опыта (внутри mutate-черновика): покупка/подъём
+ * НЕ списывает очки — цену сверяет Рассказчик. Дубли подряд гасятся.
+ */
+export function pushXpLog(d: VtmSheetData, text: string): void {
+  if (d.xpLog[0]?.text === text) return; // без дублей подряд
+  d.xpLog = [
+    { id: `xp-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e5).toString(36)}`, text, ts: new Date().toISOString() },
+    ...d.xpLog,
+  ].slice(0, 40);
+}
+
 // ---------- Создание пустого листа ----------
 
 export function emptySheet(): VtmSheetData {

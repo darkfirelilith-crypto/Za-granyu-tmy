@@ -20,6 +20,7 @@ import {
   CLAN_FLAW_PRESETS,
   INCOMPATIBLE_ADVANTAGES,
   XP_COSTS,
+  pushXpLog,
 } from "@/lib/vtm-data";
 import { LORESHEETS, LORESHEET_BY_ID, LORESHEET_RULES } from "@/lib/vtm-histories";
 import { POWER_SYSTEMS, DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
@@ -85,13 +86,7 @@ export function DisciplinesSection({
 
   /** Авто-запись в журнал опыта: покупка/подъём не списывает очки — цену сверяет Рассказчик. */
   const logXp = (text: string) => {
-    mutate((d) => {
-      if (d.xpLog[0]?.text === text) return; // без дублей подряд
-      d.xpLog = [
-        { id: `xp-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e5).toString(36)}`, text, ts: new Date().toISOString() },
-        ...d.xpLog,
-      ].slice(0, 40);
-    });
+    mutate((d) => pushXpLog(d, text));
   };
 
   /** Подъём уровня Дисциплины (каталожной или своей) + авто-запись цены в журнал опыта. */
@@ -786,7 +781,13 @@ export function AdvantagesSection({
                         value={a.rating}
                         max={maxLvl}
                         color={isBg ? "gold" : a.kind === "flaw" ? "blood" : "gold"}
-                        onChange={(n) => mutate((d) => { const x = d.advantages.find((y) => y.id === a.id); if (x) x.rating = n; })}
+                        onChange={(n) => mutate((d) => {
+                          const x = d.advantages.find((y) => y.id === a.id);
+                          if (!x) return;
+                          // автозапись цены в журнал опыта (не списывает очки — сверяет Рассказчик)
+                          if (n > x.rating) pushXpLog(d, `покупка: «${a.name}» ↑ до ${n} — цена ${XP_COSTS.meritRaise(n)} опыта (сверься с Рассказчиком)`);
+                          x.rating = n;
+                        })}
                         ariaLabel={`${a.name}: уровень ${a.rating}`}
                       />
                       {pts !== null && (

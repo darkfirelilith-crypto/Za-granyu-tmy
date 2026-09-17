@@ -81,6 +81,8 @@ export interface MdParseResult {
   unknown: string[];
   /** Нестрогие предупреждения (пропуски, нераспознанные строки). */
   warnings: string[];
+  /** Редкие Дисциплины (кровные линии) — опознаны, но подсвечиваются в превью. */
+  rareDisciplines: string[];
 }
 
 // ---------- Мелкие помощники ----------
@@ -110,6 +112,7 @@ export function parseSummaryMarkdown(md: string): MdParseResult {
   const found: string[] = [];
   const unknown: string[] = [];
   const warnings: string[] = [];
+  const rareDisciplines: string[] = [];
 
   const lines = md.replace(/\r\n?/g, "\n").split("\n");
 
@@ -310,6 +313,7 @@ export function parseSummaryMarkdown(md: string): MdParseResult {
             xp: 0,
           };
           if (!def) unknown.push(`${nv.name} (Дисциплина)`);
+          else if (def.rare && !rareDisciplines.includes(def.name)) rareDisciplines.push(def.name);
           if (!fields.disciplines) fields.disciplines = [];
           fields.disciplines.push(currentDiscipline);
           if (!found.includes("Дисциплины")) found.push("Дисциплины");
@@ -562,7 +566,7 @@ export function parseSummaryMarkdown(md: string): MdParseResult {
     warnings.push("В свитке не найдено ни одного знакомого поля. Это точно «Сводка Сородича» (Ⓜ МД)?");
   }
 
-  return { fields, found, unknown, warnings };
+  return { fields, found, unknown, warnings, rareDisciplines };
 }
 
 // ---------- Вливание в лист ----------
