@@ -23,9 +23,10 @@ import {
   pushXpLog,
 } from "@/lib/vtm-data";
 import { LORESHEETS, LORESHEET_BY_ID, LORESHEET_RULES } from "@/lib/vtm-histories";
-import { POWER_SYSTEMS, DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
+import { DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
 import { DerivedStats } from "@/lib/vtm-calc";
 import { vtmUid } from "@/lib/vtm-id";
+import { VtmPowerModal, VtmDiscInfoModal } from "@/components/vtm/vtm-power-modal";
 
 // ============================================================
 // ДИСЦИПЛИНЫ
@@ -71,6 +72,9 @@ export function DisciplinesSection({
   const [customName, setCustomName] = useState("");
   const [customDesc, setCustomDesc] = useState("");
   const [customLvl, setCustomLvl] = useState(1);
+  // Модальные окна: подробности силы + правила Дисциплины
+  const [powerModal, setPowerModal] = useState<{ discId: string; lvl: number; name: string } | null>(null);
+  const [infoModalId, setInfoModalId] = useState<string | null>(null);
   const cq = catQuery.trim().toLowerCase();
 
   const setDisc = (key: string, name: string, patch: Partial<VtmDisciplineState>) => {
@@ -161,7 +165,7 @@ export function DisciplinesSection({
         <span className="vtm-stamp">Дисциплины</span>
         <span className="vtm-hint !text-[0.75rem]">на листе: <b className="not-italic text-[#d9c7b6]">{data.disciplines.length}</b></span>
         <p className="vtm-hint !text-[0.77rem] flex-1 min-w-[240px]">
-          Клик по точке — уровень (0–5); каждому уровню — своя сила.
+          Клик по точке — уровень (0–5); клик по силе — подробности и механика в отдельном окне.
           {clan && ` Клановые: ${clanDiscIds.map((id) => DISCIPLINE_BY_ID.get(id)?.name).join(", ")}.`}
         </p>
         <button
@@ -299,6 +303,16 @@ export function DisciplinesSection({
                 {clanMark && <span className="vtm-hint !text-[0.70rem] uppercase">клановая</span>}
                 {def?.rare && !clanMark && <span className="vtm-hint !text-[0.70rem] uppercase">редкая</span>}
                 {!def && <span className="vtm-hint !text-[0.70rem] uppercase">своя</span>}
+                {def && (
+                  <button
+                    className="vtm-disc-info-btn"
+                    onClick={() => setInfoModalId(def.id)}
+                    aria-label={`Правила и все силы Дисциплины ${state.name}`}
+                    title="Правила и все силы — подробно в отдельном окне"
+                  >
+                    ◈ подробнее
+                  </button>
+                )}
                 <button
                   className="vtm-btn vtm-btn-ghost !p-1 !text-[0.72rem] ml-auto vtm-confirm-del"
                   onClick={() => (confirmId === confirmKey ? removeAt(idx, state.name) : setConfirmId(confirmKey))}
@@ -327,21 +341,9 @@ export function DisciplinesSection({
                   </span>
                 </div>
 
-                {/* Подробные правила Дисциплины — как она работает */}
-                {def && DISCIPLINE_RULES[def.id] && (
-                  <div className="vtm-frame rounded-md p-2.5 space-y-1" style={{ background: "rgba(122,74,140,0.06)" }}>
-                    <span className="vtm-label text-[0.70rem] text-[#a877c0]">Как работает {def.name}</span>
-                    {DISCIPLINE_RULES[def.id].map((rule, i) => (
-                      <p key={i} className="vtm-hint !text-[0.79rem] leading-relaxed flex gap-1.5">
-                        <span className="text-[#a877c0] not-italic" aria-hidden>◈</span>{rule}
-                      </p>
-                    ))}
-                  </div>
-                )}
-
-                {/* Силы по уровням */}
+                {/* Силы по уровням: компактные чипы, клик — модалка с подробностями */}
                 {value > 0 && def && (
-                  <div className="space-y-1.5 pt-1">
+                  <div className="space-y-2 pt-1">
                     {def.id === "thinblood_alchemy" ? (
                       /* Слабокровные: формулы Алхимии карточками — с эффектами и заметками о варке */
                       <ThinbloodFormulaPicker
@@ -360,70 +362,52 @@ export function DisciplinesSection({
                         }}
                       />
                     ) : (
-                      <>
-                        {Array.from({ length: value }, (_, i) => i + 1).map((lvl) => {
-                          const powers = def.powers[lvl] || [];
-                          const chosen = state?.powers?.[lvl] || "";
-                          const chosenDef = powers.find((p) => p.name === chosen);
-                          const gaps = chosenDef?.amalgam ? amalgamGaps(data, chosenDef.amalgam) : [];
-                          return (
-                            <div key={lvl} className="flex items-center gap-2 flex-wrap">
-                              <span className="vtm-label text-[0.70rem] text-[#9c8072] w-8 shrink-0">{lvl} ур.</span>
-                              <select
-                                className="vtm-input !py-1 !text-[0.84rem] flex-1 min-w-[160px]"
-                                value={powers.some((p) => p.name === chosen) ? chosen : ""}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  mutate((d) => {
-                                    const disc = d.disciplines.find((x) => x.key === def.id);
-                                    if (disc) disc.powers[lvl] = val;
-                                  });
-                                  if (val && val !== (state?.powers?.[lvl] || "")) {
-                                    logXp(`сила: «${val}» (${lvl} ур. · «${def.name}») — цена ${XP_COSTS.disciplinePower(lvl)} опыта (сверься с Рассказчиком)`);
-                                  }
-                                }}
-                                aria-label={`Сила ${lvl} уровня Дисциплины ${def.name}`}
-                              >
-                                <option value="">— выбери силу —</option>
-                                {powers.map((p) => (
-                                  <option key={p.name} value={p.name}>{p.name}{p.amalgam ? ` · амальгама: ${p.amalgam}` : ""}</option>
-                                ))}
-                              </select>
-                              {chosenDef && (
-                                <span className="vtm-hint !text-[0.66rem] not-italic whitespace-nowrap" title="Цена опыта за новую силу">
-                                  опыт: {XP_COSTS.disciplinePower(lvl)}
-                                </span>
-                              )}
-                              {gaps.length > 0 && (
-                                <span className="vtm-req vtm-label !text-[0.68rem] w-full" role="note">
-                                  ⚠ амальгама: нужна {gaps.join(" + ")} — на листе их пока нет
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-                        {/* Описания выбранных сил — с подробной механикой */}
-                        {state?.powers && Object.entries(state.powers).map(([lvlS, name]) => {
-                          const lvl = parseInt(lvlS, 10);
-                          const p = (def.powers[lvl] || []).find((x) => x.name === name);
-                          if (!p) return null;
-                          const system = POWER_SYSTEMS[`${def.id}:${name}`];
-                          return (
-                            <div key={lvlS} className="pl-3 border-l-2 border-[#3d1a20] space-y-1">
-                              <p className="vtm-hint !text-[0.79rem]">
-                                <b className="text-[#c4ac9d] not-italic">{lvl} ур. — {name}:</b> {p.desc}
-                                {p.amalgam && <span className="text-[#a877c0]"> · амальгама: {p.amalgam}</span>}
-                              </p>
-                              {system && (
-                                <p className="vtm-hint !text-[0.81rem] leading-relaxed rounded-md p-2" style={{ background: "rgba(122,74,140,0.08)", border: "1px dashed rgba(122,74,140,0.3)" }}>
-                                  <span className="vtm-label text-[0.68rem] text-[#a877c0] mr-1.5">МЕХАНИКА</span>
-                                  {system}
-                                </p>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </>
+                      Array.from({ length: value }, (_, i) => i + 1).map((lvl) => {
+                        const powers = def.powers[lvl] || [];
+                        const chosen = state?.powers?.[lvl] || "";
+                        return (
+                          <div key={lvl} className="vtm-disc-lvl-row">
+                            <span className="vtm-disc-lvl-num">
+                              <b>{lvl} ур.</b>
+                              <i className="vtm-disc-lvl-xp">сила · {XP_COSTS.disciplinePower(lvl)} опыта</i>
+                            </span>
+                            {powers.length > 0 ? (
+                              <span className="vtm-disc-lvl-chips">
+                                {powers.map((p) => {
+                                  const isChosen = chosen === p.name;
+                                  const gaps = p.amalgam ? amalgamGaps(data, p.amalgam) : [];
+                                  return (
+                                    <button
+                                      key={p.name}
+                                      type="button"
+                                      className={`vtm-power-chip ${isChosen ? "chosen" : ""} ${p.amalgam ? "amalgam" : ""} ${gaps.length > 0 && !isChosen ? "gapped" : ""}`}
+                                      onClick={() => setPowerModal({ discId: def.id, lvl, name: p.name })}
+                                      aria-pressed={isChosen}
+                                      aria-label={`${p.name}, ${lvl} уровень${isChosen ? " — выбрана" : ""} — открыть подробности`}
+                                      title={gaps.length > 0 && !isChosen ? `амальгама: нужна ${gaps.join(" + ")}` : "Подробности и механика"}
+                                    >
+                                      {p.amalgam && <span className="vtm-power-chip-mark" aria-hidden>⚭</span>}
+                                      <b>{p.name}</b>
+                                      {isChosen && <span className="vtm-power-chip-check" aria-hidden>✓</span>}
+                                    </button>
+                                  );
+                                })}
+                              </span>
+                            ) : (
+                              <span className="vtm-hint !text-[0.73rem]">Силы этого уровня пока не описаны — впиши свою через «✍ Своя» или спроси Рассказчика.</span>
+                            )}
+                            {chosen && (
+                              <span className="vtm-disc-chosen-note">
+                                <b>{chosen}</b>
+                                {(() => {
+                                  const p = powers.find((x) => x.name === chosen);
+                                  return p?.amalgam ? <i> · амальгама: {p.amalgam}</i> : null;
+                                })()}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 )}
@@ -459,6 +443,59 @@ export function DisciplinesSection({
           );
         })}
       </div>
+
+      {/* Модальное окно: подробности и механика силы */}
+      {(() => {
+        if (!powerModal) return null;
+        const def = DISCIPLINE_BY_ID.get(powerModal.discId);
+        if (!def) return null;
+        const power = (def.powers[powerModal.lvl] || []).find((p) => p.name === powerModal.name);
+        if (!power) return null;
+        const state = data.disciplines.find((x) => x.key === def.id);
+        const value = state?.value || 0;
+        const chosen = state?.powers?.[powerModal.lvl] || "";
+        const gaps = power.amalgam ? amalgamGaps(data, power.amalgam) : [];
+        const pickPower = (name: string) => {
+          mutate((d) => {
+            const disc = d.disciplines.find((x) => x.key === def.id);
+            if (!disc) return;
+            if (!disc.powers) disc.powers = {};
+            disc.powers[powerModal.lvl] = name;
+          });
+          if (name && name !== (state?.powers?.[powerModal.lvl] || "")) {
+            logXp(`сила: «${name}» (${powerModal.lvl} ур. · «${def.name}») — цена ${XP_COSTS.disciplinePower(powerModal.lvl)} опыта (сверься с Рассказчиком)`);
+          }
+        };
+        return (
+          <VtmPowerModal
+            disc={def}
+            level={powerModal.lvl}
+            power={power}
+            chosen={!!chosen && chosen === power.name}
+            canPick={powerModal.lvl <= value}
+            xpCost={XP_COSTS.disciplinePower(powerModal.lvl)}
+            warning={gaps.length > 0 ? `амальгама: нужна ${gaps.join(" + ")} — на листе их пока нет` : undefined}
+            onPick={() => pickPower(power.name)}
+            onRemove={() => pickPower("")}
+            onClose={() => setPowerModal(null)}
+          />
+        );
+      })()}
+
+      {/* Модальное окно: правила Дисциплины и все силы по уровням */}
+      {(() => {
+        if (!infoModalId) return null;
+        const def = DISCIPLINE_BY_ID.get(infoModalId);
+        if (!def) return null;
+        return (
+          <VtmDiscInfoModal
+            disc={def}
+            rules={DISCIPLINE_RULES[def.id]}
+            onOpenPower={(lvl, name) => setPowerModal({ discId: def.id, lvl, name })}
+            onClose={() => setInfoModalId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
@@ -1011,7 +1048,9 @@ export function HistoriesSection({
   data: VtmSheetData;
   mutate: (fn: (draft: VtmSheetData) => void) => void;
 }) {
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [catQuery, setCatQuery] = useState("");
+  const [onlyOwned, setOnlyOwned] = useState(false);
 
   const setLevel = (sheetId: string, level: number) => {
     mutate((d) => {
@@ -1063,6 +1102,32 @@ export function HistoriesSection({
     return sum + def.levels.slice(0, l.level).reduce((s, lv) => s + lv.xp, 0);
   }, 0);
 
+  // Каталог: взятые сверху, затем по алфавиту; фильтр «только взятые» + поиск
+  const catalogList = useMemo(() => {
+    const q = catQuery.trim().toLowerCase();
+    let list = [...LORESHEETS];
+    if (onlyOwned) list = list.filter((ls) => data.loresheets.some((l) => l.sheetId === ls.id));
+    if (q) {
+      list = list.filter((ls) =>
+        `${ls.name} ${ls.tagline} ${ls.desc}`.toLowerCase().includes(q) ||
+        ls.levels.some((lv) => `${lv.name} ${lv.effect}`.toLowerCase().includes(q))
+      );
+    }
+    list.sort((a, b) => {
+      const aOwned = data.loresheets.some((l) => l.sheetId === a.id) ? 0 : 1;
+      const bOwned = data.loresheets.some((l) => l.sheetId === b.id) ? 0 : 1;
+      if (aOwned !== bOwned) return aOwned - bOwned;
+      return a.name.localeCompare(b.name, "ru");
+    });
+    return list;
+  }, [catQuery, onlyOwned, data.loresheets]);
+
+  // Выбранный листог: явный выбор или первый взятый
+  const selected =
+    (selectedId && LORESHEETS.find((ls) => ls.id === selectedId)) ||
+    LORESHEETS.find((ls) => data.loresheets.some((l) => l.sheetId === ls.id)) ||
+    null;
+
   return (
     <div className="space-y-4">
       {/* Правила листогов */}
@@ -1087,98 +1152,167 @@ export function HistoriesSection({
         </div>
       </div>
 
-      {/* Каталог листогов */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {LORESHEETS.map((ls) => {
-          const state = data.loresheets.find((l) => l.sheetId === ls.id);
-          const level = state?.level || 0;
-          const open = openId === ls.id;
-          const xpSpent = ls.levels.slice(0, level).reduce((s, lv) => s + lv.xp, 0);
-          return (
-            <section key={ls.id} className="vtm-panel" aria-label={ls.name}>
-              <button
-                className="w-full vtm-panel-head text-left cursor-pointer"
-                onClick={() => setOpenId(open ? null : ls.id)}
-                aria-expanded={open}
-                aria-controls={`ls-${ls.id}`}
-              >
-                <span className="vtm-display text-[1.01rem] text-[#d9c7b6]">{ls.name}</span>
-                <span className="vtm-hint !text-[0.73rem] ml-1 hidden sm:inline">{ls.tagline}</span>
-                <span className="ml-auto flex items-center gap-2">
-                  {level > 0 && (
-                    <span className="vtm-label text-[0.73rem] text-[#d6a840]">ур. {level} · {xpSpent} оп.</span>
-                  )}
-                  <span className="vtm-label text-[0.73rem] text-[#a8863d]">{open ? "▲" : "▼"}</span>
-                </span>
+      {/* Каталог слева + выбранный листог в основном блоке */}
+      <div className="vtm-hist-layout grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-4 items-start">
+        {/* КАТАЛОГ */}
+        <aside className="vtm-panel p-3 md:p-4 space-y-2.5 vtm-hist-catalog" aria-label="Каталог историй">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="vtm-label text-[0.79rem] text-[#d6a840]">Каталог историй</span>
+            <span className="vtm-label text-[0.70rem] text-[#9c8072] ml-auto">{catalogList.length} из {LORESHEETS.length}</span>
+          </div>
+          <input
+            className="vtm-input !py-1.5 !text-[0.84rem]"
+            value={catQuery}
+            onChange={(e) => setCatQuery(e.target.value)}
+            placeholder="поиск: культ, секта, имя…"
+            aria-label="Поиск по каталогу историй"
+          />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className={`vtm-hist-filter ${onlyOwned ? "active" : ""}`}
+              onClick={() => setOnlyOwned(!onlyOwned)}
+              aria-pressed={onlyOwned}
+            >
+              {onlyOwned ? "✓ только взятые" : "только взятые"}
+            </button>
+            {selectedId && (
+              <button type="button" className="vtm-hint !text-[0.72rem] underline decoration-dotted" onClick={() => setSelectedId(null)}>
+                сбросить выбор
               </button>
-              <div id={`ls-${ls.id}`} className="p-3 md:p-4 space-y-2.5">
-                <p className="text-[0.9rem] leading-relaxed text-[#c4ac9d]">{ls.desc}</p>
-                {/* Точки ступеней */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="vtm-label text-[0.72rem] text-[#9c8072]">СТУПЕНИ</span>
-                  <span className="vtm-dots" role="group" aria-label={`${ls.name}: уровень ступеней`}>
-                    {[1, 2, 3, 4].map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        className={`vtm-dot gold ${n <= level ? "filled" : ""}`}
-                        onClick={() => setLevel(ls.id, n)}
-                        aria-label={`Ступень ${n}`}
-                        title={n <= level ? `снять до ${n - 1}` : `взять ступень ${n} (${ls.levels[n - 1].xp} опыта)`}
-                      />
-                    ))}
+            )}
+          </div>
+          <div className="max-h-[480px] overflow-y-auto overflow-x-hidden vtm-scroll space-y-1.5 pr-1">
+            {catalogList.map((ls) => {
+              const state = data.loresheets.find((l) => l.sheetId === ls.id);
+              const level = state?.level || 0;
+              const xpSpent = ls.levels.slice(0, level).reduce((s, lv) => s + lv.xp, 0);
+              const active = selected?.id === ls.id;
+              return (
+                <button
+                  key={ls.id}
+                  type="button"
+                  className={`vtm-hist-item ${active ? "active" : ""} ${level > 0 ? "owned" : ""}`}
+                  onClick={() => setSelectedId(ls.id)}
+                  aria-pressed={active}
+                  aria-label={`История «${ls.name}»${level > 0 ? `, ступень ${level}` : ""}`}
+                >
+                  <span className="vtm-hist-item-name">{ls.name}</span>
+                  <span className="vtm-hist-item-tag">{ls.tagline}</span>
+                  {level > 0 ? (
+                    <span className="vtm-hist-item-badge">ур. {level} · {xpSpent} оп.</span>
+                  ) : (
+                    <span className="vtm-hist-item-badge muted">не взята</span>
+                  )}
+                </button>
+              );
+            })}
+            {catalogList.length === 0 && (
+              <p className="vtm-hint text-center py-3">Ни одна история не откликнулась — попробуй иначе.</p>
+            )}
+          </div>
+        </aside>
+
+        {/* ОСНОВНОЙ БЛОК: выбранный листог */}
+        <div className="min-w-0 space-y-4">
+          {!selected && (
+            <div className="vtm-hist-empty" role="status">
+              <span className="vtm-hist-empty-scroll" aria-hidden>📜</span>
+              <p className="vtm-disc-empty-title">Выбери историю из каталога</p>
+              <p className="vtm-hint !text-[0.79rem] text-center max-w-[460px]">
+                Слева — все истории Маскарада: культы, секты и легендарные Сородичи. Клик по названию — и история раскроется здесь: описание, ступени и цена опыта.
+              </p>
+            </div>
+          )}
+
+          {selected && (() => {
+            const ls = selected;
+            const state = data.loresheets.find((l) => l.sheetId === ls.id);
+            const level = state?.level || 0;
+            const xpSpent = ls.levels.slice(0, level).reduce((s, lv) => s + lv.xp, 0);
+            return (
+              <section className="vtm-panel" aria-label={`История: ${ls.name}`}>
+                <div className="vtm-panel-head">
+                  <span className="vtm-display text-[1.05rem] text-[#d9c7b6]">{ls.name}</span>
+                  <span className="vtm-hint !text-[0.73rem] ml-1">{ls.tagline}</span>
+                  <span className="ml-auto flex items-center gap-2">
+                    {level > 0 && (
+                      <span className="vtm-label text-[0.73rem] text-[#d6a840]">ур. {level} · {xpSpent} оп.</span>
+                    )}
                   </span>
-                  {level === 0 && (
-                    <button
-                      className="vtm-btn vtm-btn-gold !py-1 !px-2 !text-[0.73rem]"
-                      onClick={() => setLevel(ls.id, 1)}
-                    >
-                      + Взять листог ({ls.levels[0].xp} оп.)
-                    </button>
-                  )}
                 </div>
-                {/* Ступени: взятые раскрыты, дальние — свёрнуты */}
-                <div className="space-y-1.5">
-                  {ls.levels.map((lv, i) => {
-                    const lvl = i + 1;
-                    const owned = lvl <= level;
-                    const locked = lvl > level + 1 && !open; // соседняя всегда видна
-                    if (locked) return null;
-                    return (
-                      <div
-                        key={lvl}
-                        className={`rounded-md p-2 border ${owned ? "border-[#5c1014]" : "border-[#2b1116]"}`}
-                        style={{ background: owned ? "rgba(138,26,29,0.09)" : "rgba(0,0,0,0.2)" }}
+                <div className="p-3 md:p-4 space-y-2.5">
+                  <p className="text-[0.9rem] leading-relaxed text-[#c4ac9d]">{ls.desc}</p>
+                  {/* Точки ступеней */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="vtm-label text-[0.72rem] text-[#9c8072]">СТУПЕНИ</span>
+                    <span className="vtm-dots" role="group" aria-label={`${ls.name}: уровень ступеней`}>
+                      {[1, 2, 3, 4].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className={`vtm-dot gold ${n <= level ? "filled" : ""}`}
+                          onClick={() => setLevel(ls.id, n)}
+                          aria-label={`Ступень ${n}`}
+                          title={n <= level ? `снять до ${n - 1}` : `взять ступень ${n} (${ls.levels[n - 1].xp} опыта)`}
+                        />
+                      ))}
+                    </span>
+                    {level === 0 && (
+                      <button
+                        className="vtm-btn vtm-btn-gold !py-1 !px-2 !text-[0.73rem]"
+                        onClick={() => setLevel(ls.id, 1)}
                       >
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[#a8863d] not-italic text-[0.88rem]" aria-hidden>{"●".repeat(lvl)}{"○".repeat(4 - lvl)}</span>
-                          <b className="text-[0.88rem] text-[#d9c7b6] not-italic">{lv.name}</b>
-                          <span className="vtm-label text-[0.70rem] text-[#a8863d] ml-auto">{lv.xp} опыта</span>
+                        + Взять листог ({ls.levels[0].xp} оп.)
+                      </button>
+                    )}
+                  </div>
+                  {/* Все ступени — в основном блоке видны сразу */}
+                  <div className="space-y-1.5">
+                    {ls.levels.map((lv, i) => {
+                      const lvl = i + 1;
+                      const owned = lvl <= level;
+                      const next = lvl === level + 1;
+                      if (!owned && !next) return null;
+                      return (
+                        <div
+                          key={lvl}
+                          className={`rounded-md p-2 border ${owned ? "border-[#5c1014]" : "border-[#2b1116]"}`}
+                          style={{ background: owned ? "rgba(138,26,29,0.09)" : "rgba(0,0,0,0.2)" }}
+                        >
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[#a8863d] not-italic text-[0.88rem]" aria-hidden>{"●".repeat(lvl)}{"○".repeat(4 - lvl)}</span>
+                            <b className="text-[0.88rem] text-[#d9c7b6] not-italic">{lv.name}</b>
+                            <span className="vtm-label text-[0.70rem] text-[#a8863d] ml-auto">{lv.xp} опыта</span>
+                          </div>
+                          <p className="vtm-hint !text-[0.81rem] mt-1 leading-relaxed">{lv.effect}</p>
                         </div>
-                        <p className="vtm-hint !text-[0.81rem] mt-1 leading-relaxed">{lv.effect}</p>
-                      </div>
-                    );
-                  })}
-                  {!open && level < 4 && (
-                    <button className="vtm-hint !text-[0.77rem] underline decoration-dotted cursor-pointer" onClick={() => setOpenId(ls.id)}>
-                      показать дальнейшие ступени…
-                    </button>
+                      );
+                    })}
+                    {level < 4 && (
+                      <button
+                        className="vtm-hint !text-[0.77rem] underline decoration-dotted cursor-pointer"
+                        onClick={() => setLevel(ls.id, Math.min(4, level + 2))}
+                      >
+                        открыть следующую ступень…
+                      </button>
+                    )}
+                  </div>
+                  {/* Заметка к листогу */}
+                  {level > 0 && (
+                    <input
+                      className="vtm-input !py-1 !text-[0.84rem] border-dashed"
+                      value={state?.note || ""}
+                      onChange={(e) => mutate((d) => { const l = d.loresheets.find((x) => x.sheetId === ls.id); if (l) l.note = e.target.value; })}
+                      placeholder="конкретика: кто твой контакт, где схема, чем платит"
+                      aria-label={`Заметка к листогу ${ls.name}`}
+                    />
                   )}
                 </div>
-                {/* Заметка к листогу */}
-                {level > 0 && (
-                  <input
-                    className="vtm-input !py-1 !text-[0.84rem] border-dashed"
-                    value={state?.note || ""}
-                    onChange={(e) => mutate((d) => { const l = d.loresheets.find((x) => x.sheetId === ls.id); if (l) l.note = e.target.value; })}
-                    placeholder="конкретика: кто твой контакт, где схема, чем платит"
-                    aria-label={`Заметка к листогу ${ls.name}`}
-                  />
-                )}
-              </div>
-            </section>
-          );
-        })}
+              </section>
+            );
+          })()}
+        </div>
       </div>
     </div>
   );

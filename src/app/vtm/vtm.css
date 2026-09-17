@@ -3865,3 +3865,641 @@ button.vtm-die.vtm-die-selectable.selected {
   .vtm-scene-copy { transition: none !important; }
   .vtm-panel-head .vtm-dossier-print { transition: none !important; }
 }
+
+/* ============================================================
+   РАУНД 25: «Словарь» + модалки сил + каталог Историй.
+   ============================================================ */
+
+/* ---------- Кнопка «◈ подробнее» в шапке карточки Дисциплины ---------- */
+
+.vtm-disc-info-btn {
+  font-family: var(--vtm-font-label), sans-serif;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vtm-violet-bright);
+  background: rgba(122, 74, 140, 0.08);
+  border: 1px dashed rgba(168, 119, 192, 0.45);
+  border-radius: 999px;
+  padding: 2px 9px;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  min-height: 24px;
+}
+.vtm-disc-info-btn:hover {
+  background: rgba(122, 74, 140, 0.18);
+  color: #d8b8ea;
+  box-shadow: 0 0 10px rgba(122, 74, 140, 0.35);
+}
+
+/* ---------- Силы на карточке: строка уровня + чипы ---------- */
+
+.vtm-disc-lvl-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.vtm-disc-lvl-num {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 62px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.vtm-disc-lvl-num b {
+  font-family: var(--vtm-font-label), sans-serif;
+  font-size: 0.70rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--vtm-ash);
+  font-weight: 600;
+}
+.vtm-disc-lvl-xp {
+  font-style: normal;
+  font-family: var(--vtm-font-label), sans-serif;
+  font-size: 0.60rem;
+  letter-spacing: 0.08em;
+  color: rgba(168, 134, 61, 0.75);
+  white-space: nowrap;
+}
+.vtm-disc-lvl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+.vtm-power-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--vtm-font-body), Georgia, serif;
+  font-size: 0.80rem;
+  color: var(--vtm-bone-dim);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--vtm-line-soft);
+  border-radius: 999px;
+  padding: 3px 10px 3px 9px;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  min-height: 28px;
+  line-height: 1.2;
+}
+.vtm-power-chip b {
+  font-weight: 600;
+  font-style: normal;
+  color: var(--vtm-bone);
+}
+.vtm-power-chip:hover {
+  border-color: rgba(168, 119, 192, 0.55);
+  background: rgba(122, 74, 140, 0.12);
+  color: #e6d5c6;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), 0 0 8px rgba(122, 74, 140, 0.18);
+}
+.vtm-power-chip-mark {
+  color: var(--vtm-violet-bright);
+  font-size: 0.72rem;
+}
+.vtm-power-chip-check {
+  color: var(--vtm-blood-bright);
+  font-size: 0.74rem;
+  text-shadow: 0 0 6px rgba(194, 43, 48, 0.6);
+}
+.vtm-power-chip.chosen {
+  border-color: rgba(194, 43, 48, 0.55);
+  background: rgba(138, 26, 29, 0.16);
+}
+.vtm-power-chip.chosen b { color: #f0ddd0; }
+.vtm-power-chip.amalgam:not(.chosen):not(.gapped) {
+  border-style: dashed;
+  border-color: rgba(122, 74, 140, 0.4);
+}
+.vtm-power-chip.gapped {
+  opacity: 0.62;
+  border-style: dashed;
+}
+
+.vtm-disc-chosen-note {
+  flex-basis: 100%;
+  font-size: 0.74rem;
+  color: var(--vtm-ash);
+  padding-left: 2px;
+}
+.vtm-disc-chosen-note b {
+  color: var(--vtm-bone);
+  font-weight: 600;
+}
+.vtm-disc-chosen-note i {
+  color: var(--vtm-violet-bright);
+  font-style: italic;
+}
+
+/* ---------- Модальные окна силы и Дисциплины ---------- */
+
+@keyframes vtm-pm-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes vtm-pm-rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.vtm-pm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70; /* выше панели костей (48) и тура (46) */
+  background: rgba(7, 2, 4, 0.86);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  animation: vtm-pm-fade 0.22s ease both;
+}
+.vtm-pm-card {
+  width: 100%;
+  max-width: 620px;
+  max-height: min(86vh, 760px);
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -20%, rgba(138, 26, 29, 0.12), transparent 60%),
+    linear-gradient(180deg, var(--vtm-panel-2), var(--vtm-panel));
+  border: 1px solid var(--vtm-line);
+  border-top: 1px solid rgba(168, 134, 61, 0.4);
+  border-radius: 14px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.75), 0 0 40px rgba(138, 26, 29, 0.14), inset 0 1px 0 rgba(217, 199, 182, 0.05);
+  animation: vtm-pm-rise 0.26s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  overflow: hidden;
+}
+.vtm-pm-card.vtm-pm-card-wide { max-width: 760px; }
+
+.vtm-pm-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--vtm-line-soft);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.25), transparent);
+  flex-shrink: 0;
+}
+.vtm-pm-kicker {
+  display: block;
+  font-family: var(--vtm-font-label), sans-serif;
+  font-size: 0.64rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--vtm-gold);
+  margin-bottom: 3px;
+}
+.vtm-pm-title {
+  font-family: var(--vtm-font-display), serif;
+  font-size: 1.28rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--vtm-bone);
+  text-shadow: 0 2px 12px rgba(138, 26, 29, 0.35);
+  line-height: 1.15;
+}
+.vtm-pm-close {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--vtm-line);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--vtm-bone-dim);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+.vtm-pm-close:hover {
+  border-color: rgba(194, 43, 48, 0.6);
+  color: #f0ddd0;
+  box-shadow: 0 0 12px rgba(194, 43, 48, 0.35);
+  transform: rotate(90deg);
+}
+
+.vtm-pm-body {
+  padding: 14px 18px 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vtm-pm-desc {
+  font-size: 0.90rem;
+  line-height: 1.65;
+  color: var(--vtm-bone-dim);
+  border-left: 2px solid var(--vtm-line);
+  padding-left: 12px;
+}
+
+.vtm-pm-system {
+  background: rgba(122, 74, 140, 0.08);
+  border: 1px dashed rgba(122, 74, 140, 0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.vtm-pm-system-label {
+  display: block;
+  font-family: var(--vtm-font-label), sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--vtm-violet-bright);
+  margin-bottom: 5px;
+}
+.vtm-pm-system p {
+  font-size: 0.85rem;
+  line-height: 1.62;
+  color: var(--vtm-bone-dim);
+}
+.vtm-pm-rules-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vtm-pm-rules-list li {
+  font-size: 0.83rem;
+  line-height: 1.6;
+  color: var(--vtm-bone-dim);
+  display: flex;
+  gap: 7px;
+}
+.vtm-pm-rules-list li span { color: var(--vtm-violet-bright); flex-shrink: 0; }
+
+/* Полочки */
+.vtm-pm-shelves {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 6px;
+}
+.vtm-pm-shelf {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--vtm-line-soft);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+.vtm-pm-shelf-label {
+  font-family: var(--vtm-font-label), sans-serif;
+  font-size: 0.60rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--vtm-ash);
+}
+.vtm-pm-shelf-value {
+  font-size: 0.82rem;
+  color: var(--vtm-bone);
+  line-height: 1.45;
+}
+
+.vtm-pm-notes {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--vtm-gold-bright);
+  background: rgba(168, 134, 61, 0.06);
+  border-radius: 8px;
+  padding: 8px 11px;
+}
+.vtm-pm-notes-mark { margin-right: 4px; }
+
+.vtm-pm-warning {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #f0b3a0;
+  background: rgba(194, 43, 48, 0.1);
+  border: 1px dashed rgba(194, 43, 48, 0.45);
+  border-radius: 8px;
+  padding: 8px 11px;
+}
+
+.vtm-pm-source {
+  font-size: 0.74rem;
+  color: var(--vtm-ash);
+  font-style: italic;
+}
+.vtm-pm-source .vtm-label { color: rgba(156, 128, 114, 0.8); margin-right: 4px; }
+
+.vtm-pm-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+  border-top: 1px solid var(--vtm-line-soft);
+}
+.vtm-pm-actions-hint {
+  font-size: 0.72rem;
+  color: var(--vtm-ash);
+  font-style: italic;
+}
+.vtm-pm-locked {
+  font-size: 0.80rem;
+  color: var(--vtm-ash);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  padding: 8px 11px;
+}
+
+/* Перечень сил в модалке Дисциплины */
+.vtm-pm-lvl-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vtm-pm-lvl-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.vtm-pm-lvl-head b {
+  font-family: var(--vtm-font-label), sans-serif;
+  font-size: 0.70rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--vtm-gold-bright);
+}
+.vtm-pm-lvl-head i {
+  color: rgba(168, 134, 61, 0.6);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+}
+.vtm-pm-lvl-powers {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vtm-pm-power-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--vtm-line-soft);
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.vtm-pm-power-row:hover {
+  border-color: rgba(168, 119, 192, 0.5);
+  background: rgba(122, 74, 140, 0.1);
+}
+.vtm-pm-power-name {
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: var(--vtm-bone);
+  flex-shrink: 0;
+}
+.vtm-pm-amalgam-mark { color: var(--vtm-violet-bright); margin-right: 3px; }
+.vtm-pm-power-desc {
+  font-size: 0.78rem;
+  color: var(--vtm-ash);
+  line-height: 1.45;
+  flex: 1;
+  min-width: 0;
+}
+.vtm-pm-power-go {
+  color: var(--vtm-gold);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.vtm-pm-power-row:hover .vtm-pm-power-go { transform: translateX(2px); }
+
+.vtm-pm-foot-hint {
+  font-size: 0.74rem;
+  color: var(--vtm-ash);
+  text-align: center;
+  padding-top: 2px;
+}
+
+/* ---------- Истории: каталог + основной блок ---------- */
+
+.vtm-hist-catalog { position: relative; }
+
+.vtm-hist-filter {
+  font-family: var(--vtm-font-label), sans-serif;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--vtm-ash);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--vtm-line-soft);
+  border-radius: 999px;
+  padding: 4px 11px;
+  cursor: pointer;
+  min-height: 28px;
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+.vtm-hist-filter:hover { border-color: rgba(168, 134, 61, 0.5); color: var(--vtm-bone-dim); }
+.vtm-hist-filter.active {
+  color: var(--vtm-gold-bright);
+  border-color: rgba(168, 134, 61, 0.55);
+  background: rgba(168, 134, 61, 0.1);
+}
+
+.vtm-hist-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "name badge" "tag badge";
+  gap: 0 8px;
+  width: 100%;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--vtm-line-soft);
+  border-left: 2px solid transparent;
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.vtm-hist-item:hover {
+  border-color: rgba(168, 134, 61, 0.4);
+  background: rgba(138, 26, 29, 0.07);
+  transform: translateX(2px);
+}
+.vtm-hist-item.active {
+  border-color: rgba(194, 43, 48, 0.55);
+  border-left-color: var(--vtm-blood-bright);
+  background: rgba(138, 26, 29, 0.13);
+  box-shadow: 0 0 14px rgba(138, 26, 29, 0.16);
+}
+.vtm-hist-item.owned:not(.active) { border-left-color: rgba(168, 134, 61, 0.55); }
+.vtm-hist-item-name {
+  grid-area: name;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--vtm-bone);
+  line-height: 1.25;
+}
+.vtm-hist-item-tag {
+  grid-area: tag;
+  font-size: 0.70rem;
+  color: var(--vtm-ash);
+  font-style: italic;
+  line-height: 1.3;
+}
+.vtm-hist-item-badge {
+  grid-area: badge;
+  align-self: center;
+  font-family: var(--vtm-font-label), sans-serif;
+  font-size: 0.60rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--vtm-gold-bright);
+  background: rgba(168, 134, 61, 0.1);
+  border: 1px solid rgba(168, 134, 61, 0.35);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.vtm-hist-item-badge.muted {
+  color: rgba(156, 128, 114, 0.65);
+  background: transparent;
+  border-color: var(--vtm-line-soft);
+}
+
+.vtm-hist-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 42px 20px;
+  border: 1px dashed var(--vtm-line);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.22);
+}
+.vtm-hist-empty-scroll {
+  font-size: 1.9rem;
+  filter: drop-shadow(0 0 10px rgba(168, 134, 61, 0.35));
+  animation: vtm-hist-float 4.5s ease-in-out infinite;
+}
+@keyframes vtm-hist-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* ---------- Словарь ---------- */
+
+.vtm-glos-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--vtm-font-label), sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--vtm-ash);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--vtm-line-soft);
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+  min-height: 30px;
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+.vtm-glos-filter:hover { border-color: rgba(168, 134, 61, 0.5); color: var(--vtm-bone-dim); }
+.vtm-glos-filter.active {
+  color: var(--vtm-gold-bright);
+  border-color: rgba(168, 134, 61, 0.6);
+  background: rgba(168, 134, 61, 0.1);
+  box-shadow: 0 0 10px rgba(168, 134, 61, 0.12);
+}
+
+.vtm-glos-group-head {
+  border-bottom: 1px solid var(--vtm-line-soft);
+  padding-bottom: 6px;
+}
+.vtm-glos-group-icon {
+  font-size: 1.05rem;
+  filter: drop-shadow(0 0 8px rgba(138, 26, 29, 0.5));
+}
+
+.vtm-glos-card {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.vtm-glos-term {
+  font-family: var(--vtm-font-display), serif;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--vtm-bone);
+  letter-spacing: 0.02em;
+}
+.vtm-glos-en {
+  font-size: 0.72rem;
+  color: var(--vtm-gold);
+  font-style: italic;
+  letter-spacing: 0.06em;
+}
+.vtm-glos-def {
+  font-size: 0.84rem;
+  line-height: 1.62;
+  color: var(--vtm-bone-dim);
+}
+.vtm-glos-mortal {
+  font-size: 0.80rem;
+  line-height: 1.58;
+  color: var(--vtm-ash);
+  background: rgba(0, 0, 0, 0.25);
+  border-left: 2px solid rgba(168, 134, 61, 0.5);
+  border-radius: 0 8px 8px 0;
+  padding: 7px 10px;
+}
+.vtm-glos-mortal-label {
+  display: block;
+  font-family: var(--vtm-font-label), sans-serif;
+  font-size: 0.60rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--vtm-gold-bright);
+  margin-bottom: 3px;
+}
+
+/* ---------- Мобайл (≤640px) ---------- */
+@media (max-width: 640px) {
+  .vtm-pm-overlay { padding: 10px; align-items: flex-end; }
+  .vtm-pm-card {
+    max-height: 92vh;
+    border-radius: 14px 14px 6px 6px;
+  }
+  .vtm-pm-body { padding: 12px 14px 16px; }
+  .vtm-pm-head { padding: 13px 14px 10px; }
+  .vtm-pm-title { font-size: 1.12rem; }
+  .vtm-pm-shelves { grid-template-columns: 1fr 1fr; }
+  .vtm-pm-actions .vtm-btn { flex: 1 1 100%; min-height: 40px; }
+
+  .vtm-disc-lvl-num { flex-direction: row; align-items: baseline; gap: 6px; min-width: 0; }
+  .vtm-hist-item { grid-template-columns: 1fr; grid-template-areas: "name" "tag" "badge"; }
+  .vtm-hist-item-badge { justify-self: start; }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .vtm-pm-overlay,
+  .vtm-pm-card,
+  .vtm-hist-empty-scroll { animation: none !important; }
+  .vtm-power-chip,
+  .vtm-hist-item,
+  .vtm-pm-close,
+  .vtm-pm-power-row,
+  .vtm-pm-power-go,
+  .vtm-disc-info-btn,
+  .vtm-hist-filter,
+  .vtm-glos-filter { transition: none !important; }
+}
