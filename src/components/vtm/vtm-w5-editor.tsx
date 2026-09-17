@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { VtmReturnPortal } from "@/components/vtm/portal-transition";
 import { vtmFetch } from "@/lib/vtm-api";
 import { SKILL_LIBRARY } from "@/lib/vtm-data";
+import { VtmDicePanel, setVtmSheetHooks, useVtmDice, vtmW5RollAndShow, vtmW5RageCheckAndShow } from "@/components/vtm/vtm-dice";
+import { W5PrintDoc, W5PrintSummary } from "@/components/vtm/vtm-w5-print";
 import {
   W5SheetData,
   W5GiftEntry,
@@ -60,6 +62,12 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
   const [tab, setTab] = useState<W5Tab>("identity");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [conflict, setConflict] = useState<{ serverData: W5SheetData; serverUpdatedAt: string } | null>(null);
+  // Режим печати: «лист» — полный бланк; «сводка» — одна страница для стола
+  const [printMode, setPrintMode] = useState<"sheet" | "summary">("sheet");
+  const printDoc = useCallback((mode: "sheet" | "summary") => {
+    setPrintMode(mode);
+    setTimeout(() => window.print(), 60);
+  }, []);
   const syncedAtRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightRef = useRef(false);
@@ -142,6 +150,32 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
     });
   }, []);
 
+  // Кости Луны: режим панели и хуки листа Гароу (хроника, Ярость, Воля)
+  useEffect(() => {
+    useVtmDice.getState().setMode("werewolf");
+    return () => useVtmDice.getState().setMode("vampire");
+  }, []);
+  useEffect(() => {
+    setVtmSheetHooks({
+      logRoll: (text) => mutate((d) => { d.rollLog = [{ id: `roll-${Date.now().toString(36)}`, text, ts: new Date().toISOString() }, ...d.rollLog].slice(0, 60); }),
+      addRage: (n) => mutate((d) => {
+        const next = Math.max(0, Math.min(5, d.trackers.rage + n));
+        d.trackers.rage = next;
+        if (next === 0) d.trackers.wolfLost = true;
+        if (next > 0) d.trackers.wolfLost = false;
+      }),
+      spendWillpower: () => {
+        if (!data) return false;
+        const max = w5WillpowerMax(data);
+        if (data.trackers.wpSup >= max) return false;
+        mutate((draft) => { draft.trackers.wpSup = Math.min(draft.trackers.wpSup + 1, w5WillpowerMax(draft)); });
+        return true;
+      },
+      willpowerLeft: () => (data ? Math.max(0, w5WillpowerMax(data) - data.trackers.wpSup) : 0),
+    });
+    return () => setVtmSheetHooks(null);
+  }, [data, mutate]);
+
   // Прогрев кэша архива после закрытия
   const back = () => {
     qc.invalidateQueries({ queryKey: ["vtm-sheets"] });
@@ -197,6 +231,11 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
     { key: "int", label: "Интеллект" }, { key: "wit", label: "Смекалка" }, { key: "res", label: "Упорство" },
   ];
 
+  // Быстрый бросок пула с костями Ярости — используется вкладками
+  const rollCheck = (pool: number, label: string, opts?: { damage?: boolean }) => {
+    vtmW5RollAndShow(pool, data.trackers.rage, label, opts);
+  };
+
   return (
     <main className="relative z-10 min-h-screen vtm-root" aria-label="Лист Гароу (W5)">
       <div className="max-w-[96rem] mx-auto px-3 md:px-6 py-6 md:py-8 space-y-4">
@@ -222,6 +261,8 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
               {status === "saving" ? "Запись…" : status === "saved" ? "Записано" : status === "error" ? "Сбой" : ""}
             </span>
             <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={copySummary}>⧉ Копия</button>
+            <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={() => printDoc("sheet")} aria-label="Печать листа Гароу" title="Печать полного листа">🖨 Лист</button>
+            <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={() => printDoc("summary")} aria-label="Печать сводки Гароу" title="Печать сводки на одну страницу">🖨 Сводка</button>
             <button
               className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs"
               onClick={() => {
@@ -274,10 +315,10 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
             <W5IdentityTab data={data} mutate={mutate} />
           )}
           {tab === "nature" && (
-            <W5NatureTab data={data} mutate={mutate} attrPairs={attrPairs} attrTotal={attrTotal} />
+            <W5NatureTab data={data} mutate={mutate} attrPairs={attrPairs} attrTotal={attrTotal} onRoll={rollCheck} />
           )}
           {tab === "skills" && (
-            <W5SkillsTab data={data} mutate={mutate} attrPairs={attrPairs} />
+            <W5SkillsTab data={data} mutate={mutate} attrPairs={attrPairs} onRoll={rollCheck} />
           )}
           {tab === "gifts" && (
             <W5GiftsTab data={data} mutate={mutate} />
@@ -307,6 +348,13 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
           <p className="vtm-label text-[0.72rem] tracking-[0.3em] uppercase text-[#4a3230]">The wheel will turn as it must</p>
         </footer>
       </div>
+
+      {/* Печатная версия листа Гароу — видна только при печати / сохранении в PDF */}
+      <div className="vtm-print-only" aria-hidden="true">
+        {printMode === "summary" ? <W5PrintSummary data={data} /> : <W5PrintDoc data={data} />}
+      </div>
+
+      <VtmDicePanel />
 
       {/* Конфликт версий */}
       {conflict && (
@@ -501,11 +549,13 @@ function W5NatureTab({
   mutate,
   attrPairs,
   attrTotal,
+  onRoll,
 }: {
   data: W5SheetData;
   mutate: (fn: (d: W5SheetData) => void) => void;
   attrPairs: { key: keyof W5SheetData["attributes"]; label: string }[];
   attrTotal: number;
+  onRoll: (pool: number, label: string, opts?: { damage?: boolean }) => void;
 }) {
   const delta = attrTotal - 22;
   return (
@@ -520,13 +570,20 @@ function W5NatureTab({
         <div className="p-3 md:p-4 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           {attrPairs.map(({ key, label }) => (
             <div key={key} className="vtm-frame rounded-md p-2.5 flex flex-col items-center gap-2" style={{ background: "rgba(0,0,0,0.2)" }}>
-              <span className="vtm-label text-[0.72rem] text-[#c4ac9d]">{label}</span>
+              <button
+                className="vtm-label text-[0.72rem] text-[#c4ac9d] vtm-w5-roll-name"
+                onClick={() => onRoll(data.attributes[key], label)}
+                title={`Бросить пул: ${label} ${data.attributes[key]} + кости Ярости`}
+                aria-label={`Бросок ${label}`}
+              >
+                {label}
+              </button>
               <Dots value={data.attributes[key]} color="moon" onChange={(n) => mutate((d) => { d.attributes[key] = n; })} ariaLabel={`${label}: уровень ${data.attributes[key]}`} />
             </div>
           ))}
         </div>
         <p className="vtm-hint !text-[0.75rem] px-4 pb-3">
-          Распределение по правилам: одна 4, три по 3, четыре по 2, одна 1. Смена облика требует проверки Ярости.
+          Распределение по правилам: одна 4, три по 3, четыре по 2, одна 1. Клик по названию — бросок пула: характеристика + кости Ярости. Смена облика требует проверки Ярости.
         </p>
       </section>
 
@@ -560,10 +617,12 @@ function W5SkillsTab({
   data,
   mutate,
   attrPairs,
+  onRoll,
 }: {
   data: W5SheetData;
   mutate: (fn: (d: W5SheetData) => void) => void;
   attrPairs: { key: keyof W5SheetData["attributes"]; label: string }[];
+  onRoll: (pool: number, label: string, opts?: { damage?: boolean }) => void;
 }) {
   const skillValue = (id: string) => data.skills.find((s) => s.id === id);
   const setSkill = (id: string, patch: Partial<{ value: number; spec: string }>) => {
@@ -575,13 +634,13 @@ function W5SkillsTab({
   };
   // Пара по умолчанию для проверки (упрощённо: ментальные от Интеллекта и т.д.)
   const defaultAttr: Record<string, string> = { physical: "ЛОВ", social: "ОБА", mental: "ИНТ" };
-  const attrShort: Record<string, string> = { Сила: "СИЛ", Ловкость: "ЛОВ", Стойкость: "СТО", Обаяние: "ОБА", Манипуляция: "МАН", Самообладание: "САМ", Интеллект: "ИНТ", Смекалка: "СМК", Упорство: "УПР" };
+  const defaultAttrKey: Record<string, keyof W5SheetData["attributes"]> = { physical: "dex", social: "cha", mental: "int" };
 
   const groups: ("physical" | "social" | "mental")[] = ["physical", "social", "mental"];
   return (
     <div className="space-y-4">
       <p className="vtm-hint !text-[0.78rem] vtm-panel p-3">
-        Клик по точке — уровень (0–5). Пара для проверки подписана чипом: характеристика + навык, успех на 6+. Специализация появляется с уровнем 1+.
+        Клик по точке — уровень (0–5). Клик по названию навыка — бросок: характеристика + навык + кости Ярости, успех на 6+. Специализация появляется с уровнем 1+.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {groups.map((g) => (
@@ -594,7 +653,14 @@ function W5SkillsTab({
                 return (
                   <div key={s.id} className="vtm-w5-skill-row">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="vtm-label text-[0.84rem] text-[#d9c7b6] flex-1 min-w-[100px]" title={s.hint}>{s.name}</span>
+                      <button
+                        className="vtm-label text-[0.84rem] text-[#d9c7b6] flex-1 min-w-[100px] text-left vtm-w5-roll-name"
+                        title={`Бросить: ${defaultAttr[g]} ${data.attributes[defaultAttrKey[g]]} + ${s.name} ${value} + кости Ярости`}
+                        onClick={() => onRoll(data.attributes[defaultAttrKey[g]] + value, `${s.name}${st?.spec ? ` (${st.spec})` : ""}`)}
+                        aria-label={`Бросок ${s.name}`}
+                      >
+                        {s.name}
+                      </button>
                       <span className="vtm-hint !text-[0.64rem] not-italic text-[#8ea6c9]">{defaultAttr[g]}</span>
                       <Dots value={value} color="moon" onChange={(n) => setSkill(s.id, { value: n })} ariaLabel={`${s.name}: уровень ${value}`} />
                     </div>
@@ -615,7 +681,7 @@ function W5SkillsTab({
         ))}
       </div>
       <p className="vtm-hint !text-[0.72rem] text-center">
-        Пулы по умолчанию: физика — Ловкость {attrShort["Ловкость"] ? "" : ""}или Сила, социалка — Обаяние или Манипуляция, ментал — Интеллект или Смекалка. Точную пару на проверку называет Рассказчик.
+        Пулы по умолчанию: физика — Ловкость или Сила, социалка — Обаяние или Манипуляция, ментал — Интеллект или Смекалка. Точную пару на проверку называет Рассказчик.
       </p>
     </div>
   );
@@ -914,8 +980,20 @@ function W5TracksTab({
                 if (n === 0) d.trackers.wolfLost = true;
                 if (n > 0) d.trackers.wolfLost = false;
               })} ariaLabel={`Ярость: ${data.trackers.rage}`} />
+              <button
+                className="vtm-btn vtm-btn-ghost !py-1 !px-2.5 !text-[0.74rem] shrink-0"
+                onClick={() => vtmW5RageCheckAndShow("по листу")}
+                title="Одна кость: успех 6+ — Ярость не меняется, провал — Ярость −1"
+              >
+                🌕 Проверка Ярости
+              </button>
               <span className="vtm-hint !text-[0.72rem]">0 — волк потерян</span>
             </div>
+            {data.trackers.rage >= 5 && (
+              <p className="vtm-req vtm-label !text-[0.7rem]" role="note">
+                ⚠ Ярость 5 — Смертельная Ярость на волоске: любая провокация может бросить в безумие Криноса.
+              </p>
+            )}
             <label className="flex items-center gap-2 vtm-hint !text-[0.76rem]">
               <input type="checkbox" checked={data.trackers.wolfLost} onChange={(e) => mutate((d) => { d.trackers.wolfLost = e.target.checked; })} aria-label="Волк потерян" />
               волк потерян (вернуть — выть на луну)
@@ -1109,6 +1187,19 @@ function W5NotesTab({ data, mutate }: { data: W5SheetData; mutate: (fn: (d: W5Sh
             </div>
           ))}
         </div>
+        {/* Хроника бросков — как у Сородичей, живёт в самом листе */}
+        {data.rollLog.length > 0 && (
+          <div className="p-3 border-t border-[#2b1116]">
+            <p className="vtm-label text-[0.74rem] text-[#8ea6c9] mb-1.5">Хроника бросков · {data.rollLog.length}</p>
+            <div className="max-h-40 overflow-y-auto vtm-scroll pr-1">
+              {data.rollLog.map((e) => (
+                <p key={e.id} className="vtm-roll-row !text-[0.73rem]">
+                  {new Date(e.ts).toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · {e.text}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

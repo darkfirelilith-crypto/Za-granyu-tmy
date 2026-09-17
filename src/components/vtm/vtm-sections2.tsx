@@ -83,6 +83,27 @@ export function DisciplinesSection({
     mutate((d) => { Object.assign(d.disciplines[idx], patch); });
   };
 
+  /** Авто-запись в журнал опыта: покупка/подъём не списывает очки — цену сверяет Рассказчик. */
+  const logXp = (text: string) => {
+    mutate((d) => {
+      if (d.xpLog[0]?.text === text) return; // без дублей подряд
+      d.xpLog = [
+        { id: `xp-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e5).toString(36)}`, text, ts: new Date().toISOString() },
+        ...d.xpLog,
+      ].slice(0, 40);
+    });
+  };
+
+  /** Подъём уровня Дисциплины (каталожной или своей) + авто-запись цены в журнал опыта. */
+  const raiseDisc = (key: string | null, name: string, n: number, idx: number) => {
+    const prev = key
+      ? data.disciplines.find((x) => x.key === key)?.value || 0
+      : data.disciplines[idx]?.value || 0;
+    if (key) setDisc(key, name, { value: n });
+    else setAt(idx, { value: n });
+    if (n > prev) logXp(`покупка: «${name}» ↑ до ${n} — цена ${XP_COSTS.discipline(n)} опыта (сверься с Рассказчиком)`);
+  };
+
   /** Удалить запись листа по индексу — работает и для библиотечных, и для своих. */
   const removeAt = (idx: number, name: string) => {
     mutate((d) => { d.disciplines.splice(idx, 1); });
@@ -297,7 +318,7 @@ export function DisciplinesSection({
                   <Dots
                     value={value}
                     color="violet"
-                    onChange={(n) => (def ? setDisc(def.id, def.name, { value: n }) : setAt(idx, { value: n }))}
+                    onChange={(n) => (def ? raiseDisc(def.id, def.name, n, idx) : raiseDisc(null, state.name, n, idx))}
                     ariaLabel={`${state.name}: уровень ${value}`}
                   />
                   {def && value > 0 && value < 5 && (
@@ -337,6 +358,9 @@ export function DisciplinesSection({
                             if (!disc.powers) disc.powers = {};
                             disc.powers[lvl] = name;
                           });
+                          if (name && name !== (state?.powers?.[lvl] || "")) {
+                            logXp(`формула: «${name}» (${lvl} ур. · Алхимия) — цена ${XP_COSTS.disciplinePower(lvl)} опыта (сверься с Рассказчиком)`);
+                          }
                         }}
                       />
                     ) : (
@@ -353,10 +377,14 @@ export function DisciplinesSection({
                                 className="vtm-input !py-1 !text-[0.84rem] flex-1 min-w-[160px]"
                                 value={powers.some((p) => p.name === chosen) ? chosen : ""}
                                 onChange={(e) => {
+                                  const val = e.target.value;
                                   mutate((d) => {
                                     const disc = d.disciplines.find((x) => x.key === def.id);
-                                    if (disc) disc.powers[lvl] = e.target.value;
+                                    if (disc) disc.powers[lvl] = val;
                                   });
+                                  if (val && val !== (state?.powers?.[lvl] || "")) {
+                                    logXp(`сила: «${val}» (${lvl} ур. · «${def.name}») — цена ${XP_COSTS.disciplinePower(lvl)} опыта (сверься с Рассказчиком)`);
+                                  }
                                 }}
                                 aria-label={`Сила ${lvl} уровня Дисциплины ${def.name}`}
                               >

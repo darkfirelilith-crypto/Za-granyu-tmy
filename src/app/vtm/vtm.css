@@ -2858,3 +2858,82 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 @media (max-width: 640px) {
   .vtm-w5-box { width: 15px; height: 19px; }
 }
+
+/* ============================================================
+   РАУНД 16 · Кости Луны (W5): кости Ярости, Жестокие кости,
+   бросковые названия, лунная панель костей и хроника Гароу.
+   ============================================================ */
+
+/* Кость Ярости — красная, как у Голода, но с лунным отливом на границе */
+.vtm-die.rage {
+  border-color: rgba(194, 43, 48, 0.7);
+}
+
+/* Жестокая кость (1–2 на кости Ярости) — тлеющий уголь, успех не даёт */
+.vtm-die.brutal {
+  background: linear-gradient(160deg, #3d0d10, #150406);
+  border-color: rgba(232, 99, 107, 0.85);
+  color: #f0a5a8;
+  border-radius: 4px 50% 50% 50%;
+  box-shadow: 0 0 12px rgba(232, 99, 107, 0.4), inset 0 0 6px rgba(0, 0, 0, 0.7);
+  animation: vtm-brutal-smolder 1.6s ease-in-out infinite;
+}
+
+@keyframes vtm-brutal-smolder {
+  0%, 100% { box-shadow: 0 0 10px rgba(232, 99, 107, 0.35), inset 0 0 6px rgba(0, 0, 0, 0.7); }
+  50% { box-shadow: 0 0 16px rgba(232, 99, 107, 0.6), inset 0 0 6px rgba(0, 0, 0, 0.7); }
+}
+
+/* Лунная панель костей — серебро вместо крови */
+.vtm-dice-panel-w5 .vtm-dice-body {
+  border-color: rgba(142, 166, 201, 0.35);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65), 0 0 24px rgba(142, 166, 201, 0.08);
+}
+
+.vtm-dice-toggle-w5 {
+  border-color: rgba(142, 166, 201, 0.5);
+  box-shadow: 0 0 14px rgba(142, 166, 201, 0.25);
+}
+.vtm-dice-toggle-w5:hover {
+  border-color: #c9d3e8;
+  box-shadow: 0 0 20px rgba(142, 166, 201, 0.45);
+}
+
+/* Бросковые названия: характеристики и навыки Гароу */
+.vtm-w5-roll-name {
+  cursor: pointer;
+  border-bottom: 1px dashed transparent;
+  transition: color 0.15s ease, border-color 0.15s ease, text-shadow 0.15s ease;
+}
+.vtm-w5-roll-name:hover {
+  color: #c9d3e8 !important;
+  border-bottom-color: rgba(142, 166, 201, 0.55);
+  text-shadow: 0 0 12px rgba(142, 166, 201, 0.35);
+}
+.vtm-w5-roll-name:focus-visible {
+  outline: 1px dashed rgba(142, 166, 201, 0.7);
+  outline-offset: 2px;
+}
+
+/* Бейджи хроники: Жестокий исход (провал) и Жестокий успех на уроне */
+.vtm-rh-badge.brutal {
+  color: #f0a5a8;
+  border-color: rgba(232, 99, 107, 0.7);
+  background: rgba(61, 13, 16, 0.4);
+  animation: vtm-brutal-smolder 1.6s ease-in-out infinite;
+}
+.vtm-rh-badge.brutaldmg {
+  color: #f0d68a;
+  border-color: rgba(214, 168, 64, 0.6);
+  background: rgba(92, 16, 20, 0.35);
+}
+
+@media (max-width: 640px) {
+  .vtm-die { width: 30px; height: 30px; font-size: 0.92rem; }
+  .vtm-w5-roll-name { min-height: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vtm-die.brutal, .vtm-rh-badge.brutal { animation: none !important; }
+  .vtm-w5-roll-name { transition: none !important; }
+}

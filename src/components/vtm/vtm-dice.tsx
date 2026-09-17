@@ -12,6 +12,84 @@ import { create } from "zustand";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 
+// ---------- Кости Гароу (W5): Ярость заменяет кости пула ----------
+// По правилам W5: успех на 6+, пара десяток — критический; кость Ярости
+// с 1–2 — ЖЕСТОКАЯ: сама не даёт успеха; две и более ЖЕСТОКИХ в одном
+// испытании — ЖЕСТОКИЙ ИСХОД (провал с разрушениями; на уроне — наоборот
+// +4 успеха). Жестокую кость нельзя перебросить волей.
+
+export interface W5Die {
+  value: number;      // 1..10
+  rage: boolean;      // кость Ярости
+  success: boolean;   // >= 6
+  crit: boolean;      // == 10
+  brutal: boolean;    // кость Ярости с 1–2
+}
+
+export interface W5RollResult {
+  dice: W5Die[];
+  successes: number;      // без Жестоких костей и без бонуса урона
+  critPairs: number;
+  totalSuccesses: number; // итог (на уроне при Жестоком исходе — с +4)
+  brutalCount: number;    // сколько костей 1–2 среди Ярости
+  brutalOutcome: boolean; // 2+ Жестоких — испытание провалено/разрушено
+  brutalDamage: boolean;  // Жестокий исход на броске урона (+4 успеха)
+  pool: number;
+  rageDice: number;
+  label: string;
+  difficulty?: number;
+}
+
+/** Бросок пула Гароу: rage — сколько костей пула являются костями Ярости. */
+export function rollW5Pool(pool: number, rage: number, label: string, opts?: { damage?: boolean; difficulty?: number }): W5RollResult {
+  const p = Math.max(1, Math.min(40, Math.floor(pool)));
+  const r = Math.max(0, Math.min(p, Math.min(5, Math.floor(rage))));
+  const dice: W5Die[] = [];
+  for (let i = 0; i < p; i++) {
+    const value = 1 + Math.floor(Math.random() * 10);
+    const isRage = i < r;
+    const brutal = isRage && value <= 2;
+    dice.push({ value, rage: isRage, success: value >= 6 && !brutal, crit: value === 10, brutal });
+  }
+  const tens = dice.filter((d) => d.crit).length;
+  const critPairs = Math.floor(tens / 2);
+  const plain = dice.filter((d) => d.success && !d.crit).length;
+  const oddTens = tens % 2;
+  const successes = plain + critPairs * 2 + oddTens;
+  const brutalCount = dice.filter((d) => d.brutal).length;
+  const brutalOutcome = brutalCount >= 2;
+  const brutalDamage = brutalOutcome && !!opts?.damage;
+  const totalSuccesses = brutalOutcome ? (brutalDamage ? successes + 4 : 0) : successes;
+  return {
+    dice,
+    successes,
+    critPairs,
+    totalSuccesses,
+    brutalCount,
+    brutalOutcome,
+    brutalDamage,
+    pool: p,
+    rageDice: r,
+    label,
+    difficulty: opts?.difficulty,
+  };
+}
+
+/** Проверка Ярости (W5): одна кость — успех 6+ сохраняет Ярость, провал — Ярость −1. */
+export function rollW5RageCheck(label: string): { ok: boolean; value: number } {
+  const value = 1 + Math.floor(Math.random() * 10);
+  return { ok: value >= 6, value };
+}
+
+export function describeW5(r: W5RollResult): string {
+  const diff = r.difficulty ? ` · порог ≤ ${r.difficulty}` : "";
+  if (r.brutalOutcome && r.brutalDamage) return `ЖЕСТОКИЙ УСПЕХ · ${r.totalSuccesses} успехов${diff} — удар разнёс цель в щепки`;
+  if (r.brutalOutcome) return `ЖЕСТОКИЙ ИСХОД${diff} — провал, и что-то разрушено`;
+  if (r.totalSuccesses > 0 && r.critPairs) return `КРИТИЧЕСКИЙ УСПЕХ · ${r.totalSuccesses}${diff}`;
+  if (r.totalSuccesses > 0) return `УСПЕХ · ${r.totalSuccesses}${diff}`;
+  return `ПРОВАЛ · 0 успехов${diff}`;
+}
+
 export interface VtmDie {
   value: number;      // 1..10
   hunger: boolean;    // кость Голода
@@ -78,28 +156,40 @@ export interface RollHistoryItem {
   id: string;
   label: string;
   ts: number;
-  kind: "pool" | "rouse";
+  kind: "pool" | "rouse" | "w5pool" | "wrage";
   roll?: VtmRollResult;
   rouse?: { ok: boolean; value: number };
+  w5roll?: W5RollResult;
+  wrage?: { ok: boolean; value: number };
 }
 
 interface DiceState {
+  mode: "vampire" | "werewolf";   // какой лист открыт — какая терминология у панели
   open: boolean;
   last: VtmRollResult | null;
   rouse: { ok: boolean; value: number; label: string; ts: number } | null;
+  w5last: W5RollResult | null;
+  wrage: { ok: boolean; value: number; label: string; ts: number } | null;
   history: RollHistoryItem[];
+  setMode: (m: "vampire" | "werewolf") => void;
   toggle: () => void;
   setOpen: (v: boolean) => void;
   pushRoll: (r: VtmRollResult) => void;
   pushRouse: (r: { ok: boolean; value: number; label: string }) => void;
+  pushW5Roll: (r: W5RollResult) => void;
+  pushRageCheck: (r: { ok: boolean; value: number; label: string }) => void;
   clearHistory: () => void;
 }
 
 export const useVtmDice = create<DiceState>((set) => ({
+  mode: "vampire",
   open: false,
   last: null,
   rouse: null,
+  w5last: null,
+  wrage: null,
   history: [],
+  setMode: (m) => set({ mode: m, last: null, rouse: null, w5last: null, wrage: null }),
   toggle: () => set((s) => ({ open: !s.open })),
   setOpen: (v) => set({ open: v }),
   pushRoll: (r) =>
@@ -119,6 +209,23 @@ export const useVtmDice = create<DiceState>((set) => ({
         ...s.history,
       ].slice(0, HISTORY_CAP),
     })),
+  pushW5Roll: (r) =>
+    set((s) => ({
+      w5last: r,
+      open: true,
+      history: [
+        { id: `w5-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, label: r.label, ts: Date.now(), kind: "w5pool", w5roll: r } as RollHistoryItem,
+        ...s.history,
+      ].slice(0, HISTORY_CAP),
+    })),
+  pushRageCheck: (r) =>
+    set((s) => ({
+      wrage: { ...r, ts: Date.now() },
+      history: [
+        { id: `wrage-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, label: r.label, ts: Date.now(), kind: "wrage", wrage: { ok: r.ok, value: r.value } } as RollHistoryItem,
+        ...s.history,
+      ].slice(0, HISTORY_CAP),
+    })),
   clearHistory: () => set({ history: [] }),
 }));
 
@@ -126,10 +233,11 @@ export const useVtmDice = create<DiceState>((set) => ({
 
 interface SheetHooks {
   logRoll: (text: string) => void;
-  addHunger: (n?: number) => void;
+  addHunger?: (n?: number) => void;      // вампирский лист
+  addRage?: (n: number) => void;         // лист Гароу: +/- Ярость (отрицательное — потеря)
   spendWillpower: () => boolean;
   willpowerLeft: () => number;
-  hungerLeft: () => number;
+  hungerLeft?: () => number;
 }
 
 let hooks: SheetHooks | null = null;
@@ -162,18 +270,36 @@ function diceCompact(r: VtmRollResult): string {
   return hung.length ? `${mainStr} ⁄ голод ${hung.join("·")}` : mainStr;
 }
 
+/** Короткий вердикт броска Гароу для «Хроники бросков». */
+function verdictW5Short(r: W5RollResult): { word: string; tone: "crit" | "win" | "brutal" | "brutaldmg" | "fail" } {
+  if (r.brutalOutcome && r.brutalDamage) return { word: `ЖЕСТОК. · ${r.totalSuccesses}`, tone: "brutaldmg" };
+  if (r.brutalOutcome) return { word: "ЖЕСТОКИЙ", tone: "brutal" };
+  if (r.totalSuccesses > 0 && r.critPairs) return { word: `КРИТ · ${r.totalSuccesses}`, tone: "crit" };
+  if (r.totalSuccesses > 0) return { word: `УСПЕХ · ${r.totalSuccesses}`, tone: "win" };
+  return { word: "ПРОВАЛ", tone: "fail" };
+}
+
+/** Компактная запись броска Гароу: обычные кости · ярость в скобках. */
+function diceCompactW5(r: W5RollResult): string {
+  const main = r.dice.filter((d) => !d.rage).map((d) => d.value);
+  const rage = r.dice.filter((d) => d.rage).map((d) => d.value);
+  const mainStr = main.join("·");
+  return rage.length ? `${mainStr} ⁄ ярость ${rage.join("·")}` : mainStr;
+}
+
 // ---------- Плавающая панель ----------
 
 export function VtmDicePanel() {
-  const { open, last, rouse, history, toggle, setOpen, clearHistory } = useVtmDice();
+  const { open, last, rouse, w5last, wrage, mode, history, toggle, setOpen, clearHistory } = useVtmDice();
   const [rollBtnArmed, setRollBtnArmed] = useState(false);
   const [histOpen, setHistOpen] = useState(true);
+  const isW5 = mode === "werewolf";
 
   // Горячий бросок: последние параметры не храним — панель только показывает результат
   // и журнал. Реальные броски делаются из контекстных кнопок (клик по точкам/строкам).
 
   return (
-    <div className="vtm-dice-panel" aria-live="polite">
+    <div className={`vtm-dice-panel ${isW5 ? "vtm-dice-panel-w5" : ""}`} aria-live="polite">
       <AnimatePresence>
         {open && (
           <motion.div
@@ -184,16 +310,54 @@ export function VtmDicePanel() {
             transition={{ duration: 0.22 }}
             className="vtm-panel vtm-dice-body mb-2 p-4 space-y-3"
             role="dialog"
-            aria-label="Кости Ночи"
+            aria-label={isW5 ? "Кости Луны" : "Кости Ночи"}
           >
             <div className="flex items-center justify-between">
-              <span className="vtm-label text-[0.79rem] text-[#c4ac9d]">Кости Ночи</span>
+              <span className={`vtm-label text-[0.79rem] ${isW5 ? "text-[#c9d3e8]" : "text-[#c4ac9d]"}`}>{isW5 ? "Кости Луны" : "Кости Ночи"}</span>
               <button onClick={() => setOpen(false)} className="vtm-btn vtm-btn-ghost !px-2 !py-1 !text-[0.81rem]" aria-label="Закрыть кости">
                 ✕
               </button>
             </div>
 
-            {last && (
+            {isW5 && w5last && (
+              <div className="space-y-2">
+                <p className="vtm-label text-[0.75rem] text-[#8ea6c9]">{w5last.label}</p>
+                <div className="flex flex-wrap gap-1.5" role="img" aria-label={describeW5(w5last)}>
+                  {w5last.dice.map((d, i) => (
+                    <span
+                      key={i}
+                      className={`vtm-die ${d.success ? "success" : ""} ${d.crit ? "crit" : ""} ${d.rage ? "hunger rage" : ""} ${d.brutal ? "brutal" : ""}`}
+                      title={d.brutal ? "Жестокая кость Ярости (1–2)" : d.rage ? "Кость Ярости" : undefined}
+                    >
+                      {d.value}
+                    </span>
+                  ))}
+                </div>
+                <p className={`vtm-label text-[0.83rem] ${w5last.brutalOutcome ? (w5last.brutalDamage ? "text-[#d6a840]" : "text-[#e8636b]") : w5last.totalSuccesses > 0 ? "text-[#9fd8b3]" : "text-[#c4ac9d]"}`}>
+                  {describeW5(w5last)}
+                </p>
+                {w5last.brutalOutcome && !w5last.brutalDamage && (
+                  <p className="vtm-hint">Жестокий исход: две и более кости Ярости выпали на 1–2 — испытание провалено, и что-то вокруг разрушено: дверь, схватка, хрупкая тайна. Жестокие кости нельзя перебросить волей.</p>
+                )}
+                {w5last.brutalOutcome && w5last.brutalDamage && (
+                  <p className="vtm-hint">Жестокий успех на уроне: удар вышел разрушительным — к числу успехов добавлено +4, но и ущерб вокруг случился немалый.</p>
+                )}
+                {w5last.brutalCount === 1 && !w5last.brutalOutcome && (
+                  <p className="vtm-hint">Жестокая кость: одна кость Ярости выпала на 1–2 — сама она успеха не дала (но перебросить её волей нельзя).</p>
+                )}
+              </div>
+            )}
+
+            {isW5 && wrage && (
+              <div className="space-y-1 border-t border-[#2b1116] pt-2">
+                <p className="vtm-label text-[0.75rem] text-[#c9d3e8]">Проверка Ярости · {wrage.label}</p>
+                <p className={`vtm-label text-[0.83rem] ${wrage.ok ? "text-[#9fd8b3]" : "text-[#e8636b]"}`}>
+                  d10 = {wrage.value} — {wrage.ok ? "УСПЕХ, Ярость не меняется" : "ПРОВАЛ, Ярость −1"}
+                </p>
+              </div>
+            )}
+
+            {!isW5 && last && (
               <div className="space-y-2">
                 <p className="vtm-label text-[0.75rem] text-[#a8863d]">{last.label}</p>
                 <div className="flex flex-wrap gap-1.5" role="img" aria-label={describe(last)}>
@@ -219,7 +383,7 @@ export function VtmDicePanel() {
               </div>
             )}
 
-            {rouse && (
+            {!isW5 && rouse && (
               <div className="space-y-1 border-t border-[#2b1116] pt-2">
                 <p className="vtm-label text-[0.75rem] text-[#c4ac9d]">Испытание Крови · {rouse.label}</p>
                 <p className={`vtm-label text-[0.83rem] ${rouse.ok ? "text-[#9fd8b3]" : "text-[#e8636b]"}`}>
@@ -228,30 +392,47 @@ export function VtmDicePanel() {
               </div>
             )}
 
-            {!last && !rouse && (
+            {!last && !rouse && !w5last && !wrage && (
               <p className="vtm-hint">
-                Кости бросаются прямо с листа: клик по точкам характеристики, строке навыка, Дисциплине или треку. Здесь появятся их результаты.
+                {isW5
+                  ? "Кости бросаются прямо с листа: клик по названию характеристики или по строке навыка. Ярость даёт красные кости в пуле. Здесь появятся результаты."
+                  : "Кости бросаются прямо с листа: клик по точкам характеристики, строке навыка, Дисциплине или треку. Здесь появятся их результаты."}
               </p>
             )}
 
             <div className="flex flex-wrap gap-2 pt-1">
-              <button
-                className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.81rem]"
-                onClick={() => {
-                  // быстрое испытание Крови
-                  const r = rollRouse("вручную");
-                  useVtmDice.getState().pushRouse({ ...r, label: "вручную" });
-                  hooks?.logRoll(`Испытание Крови: d10=${r.value} — ${r.ok ? "успех" : "провал, Голод +1"}`);
-                  if (!r.ok) hooks?.addHunger(1);
-                }}
-              >
-                🩸 Испытание Крови
-              </button>
+              {isW5 ? (
+                <button
+                  className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.81rem]"
+                  onClick={() => {
+                    // проверка Ярости: успех 6+ — Ярость на месте, провал — Ярость −1
+                    const r = rollW5RageCheck("вручную");
+                    useVtmDice.getState().pushRageCheck({ ...r, label: "вручную" });
+                    hooks?.logRoll(`Проверка Ярости: d10=${r.value} — ${r.ok ? "успех, Ярость не изменилась" : "провал, Ярость −1"}`);
+                    if (!r.ok) hooks?.addRage?.(-1);
+                  }}
+                >
+                  🌕 Проверка Ярости
+                </button>
+              ) : (
+                <button
+                  className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.81rem]"
+                  onClick={() => {
+                    // быстрое испытание Крови
+                    const r = rollRouse("вручную");
+                    useVtmDice.getState().pushRouse({ ...r, label: "вручную" });
+                    hooks?.logRoll(`Испытание Крови: d10=${r.value} — ${r.ok ? "успех" : "провал, Голод +1"}`);
+                    if (!r.ok) hooks?.addHunger?.(1);
+                  }}
+                >
+                  🩸 Испытание Крови
+                </button>
+              )}
               <button
                 className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.81rem]"
                 onClick={() => {
                   if (hooks?.spendWillpower()) {
-                    toast.success("Воля −1", { description: "Пункт воли потрачен — перебрось три кости или +1 успех." });
+                    toast.success("Воля −1", { description: isW5 ? "Пункт воли потрачен — перебрось три кости (кроме Жестоких) или удержи Зверя." : "Пункт воли потрачен — перебрось три кости или +1 успех." });
                   } else {
                     toast.error("Воля иссякла", { description: "Пункт воли не потратить: шкала пуста или искалечена." });
                   }
@@ -291,6 +472,24 @@ export function VtmDicePanel() {
                                 <span className="vtm-rh-dice">{diceCompact(h.roll)}</span>
                               </span>
                             </>
+                          ) : h.kind === "w5pool" && h.w5roll ? (
+                            <>
+                              <span className={`vtm-rh-badge ${verdictW5Short(h.w5roll).tone}`}>{verdictW5Short(h.w5roll).word}</span>
+                              <span className="vtm-rh-body">
+                                <span className="vtm-rh-label">{h.label}</span>
+                                <span className="vtm-rh-dice">{diceCompactW5(h.w5roll)}</span>
+                              </span>
+                            </>
+                          ) : h.kind === "wrage" ? (
+                            <>
+                              <span className={`vtm-rh-badge ${h.wrage?.ok ? "win" : "beast"}`}>
+                                {h.wrage?.ok ? "ЯРОСТЬ · ОК" : "ЯРОСТЬ · −1"}
+                              </span>
+                              <span className="vtm-rh-body">
+                                <span className="vtm-rh-label">Проверка Ярости · {h.label}</span>
+                                <span className="vtm-rh-dice">d10 = {h.wrage?.value}</span>
+                              </span>
+                            </>
                           ) : (
                             <>
                               <span className={`vtm-rh-badge ${h.rouse?.ok ? "win" : "beast"}`}>
@@ -322,13 +521,13 @@ export function VtmDicePanel() {
 
       <button
         onClick={toggle}
-        className="vtm-dice-toggle"
+        className={`vtm-dice-toggle ${isW5 ? "vtm-dice-toggle-w5" : ""}`}
         aria-label={open ? "Скрыть кости" : "Открыть кости"}
-        title="Кости Ночи"
+        title={isW5 ? "Кости Луны" : "Кости Ночи"}
         onMouseEnter={() => setRollBtnArmed(true)}
         onMouseLeave={() => setRollBtnArmed(false)}
       >
-        {rollBtnArmed ? "🎲" : "🩸"}
+        {rollBtnArmed ? "🎲" : isW5 ? "🌕" : "🩸"}
       </button>
     </div>
   );
@@ -340,4 +539,21 @@ export function vtmRollAndShow(pool: number, hunger: number, label: string, diff
   useVtmDice.getState().pushRoll(result);
   hooks?.logRoll(`${label}: ${result.dice.map((d) => d.value).join(" ")} → ${describe(result)}`);
   return result;
+}
+
+/** Бросок пула Гароу с показом на панели и записью в хронику листа. */
+export function vtmW5RollAndShow(pool: number, rage: number, label: string, opts?: { damage?: boolean; difficulty?: number }) {
+  const result = rollW5Pool(pool, rage, label, opts);
+  useVtmDice.getState().pushW5Roll(result);
+  hooks?.logRoll(`${label}: ${result.dice.map((d) => d.value).join(" ")} → ${describeW5(result)}`);
+  return result;
+}
+
+/** Проверка Ярости с показом на панели и потерей Ярости при провале. */
+export function vtmW5RageCheckAndShow(label: string) {
+  const r = rollW5RageCheck(label);
+  useVtmDice.getState().pushRageCheck({ ...r, label });
+  hooks?.logRoll(`Проверка Ярости (${label}): d10=${r.value} — ${r.ok ? "успех, Ярость не изменилась" : "провал, Ярость −1"}`);
+  if (!r.ok) hooks?.addRage?.(-1);
+  return r;
 }

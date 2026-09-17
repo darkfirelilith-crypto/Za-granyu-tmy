@@ -218,6 +218,12 @@ export interface W5Note {
   date: string;
 }
 
+export interface W5RollLogItem {
+  id: string;
+  text: string;
+  ts: string;
+}
+
 export interface W5Attributes {
   str: number; dex: number; sta: number;
   cha: number; man: number; com: number;
@@ -263,6 +269,7 @@ export interface W5SheetData {
   touchstones: W5ListItem[];   // до 3 касаний (опоры)
   gear: W5GearItem[];
   notes: W5Note[];
+  rollLog: W5RollLogItem[];   // хроника бросков (кости Луны)
 }
 
 export const W5_MAX_HEALTH_BASE = 3; // Здоровье = Стойкость + 3
@@ -302,6 +309,7 @@ export function emptyW5Sheet(): W5SheetData {
     touchstones: [],
     gear: [],
     notes: [],
+    rollLog: [],
   };
 }
 
@@ -369,6 +377,9 @@ export function normalizeW5(raw: any): W5SheetData {
   base.gear = Array.isArray(raw.gear) ? raw.gear.slice(0, 60).map((g: any, i: number) => ({ id: str(g.id, 40) || `gear-${i}`, name: str(g.name, 80) || "Вещь", count: str(g.count, 40), note: str(g.note, 200) })) : [];
   base.notes = Array.isArray(raw.notes)
     ? raw.notes.slice(0, 100).map((n: any, i: number) => ({ id: str(n.id, 40) || `note-${i}`, title: str(n.title, 120), content: str(n.content, 4000), date: str(n.date, 40) }))
+    : [];
+  base.rollLog = Array.isArray(raw.rollLog)
+    ? raw.rollLog.slice(0, 60).map((x: any, i: number) => ({ id: str(x?.id, 40) || `roll-${i}-${i}`, text: str(x?.text, 600), ts: str(x?.ts, 40) }))
     : [];
   return base;
 }
@@ -457,5 +468,6 @@ export function buildRandomWerewolf(): W5SheetData {
     touchstones: [],
     gear: [],
     notes: [],
+    rollLog: [],
   });
 }
