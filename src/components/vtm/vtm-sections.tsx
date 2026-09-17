@@ -137,10 +137,12 @@ export function DossierSection({
   data,
   mutate,
   derived,
+  onPrintDossier,
 }: {
   data: VtmSheetData;
   mutate: (fn: (draft: VtmSheetData) => void) => void;
   derived: DerivedStats;
+  onPrintDossier?: () => void;
 }) {
   const info = data.info;
   const clan = CLAN_BY_ID.get(info.clan);
@@ -185,6 +187,16 @@ export function DossierSection({
       <section className="vtm-panel lg:col-span-2" aria-label="Личность Сородича">
         <div className="vtm-panel-head">
           <span className="vtm-label text-[0.81rem] text-[#d6a840]">Личность</span>
+          {onPrintDossier && (
+            <button
+              onClick={onPrintDossier}
+              className="vtm-btn vtm-btn-ghost vtm-dossier-print !py-1 !px-2 !text-[0.7rem] ml-auto"
+              title="Печать досье на одну страницу — карточку для стола Рассказчика (Ctrl+P)"
+              aria-label="Печать досье для стола"
+            >
+              🖨<span className="hidden min-[480px]:inline"> Досье для стола</span>
+            </button>
+          )}
         </div>
         <div className="p-4 md:p-5 space-y-4">
           {/* Портрет + базовые поля */}

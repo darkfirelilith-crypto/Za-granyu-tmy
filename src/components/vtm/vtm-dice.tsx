@@ -412,6 +412,35 @@ function diceCompactW5(r: W5RollResult): string {
 
 // ---------- Плавающая панель ----------
 
+/** Копия сцены текстом: хроника бросков + счётчики — вставить в чат стола. */
+function buildSceneText(
+  history: RollHistoryItem[],
+  isW5: boolean,
+  sceneHunger: number,
+  sceneWp: number,
+  sceneRage: number,
+): string {
+  const when = new Date().toLocaleString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  const tally = isW5
+    ? [sceneWp ? `Воля −${sceneWp}` : "", sceneRage ? `Ярость −${sceneRage}` : ""].filter(Boolean).join(" · ")
+    : [sceneHunger ? `Голод +${sceneHunger}` : "", sceneWp ? `Воля −${sceneWp}` : ""].filter(Boolean).join(" · ");
+  const lines: string[] = [`${isW5 ? "🐺 Кости Луны" : "🩸 Кости Ночи"} · сцена · ${when}`];
+  if (tally) lines.push(`Сцена: ${tally}`);
+  for (const h of history) {
+    if (h.kind === "pool" && h.roll) {
+      lines.push(`• ${h.label}: ${verdictShort(h.roll).word} — ${h.roll.dice.map((d) => d.value).join("·")}${h.roll.hungerDice ? ` (голода ${h.roll.hungerDice})` : ""}`);
+    } else if (h.kind === "w5pool" && h.w5roll) {
+      const rage = h.w5roll.dice.filter((d) => d.rage).length;
+      lines.push(`• ${h.label}: ${verdictW5Short(h.w5roll).word} — ${h.w5roll.dice.map((d) => d.value).join("·")}${rage ? ` (ярости ${rage})` : ""}`);
+    } else if (h.kind === "wrage" && h.wrage) {
+      lines.push(`• Проверка Ярости · ${h.label}: d10=${h.wrage.value} — ${h.wrage.ok ? "Ярость цела" : "Ярость −1"}`);
+    } else if (h.rouse) {
+      lines.push(`• Испытание Крови · ${h.label}: d10=${h.rouse.value} — ${h.rouse.ok ? "Кровь послушна" : "Голод +1"}`);
+    }
+  }
+  return lines.join("\n");
+}
+
 export function VtmDicePanel() {
   const { open, last, rouse, w5last, wrage, mode, history, sceneHunger, sceneWp, sceneRage, toggle, setOpen, spendSceneWp, resetScene, clearHistory } = useVtmDice();
   const [rollBtnArmed, setRollBtnArmed] = useState(false);
@@ -486,6 +515,29 @@ export function VtmDicePanel() {
   /** Кости переброса для последнего результата: обычные и непереброшенные. */
   const vtmRerollable = last?.dice.some((d) => !d.rerolled) ?? false;
   const w5Rerollable = w5last?.dice.some((d) => !d.rage && !d.rerolled) ?? false;
+
+  /** Копия сцены в буфер: хроника + счётчики одной строкой в чат стола. */
+  const copyScene = async () => {
+    if (!history.length) return;
+    const text = buildSceneText(history, isW5, sceneHunger, sceneWp, sceneRage);
+    const write = navigator.clipboard?.writeText
+      ? navigator.clipboard.writeText(text)
+      : new Promise<void>((resolve, reject) => {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand("copy"); resolve(); } catch (e) { reject(e); } finally { ta.remove(); }
+        });
+    try {
+      await write;
+      toast.success("Сцена скопирована", { description: "Вставь в чат стола — хроника бросков и счётчики при ней." });
+    } catch {
+      toast.error("Буфер обмена недоступен", { description: "Браузер не пустил — скопируй записи вручную." });
+    }
+  };
 
   // Горячий бросок: последние параметры не храним — панель только показывает результат
   // и журнал. Реальные броски делаются из контекстных кнопок (клик по точкам/строкам).
@@ -800,14 +852,24 @@ export function VtmDicePanel() {
                         </li>
                       ))}
                     </ol>
-                    <button
-                      className={`vtm-roll-hist-clear ${wipeArmed ? "armed" : ""}`}
-                      onClick={onWipeClick}
-                      title={wipeArmed ? "Ещё один клик — хроника смыта" : "Смыть хронику бросков (клик дважды)"}
-                      aria-label={wipeArmed ? "Подтвердить смыв хроники бросков" : "Смыть хронику бросков — потребуется подтверждение"}
-                    >
-                      {wipeArmed ? "✕ смыть хронику?!" : "✕ смыть хронику"}
-                    </button>
+                    <div className="vtm-roll-hist-actions">
+                      <button
+                        className="vtm-scene-copy"
+                        onClick={copyScene}
+                        title="Скопировать сцену текстом — хроника бросков и счётчики для чата стола"
+                        aria-label="Скопировать сцену текстом"
+                      >
+                        ⧉ копия сцены
+                      </button>
+                      <button
+                        className={`vtm-roll-hist-clear ${wipeArmed ? "armed" : ""}`}
+                        onClick={onWipeClick}
+                        title={wipeArmed ? "Ещё один клик — хроника смыта" : "Смыть хронику бросков (клик дважды)"}
+                        aria-label={wipeArmed ? "Подтвердить смыв хроники бросков" : "Смыть хронику бросков — потребуется подтверждение"}
+                      >
+                        {wipeArmed ? "✕ смыть хронику?!" : "✕ смыть хронику"}
+                      </button>
+                    </div>
                   </>
                 )}
               </div>

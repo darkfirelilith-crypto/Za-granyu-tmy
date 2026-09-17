@@ -432,6 +432,13 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
             <button
               className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs"
               onClick={() => {
+                // единственный лист в архиве? — предупреждаем (кэш списка архива)
+                const cached = qc.getQueryData<{ id: string }[]>(["vtm-sheets"]);
+                if (Array.isArray(cached) && cached.length <= 1) {
+                  toast.warning("Это последняя ночь в архиве", {
+                    description: "После неё архив опустеет: Луна забудет волка. Список можно вернуть импортом «⇧ Восстановить».",
+                  });
+                }
                 if (confirm(`Предать «${data.info.name}» земле? Лист будет удалён.`)) {
                   vtmFetch(`/api/vtm/sheets/${sheetId}`, { method: "DELETE" })
                     .then(async (r) => {

@@ -3784,3 +3784,84 @@ button.vtm-die.vtm-die-selectable.selected {
   .vtm-tour-wrap { animation: none !important; }
   .vtm-dossier-print { transition: none !important; }
 }
+
+/* ============================================================
+   РАУНД 24 · «Досье для стола» вампира + копия сцены + последний лист
+   ============================================================ */
+
+/* ---------- Копия сцены: пара кнопок под хроникой бросков ---------- */
+
+/* Строка действий: копия (серебро) + смыть (кровь) — на одной линии */
+.vtm-roll-hist-actions {
+  margin-top: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.6rem;
+}
+
+/* «⧉ копия сцены» — лунное серебро, паритет «смыть хронику», но холоднее */
+.vtm-scene-copy {
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed rgba(201, 211, 232, 0.35);
+  padding: 0 0 1px;
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #c9d3e8;
+  cursor: pointer;
+  transition: color 0.2s ease, text-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.vtm-scene-copy:hover {
+  color: #e6ecf7;
+  text-shadow: 0 0 8px rgba(201, 211, 232, 0.45);
+  border-color: rgba(201, 211, 232, 0.7);
+}
+
+.vtm-scene-copy:focus-visible {
+  outline: 1px solid rgba(214, 168, 64, 0.5);
+  outline-offset: 2px;
+}
+
+/* Копия сцены у Гароу — та же кость, серебро слегка голубее */
+.vtm-dice-panel-w5 .vtm-scene-copy { color: #b9c7e2; }
+.vtm-dice-panel-w5 .vtm-scene-copy:hover { color: #dbe4f5; }
+
+/* В прижатой хронике кнопки встают на всю строку — тач-цель 34px */
+@media (max-width: 640px) {
+  .vtm-roll-hist-actions { flex-direction: column; align-items: stretch; }
+  .vtm-scene-copy,
+  .vtm-roll-hist-clear {
+    min-height: 34px;
+    text-align: center;
+    border-bottom: 0;
+    border: 1px dashed rgba(201, 211, 232, 0.28);
+    border-radius: 6px;
+    padding: 0 0.5rem;
+  }
+  .vtm-roll-hist-clear { border-color: rgba(194, 43, 48, 0.3); }
+}
+
+/* ---------- Кнопка «🖨 Досье для стола» в шапке «Личности» ---------- */
+
+/* Переиспользует .vtm-dossier-print (раунд 23); панель-хед держит кнопку справа */
+.vtm-panel-head .vtm-dossier-print {
+  margin-left: auto;
+  flex-shrink: 0;
+  min-height: 30px;
+}
+
+/* ---------- «Последняя ночь в архиве»: тёплое предупреждение в тостах ---------- */
+
+/* Тосты sonner сами по себе; здесь лишь чуточку кровавого веса заголовку,
+   чтобы предупреждение о последнем листе читалось как памятка Смерти */
+[data-sonner-toast][data-type="warning"] .vtm-last-toast-mark { color: var(--vtm-blood-bright); }
+
+@media (prefers-reduced-motion: reduce) {
+  .vtm-scene-copy { transition: none !important; }
+  .vtm-panel-head .vtm-dossier-print { transition: none !important; }
+}

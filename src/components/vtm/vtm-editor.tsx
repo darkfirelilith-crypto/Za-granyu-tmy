@@ -15,7 +15,7 @@ import { VtmImportDialog } from "@/components/vtm/vtm-import-dialog";
 import { VtmHelpDialog } from "@/components/vtm/vtm-help";
 import { applyParsedMd, MdParseResult } from "@/lib/vtm-md-import";
 import { VtmReturnPortal } from "@/components/vtm/portal-transition";
-import { VtmPrintSheet } from "@/components/vtm/vtm-print-sheet";
+import { VtmPrintSheet, VtmPrintDossier } from "@/components/vtm/vtm-print-sheet";
 import { VtmPrintSummary } from "@/components/vtm/vtm-print-summary";
 import { buildSummaryText } from "@/lib/vtm-summary-text";
 import { buildSummaryMarkdown } from "@/lib/vtm-summary-md";
@@ -57,9 +57,10 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
   const [tab, setTab] = useState<TabId>("dossier");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [conflict, setConflict] = useState<ConflictInfo | null>(null);
-  // Режим печати: «лист» — полные досье; «сводка» — одна страница для стола рассказчика
-  const [printMode, setPrintMode] = useState<"sheet" | "summary">("sheet");
-  const printDoc = useCallback((mode: "sheet" | "summary") => {
+  // Режим печати: «лист» — полные досье; «сводка» — одна страница для стола рассказчика;
+  // «dossier» — компактная карточка «Досье для стола» (зеркало Гароу, раунд 24)
+  const [printMode, setPrintMode] = useState<"sheet" | "summary" | "dossier">("sheet");
+  const printDoc = useCallback((mode: "sheet" | "summary" | "dossier") => {
     setPrintMode(mode);
     // даём React кадр на замену печатного документа до открытия диалога печати
     setTimeout(() => window.print(), 60);
@@ -394,6 +395,9 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
       toast.error("Не удалось предать лист земле");
     }
   };
+  // Единственный лист в архиве? (кэш списка обновляется вместе с архивом)
+  const cachedSheets = qc.getQueryData<{ id: string }[]>(["vtm-sheets"]);
+  const isLastSheet = Array.isArray(cachedSheets) ? cachedSheets.length <= 1 : false;
 
   const clanName = CLAN_BY_ID.get(data.info.clan)?.name;
   const sectName = SECT_BY_ID.get(data.info.sect)?.name;
@@ -544,7 +548,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
                       ? "ОШИБКА!"
                       : "АРХИВ"}
             </span>
-            <DeleteButton onDelete={deleteSheet} />
+            <DeleteButton onDelete={deleteSheet} isLast={isLastSheet} />
           </div>
         </motion.header>
 
@@ -588,7 +592,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
         >
-          {tab === "dossier" && <DossierSection data={data} mutate={mutate} derived={derived} />}
+          {tab === "dossier" && <DossierSection data={data} mutate={mutate} derived={derived} onPrintDossier={() => printDoc("dossier")} />}
           {tab === "attributes" && <AttributesSection data={data} mutate={mutate} derived={derived} onRoll={rollCheck} />}
           {tab === "skills" && <SkillsSection data={data} mutate={mutate} derived={derived} onRoll={rollCheck} />}
           {tab === "disciplines" && <DisciplinesSection data={data} mutate={mutate} derived={derived} />}
@@ -605,24 +609,38 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
 
       {/* Печатная версия листа — видна только при печати / сохранении в PDF */}
       <div className="vtm-print-only" aria-hidden="true">
-        {printMode === "summary" ? <VtmPrintSummary data={data} derived={derived} /> : <VtmPrintSheet data={data} derived={derived} />}
+        {printMode === "summary" ? <VtmPrintSummary data={data} derived={derived} /> : printMode === "dossier" ? <VtmPrintDossier data={data} derived={derived} /> : <VtmPrintSheet data={data} derived={derived} />}
       </div>
     </main>
   );
 }
 
-function DeleteButton({ onDelete }: { onDelete: () => void }) {
+function DeleteButton({ onDelete, isLast }: { onDelete: () => void; isLast?: boolean }) {
   const [confirming, setConfirming] = useState(false);
   useEffect(() => {
     if (!confirming) return;
     const t = setTimeout(() => setConfirming(false), 3000);
     return () => clearTimeout(t);
   }, [confirming]);
+  const onConfirm = () => {
+    if (confirming) {
+      setConfirming(false);
+      onDelete();
+    } else {
+      setConfirming(true);
+      if (isLast) {
+        toast.warning("Это последняя ночь в архиве", {
+          description: "Ещё один клик — и архив опустеет: Кровь забудет всё. Список можно вернуть импортом «⇧ Восстановить».",
+        });
+      }
+    }
+  };
   return (
     <button
-      onClick={() => (confirming ? onDelete() : setConfirming(true))}
+      onClick={onConfirm}
       className={`vtm-btn !py-1.5 !px-2.5 text-xs ${confirming ? "vtm-btn-danger" : "vtm-btn-ghost"}`}
-      title="Предать лист земле"
+      title={isLast ? "Предать лист земле — это единственный лист архива" : "Предать лист земле"}
+      aria-label={confirming ? `Подтвердить удаление листа${isLast ? " — последнего в архиве" : ""}` : "Удалить лист"}
     >
       {confirming ? "В землю?!" : "В землю"}
     </button>

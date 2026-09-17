@@ -355,6 +355,7 @@ function VtmHome({ openId, onOpen, onClose }: { openId: string | null; onOpen: (
                   sheet={s}
                   index={i + 1}
                   onOpen={() => onOpen(s.id)}
+                  isLast={list.length === 1}
                   draggable
                   isOver={overId === s.id}
                   onDragStart={() => {
@@ -512,6 +513,7 @@ function SheetCard({
   onDragOver,
   onDrop,
   onMove,
+  isLast,
 }: {
   sheet: SheetMeta;
   index: number;
@@ -523,6 +525,7 @@ function SheetCard({
   onDragOver?: (e: React.DragEvent) => void;
   onDrop?: (e: React.DragEvent) => void;
   onMove?: (dir: -1 | 1) => void;
+  isLast?: boolean;
 }) {
   const qc = useQueryClient();
   const del = useMutation({
@@ -548,6 +551,11 @@ function SheetCard({
       del.mutate();
     } else {
       setDelArmed(true);
+      if (isLast) {
+        toast.warning("Это последняя ночь в архиве", {
+          description: "Ещё один клик — и архив опустеет: Кровь забудет всё. Списки можно вернуть импортом «⇧ Копия».",
+        });
+      }
     }
   };
 
@@ -622,8 +630,8 @@ function SheetCard({
                   onClick={(e) => { e.stopPropagation(); onDeleteClick(); }}
                   disabled={del.isPending}
                   className={`opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-xs vtm-label px-1.5 py-0.5 rounded vtm-card-del ${delArmed ? "vtm-card-del-armed" : "text-[#c22b30] hover:text-[#e8636b] border border-transparent hover:border-[#8a1a1d]"}`}
-                  title={delArmed ? "Ещё раз — и ночь предадим земле" : "Предать лист земле (двойной клик)"}
-                  aria-label={delArmed ? `Подтвердить удаление листа ${sheet.name}` : `Удалить лист ${sheet.name}`}
+                  title={delArmed ? "Ещё раз — и ночь предадим земле" : isLast ? "Предать лист земле (двойной клик) — это единственный лист архива" : "Предать лист земле (двойной клик)"}
+                  aria-label={delArmed ? `Подтвердить удаление листа ${sheet.name}${isLast ? " — последнего в архиве" : ""}` : `Удалить лист ${sheet.name}`}
                 >
                   {del.isPending ? "…" : delArmed ? "✕ в землю?!" : "✕ в землю"}
                 </button>

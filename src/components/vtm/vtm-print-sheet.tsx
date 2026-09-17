@@ -233,3 +233,100 @@ export function VtmPrintSheet({ data, derived }: { data: VtmSheetData; derived: 
     </div>
   );
 }
+
+/**
+ * «Досье для стола» (раунд 24) — печатная карточка Сородича на одну страницу,
+ * зеркало «Досье Гароу» (раунд 23): витальные треки и Человечность, Сила Крови
+ * с резонансом, Дисциплины и преимущества одной строкой, столкновения и опоры,
+ * цитата и памятка костей Голода. Печатается из вкладки «Досье».
+ */
+export function VtmPrintDossier({ data, derived }: { data: VtmSheetData; derived: DerivedStats }) {
+  const info = data.info;
+  const clan = info.clan === "thinblood" ? undefined : CLAN_BY_ID.get(info.clan);
+  const sect = SECT_BY_ID.get(info.sect);
+  const predator = PREDATOR_BY_ID.get(info.predator);
+  const resDef = data.resonance.kind ? RESONANCE_BY_ID.get(data.resonance.kind) : undefined;
+  const humanity = derived.humanityTotal;
+
+  const disciplines = data.disciplines.filter((d) => d.value > 0);
+  const advantages = data.advantages;
+  const principles = [info.principle1, info.principle2, info.principle3].filter(Boolean);
+  const anchors = [info.anchor1, info.anchor2, info.anchor3].filter(Boolean);
+
+  return (
+    <div className="vtm-print-doc vtm-print-sum">
+      <div className="vtm-print-head">
+        {info.portrait && <img src={info.portrait} alt="" className="vtm-print-portrait" />}
+        <div>
+          <p style={{ fontSize: "7.5pt", letterSpacing: "0.35em", margin: "0 0 4px" }}>АРХИВ КРОВИ · ДОСЬЕ ДЛЯ СТОЛА</p>
+          <h1 className="vtm-print-title">Досье Сородича</h1>
+          <p className="vtm-print-name">{info.name || "Безымянный Сородич"}</p>
+          <p className="vtm-print-line">
+            {info.clan === "thinblood" ? "⚱ Слабокровная" : clan ? `⛧ ${clan.name}` : "клан —"}
+            {sect ? ` · ${sect.name}` : ""}
+            {info.generation ? ` · ${info.generation}-е пок.` : ""}
+            {predator ? ` · ${predator.name}` : ""}
+            {info.concept ? ` · ${info.concept}` : ""}
+          </p>
+        </div>
+      </div>
+
+      <p className="vtm-print-section">Витальное</p>
+      <p className="vtm-print-line">
+        <b>Голод:</b> {"◔".repeat(data.trackers.hunger)}{"○".repeat(Math.max(0, 5 - data.trackers.hunger))} ({data.trackers.hunger}/5)
+      </p>
+      <p className="vtm-print-line">
+        <b>Здоровье:</b> {trackBoxes(derived.healthMax, data.trackers.healthSup, data.trackers.healthAgg)}
+      </p>
+      <p className="vtm-print-line">
+        <b>Воля:</b> {trackBoxes(derived.wpMax, data.trackers.wpSup, data.trackers.wpAgg)}
+      </p>
+      <p className="vtm-print-line">
+        <b>Человечность:</b> {humanity}/10{data.trackers.stains ? ` · пятна: ${data.trackers.stains}` : ""}
+        {" · "}
+        <b>Сила Крови:</b> {derived.bp}
+        {resDef && data.resonance.intensity > 0 ? ` · резонанс: ${resDef.name}, ${RESONANCE_INTENSITY_LABELS[data.resonance.intensity] || data.resonance.intensity}` : ""}
+      </p>
+
+      {disciplines.length > 0 && (
+        <>
+          <p className="vtm-print-section">Дисциплины</p>
+          <p className="vtm-print-line">
+            {disciplines.map((d) => {
+              const powers = d.powers
+                ? Object.entries(d.powers).filter(([, name]) => name).sort(([a], [b]) => parseInt(a, 10) - parseInt(b, 10))
+                : [];
+              return `${d.name} ${dots(d.value)}${powers.length ? ` (${powers.map(([lvl, name]) => `${lvl}: ${name}`).join(", ")})` : ""}`;
+            }).join(" · ")}
+          </p>
+        </>
+      )}
+
+      {advantages.length > 0 && (
+        <>
+          <p className="vtm-print-section">Достоинства и недостатки</p>
+          <p className="vtm-print-line">
+            {advantages.map((a) =>
+              `${a.name}${a.rating > 1 && a.kind !== "flaw" ? ` ${a.rating}` : ""}${a.note ? ` — ${a.note}` : ""}`,
+            ).join(" · ")}
+          </p>
+        </>
+      )}
+
+      {(info.ambition || info.desire || principles.length > 0 || anchors.length > 0) && (
+        <>
+          <p className="vtm-print-section">Столкновения и опоры</p>
+          {info.ambition && <p className="vtm-print-line"><b>Цель:</b> {info.ambition}</p>}
+          {info.desire && <p className="vtm-print-line"><b>Желание:</b> {info.desire}</p>}
+          {principles.length > 0 && <p className="vtm-print-line"><b>Принципы:</b> {principles.join(" · ")}</p>}
+          {anchors.length > 0 && <p className="vtm-print-line"><b>Опоры:</b> {anchors.join(" · ")}</p>}
+        </>
+      )}
+
+      <div className="vtm-print-footer">
+        <span>Памятка костей Голода: успех на кости Голода в паре десяток — Беспредельный успех (Зверь вмешивается в дело); провал при костях Голода — Зверский провал, Зверь берёт своё. · Опыт: свободно {data.trackers.xp}, вложено {data.trackers.xpSpent} · </span>
+        <span>«Кровь — это жизнь, а жизнь — это долг.»</span>
+      </div>
+    </div>
+  );
+}
