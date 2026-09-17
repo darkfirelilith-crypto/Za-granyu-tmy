@@ -198,7 +198,7 @@ export function DisciplinesSection({
               const taken = onSheet(def.id);
               const clanMark = clanDiscIds.includes(def.id);
               return (
-                <div key={def.id} className={`vtm-disc-cat ${taken ? "taken" : ""} ${clanMark ? "clan" : ""}`}>
+                <div key={def.id} className={`vtm-disc-cat ${taken ? "taken" : ""} ${clanMark ? "clan" : ""} ${def.rare && !clanMark ? "rare" : ""}`}>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="vtm-label text-[0.80rem] flex-1 min-w-[120px]">
                       {clanMark ? "⛧ " : def.rare ? "✧ " : ""}{def.name}

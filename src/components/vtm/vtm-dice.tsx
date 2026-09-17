@@ -24,6 +24,7 @@ export interface W5Die {
   success: boolean;   // >= 6
   crit: boolean;      // == 10
   brutal: boolean;    // кость Ярости с 1–2
+  rerolled?: boolean; // кость уже переброшена волей — второй раз нельзя
 }
 
 export interface W5RollResult {
@@ -95,6 +96,7 @@ export interface VtmDie {
   hunger: boolean;    // кость Голода
   success: boolean;   // >= 6
   crit: boolean;      // == 10
+  rerolled?: boolean; // кость уже переброшена волей — второй раз нельзя
 }
 
 export interface VtmRollResult {
@@ -146,6 +148,62 @@ export function rollPool(pool: number, hunger: number, label: string, difficulty
 export function rollRouse(label: string): { ok: boolean; value: number } {
   const value = 1 + Math.floor(Math.random() * 10);
   return { ok: value >= 6, value };
+}
+
+// ---------- Переброс волей (до 3 костей за пункт) ----------
+
+/**
+ * Вампирский переброс волей: заменяет значения выбранных костей,
+ * помечает их «переброшена» и пересчитывает успехи/криты/Беспредельный/Зверский.
+ * Каждую кость можно перебросить только один раз.
+ */
+export function rerollVtmWillpower(r: VtmRollResult, indices: number[]): VtmRollResult {
+  const set = new Set(indices.map((i) => Math.floor(i)));
+  const dice: VtmDie[] = r.dice.map((d, i) =>
+    set.has(i)
+      ? { ...d, value: 1 + Math.floor(Math.random() * 10), rerolled: true }
+      : d,
+  ).map((d) => ({ ...d, success: d.value >= 6, crit: d.value === 10 }));
+  const tens = dice.filter((d) => d.crit).length;
+  const critPairs = Math.floor(tens / 2);
+  const plain = dice.filter((d) => d.success && !d.crit).length;
+  const oddTens = tens % 2;
+  const successes = plain + critPairs * 2 + oddTens;
+  return {
+    ...r,
+    dice,
+    successes,
+    critPairs,
+    totalSuccesses: successes,
+    messy: dice.some((d) => d.hunger && d.crit),
+    bestial: successes === 0 && dice.some((d) => d.hunger),
+  };
+}
+
+/**
+ * Гароу-переброс волей: правила W5 — кости Ярости (включая Жестокие)
+ * перебрасывать волей НЕЛЬЗЯ; обычные кости — до трёх за пункт, каждая один раз.
+ */
+export function rerollW5Willpower(r: W5RollResult, indices: number[]): W5RollResult {
+  const set = new Set(indices.map((i) => Math.floor(i)));
+  const dice: W5Die[] = r.dice.map((d, i) =>
+    set.has(i) && !d.rage
+      ? { ...d, value: 1 + Math.floor(Math.random() * 10), rerolled: true }
+      : d,
+  ).map((d) => ({
+    ...d,
+    success: d.value >= 6 && !d.brutal,
+    crit: d.value === 10,
+  }));
+  const tens = dice.filter((d) => d.crit).length;
+  const critPairs = Math.floor(tens / 2);
+  const plain = dice.filter((d) => d.success && !d.crit).length;
+  const oddTens = tens % 2;
+  const successes = plain + critPairs * 2 + oddTens;
+  const brutalCount = dice.filter((d) => d.brutal).length;
+  const brutalOutcome = brutalCount >= 2;
+  const totalSuccesses = brutalOutcome ? (r.brutalDamage ? successes + 4 : 0) : successes;
+  return { ...r, dice, successes, critPairs, totalSuccesses, brutalCount, brutalOutcome };
 }
 
 // ---------- Глобальное состояние панели костей ----------
@@ -295,6 +353,57 @@ export function VtmDicePanel() {
   const [histOpen, setHistOpen] = useState(true);
   const isW5 = mode === "werewolf";
 
+  // Переброс волей: выбор костей (до 3) привязан к конкретному броску —
+  // новый бросок автоматически сбрасывает выбор (сравнение по ссылке, без эффектов).
+  const currentRoll: VtmRollResult | W5RollResult | null = isW5 ? w5last : last;
+  const [wpState, setWpState] = useState<{ for: VtmRollResult | W5RollResult | null; sel: number[] } | null>(null);
+  const wpActive = wpState !== null && wpState.for === currentRoll;
+  const wpSel = wpActive ? wpState.sel : [];
+  const enterWpMode = () => setWpState({ for: currentRoll, sel: [] });
+  const cancelWpMode = () => setWpState(null);
+  const toggleWpSel = (i: number) =>
+    setWpState((s) =>
+      s && s.for === currentRoll
+        ? { ...s, sel: s.sel.includes(i) ? s.sel.filter((x) => x !== i) : s.sel.length < 3 ? [...s.sel, i] : s.sel }
+        : s,
+    );
+
+  /** Вампирский переброс: тратим волю, перебрасываем выбранные, показываем и пишем в хронику. */
+  const doVtmReroll = () => {
+    if (!last || !wpSel.length) return;
+    if (!hooks?.spendWillpower()) {
+      toast.error("Воля иссякла", { description: "Пункт воли не потратить: шкала пуста или искалечена." });
+      return;
+    }
+    const oldVals = wpSel.map((i) => last.dice[i].value);
+    const rerolled = rerollVtmWillpower(last, wpSel);
+    const newVals = wpSel.map((i) => rerolled.dice[i].value);
+    useVtmDice.getState().pushRoll({ ...rerolled, label: `${last.label} ⟲волей` });
+    hooks?.logRoll(`${last.label} ⟲ переброс волей (${oldVals.join("·")} → ${newVals.join("·")}): ${describe(rerolled)}`);
+    toast.success("Воля −1 — кости переброшены", { description: "Каждая кость перебрасывается один раз за хронику." });
+    setWpState(null);
+  };
+
+  /** Гароу-переброс: кости Ярости волей не перебрасываются (W5). */
+  const doW5Reroll = () => {
+    if (!w5last || !wpSel.length) return;
+    if (!hooks?.spendWillpower()) {
+      toast.error("Воля иссякла", { description: "Пункт воли не потратить: шкала пуста или искалечена." });
+      return;
+    }
+    const oldVals = wpSel.map((i) => w5last.dice[i].value);
+    const rerolled = rerollW5Willpower(w5last, wpSel);
+    const newVals = wpSel.map((i) => rerolled.dice[i].value);
+    useVtmDice.getState().pushW5Roll({ ...rerolled, label: `${w5last.label} ⟲волей` });
+    hooks?.logRoll(`${w5last.label} ⟲ переброс волей (${oldVals.join("·")} → ${newVals.join("·")}): ${describeW5(rerolled)}`);
+    toast.success("Воля −1 — кости переброшены", { description: "Кости Ярости волей не перебрасываются." });
+    setWpState(null);
+  };
+
+  /** Кости переброса для последнего результата: обычные и непереброшенные. */
+  const vtmRerollable = last?.dice.some((d) => !d.rerolled) ?? false;
+  const w5Rerollable = w5last?.dice.some((d) => !d.rage && !d.rerolled) ?? false;
+
   // Горячий бросок: последние параметры не храним — панель только показывает результат
   // и журнал. Реальные броски делаются из контекстных кнопок (клик по точкам/строкам).
 
@@ -321,17 +430,32 @@ export function VtmDicePanel() {
 
             {isW5 && w5last && (
               <div className="space-y-2">
-                <p className="vtm-label text-[0.75rem] text-[#8ea6c9]">{w5last.label}</p>
+                <p className="vtm-label text-[0.75rem] text-[#8ea6c9]">{w5last.label}{wpActive ? " · выбери до 3 обычных костей" : ""}</p>
                 <div className="flex flex-wrap gap-1.5" role="img" aria-label={describeW5(w5last)}>
-                  {w5last.dice.map((d, i) => (
-                    <span
-                      key={i}
-                      className={`vtm-die ${d.success ? "success" : ""} ${d.crit ? "crit" : ""} ${d.rage ? "hunger rage" : ""} ${d.brutal ? "brutal" : ""}`}
-                      title={d.brutal ? "Жестокая кость Ярости (1–2)" : d.rage ? "Кость Ярости" : undefined}
-                    >
-                      {d.value}
-                    </span>
-                  ))}
+                  {w5last.dice.map((d, i) => {
+                    const sel = wpSel.includes(i);
+                    const clickable = wpActive && !d.rage && !d.rerolled;
+                    return clickable ? (
+                      <button
+                        key={i}
+                        onClick={() => toggleWpSel(i)}
+                        aria-pressed={sel}
+                        aria-label={`Кость ${d.value}${sel ? " — выбрана" : ""}`}
+                        className={`vtm-die ${d.success ? "success" : ""} ${d.crit ? "crit" : ""} ${d.rage ? "hunger rage" : ""} ${d.brutal ? "brutal" : ""} vtm-die-selectable ${sel ? "selected" : ""}`}
+                        title="Клик — выбрать для переброса волей"
+                      >
+                        {d.value}
+                      </button>
+                    ) : (
+                      <span
+                        key={i}
+                        className={`vtm-die ${d.success ? "success" : ""} ${d.crit ? "crit" : ""} ${d.rage ? "hunger rage" : ""} ${d.brutal ? "brutal" : ""} ${d.rerolled ? "rerolled" : ""}`}
+                        title={d.brutal ? "Жестокая кость Ярости (1–2)" : d.rage ? "Кость Ярости — волей не перебрасывается" : d.rerolled ? "Уже переброшена волей" : undefined}
+                      >
+                        {d.value}
+                      </span>
+                    );
+                  })}
                 </div>
                 <p className={`vtm-label text-[0.83rem] ${w5last.brutalOutcome ? (w5last.brutalDamage ? "text-[#d6a840]" : "text-[#e8636b]") : w5last.totalSuccesses > 0 ? "text-[#9fd8b3]" : "text-[#c4ac9d]"}`}>
                   {describeW5(w5last)}
@@ -344,6 +468,33 @@ export function VtmDicePanel() {
                 )}
                 {w5last.brutalCount === 1 && !w5last.brutalOutcome && (
                   <p className="vtm-hint">Жестокая кость: одна кость Ярости выпала на 1–2 — сама она успеха не дала (но перебросить её волей нельзя).</p>
+                )}
+                {wpActive ? (
+                  <div className="vtm-wp-bar">
+                    <span className="vtm-hint !text-[0.78rem]">Выбрано {wpSel.length}/3 · кости Ярости не выбрать</span>
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        className="vtm-btn vtm-w5-gift-roll !py-1.5 !px-3 text-[0.81rem]"
+                        disabled={!wpSel.length}
+                        onClick={doW5Reroll}
+                      >
+                        ⟲ Перебросить ({wpSel.length})
+                      </button>
+                      <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.81rem]" onClick={cancelWpMode}>
+                        Отмена
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  w5Rerollable && (
+                    <button
+                      className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.81rem] vtm-wp-trigger"
+                      onClick={enterWpMode}
+                      title="Пункт воли: переброс до трёх обычных костей (кости Ярости не перебрасываются)"
+                    >
+                      ⟲ Перебросить волей
+                    </button>
+                  )
                 )}
               </div>
             )}
@@ -359,17 +510,32 @@ export function VtmDicePanel() {
 
             {!isW5 && last && (
               <div className="space-y-2">
-                <p className="vtm-label text-[0.75rem] text-[#a8863d]">{last.label}</p>
+                <p className="vtm-label text-[0.75rem] text-[#a8863d]">{last.label}{wpActive ? " · выбери до 3 костей" : ""}</p>
                 <div className="flex flex-wrap gap-1.5" role="img" aria-label={describe(last)}>
-                  {last.dice.map((d, i) => (
-                    <span
-                      key={i}
-                      className={`vtm-die ${d.success ? "success" : ""} ${d.crit ? "crit" : ""} ${d.hunger ? "hunger" : ""}`}
-                      title={d.hunger ? "Кость Голода" : undefined}
-                    >
-                      {d.value}
-                    </span>
-                  ))}
+                  {last.dice.map((d, i) => {
+                    const sel = wpSel.includes(i);
+                    const clickable = wpActive && !d.rerolled;
+                    return clickable ? (
+                      <button
+                        key={i}
+                        onClick={() => toggleWpSel(i)}
+                        aria-pressed={sel}
+                        aria-label={`Кость ${d.value}${sel ? " — выбрана" : ""}`}
+                        className={`vtm-die ${d.success ? "success" : ""} ${d.crit ? "crit" : ""} ${d.hunger ? "hunger" : ""} vtm-die-selectable ${sel ? "selected" : ""}`}
+                        title="Клик — выбрать для переброса волей"
+                      >
+                        {d.value}
+                      </button>
+                    ) : (
+                      <span
+                        key={i}
+                        className={`vtm-die ${d.success ? "success" : ""} ${d.crit ? "crit" : ""} ${d.hunger ? "hunger" : ""} ${d.rerolled ? "rerolled" : ""}`}
+                        title={d.hunger ? "Кость Голода" : d.rerolled ? "Уже переброшена волей" : undefined}
+                      >
+                        {d.value}
+                      </span>
+                    );
+                  })}
                 </div>
                 <p className={`vtm-label text-[0.83rem] ${last.bestial || last.messy ? "text-[#e8636b]" : last.totalSuccesses > 0 ? "text-[#9fd8b3]" : "text-[#c4ac9d]"}`}>
                   {describe(last)}
@@ -379,6 +545,33 @@ export function VtmDicePanel() {
                 )}
                 {last.messy && (
                   <p className="vtm-hint">Беспредельный успех: успех засчитан, но кость Голода выпала на 10 — Зверь испачкал триумф. Возможны осложнения с Маскарадом.</p>
+                )}
+                {wpActive ? (
+                  <div className="vtm-wp-bar">
+                    <span className="vtm-hint !text-[0.78rem]">Выбрано {wpSel.length}/3 · пункт воли будет потрачен</span>
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        className="vtm-btn !py-1.5 !px-3 text-[0.81rem]"
+                        disabled={!wpSel.length}
+                        onClick={doVtmReroll}
+                      >
+                        ⟲ Перебросить ({wpSel.length})
+                      </button>
+                      <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.81rem]" onClick={cancelWpMode}>
+                        Отмена
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  vtmRerollable && (
+                    <button
+                      className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.81rem] vtm-wp-trigger"
+                      onClick={enterWpMode}
+                      title="Пункт воли: переброс до трёх костей (каждая кость — один раз)"
+                    >
+                      ⟲ Перебросить волей
+                    </button>
+                  )
                 )}
               </div>
             )}
@@ -432,7 +625,7 @@ export function VtmDicePanel() {
                 className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.81rem]"
                 onClick={() => {
                   if (hooks?.spendWillpower()) {
-                    toast.success("Воля −1", { description: isW5 ? "Пункт воли потрачен — перебрось три кости (кроме Жестоких) или удержи Зверя." : "Пункт воли потрачен — перебрось три кости или +1 успех." });
+                    toast.success("Воля −1", { description: isW5 ? "Пункт воли потрачен — удержи облик, вспомни сцену или перебрось до трёх обычных костей кнопкой «⟲ Перебросить волей»." : "Пункт воли потрачен — перебрось до трёх костей кнопкой «⟲ Перебросить волей» (или удержи Зверя)." });
                   } else {
                     toast.error("Воля иссякла", { description: "Пункт воли не потратить: шкала пуста или искалечена." });
                   }

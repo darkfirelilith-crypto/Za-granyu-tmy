@@ -13,8 +13,10 @@ import { toast } from "sonner";
 import { VtmReturnPortal } from "@/components/vtm/portal-transition";
 import { vtmFetch } from "@/lib/vtm-api";
 import { SKILL_LIBRARY } from "@/lib/vtm-data";
+import { buildW5SummaryMarkdown } from "@/lib/vtm-w5-summary-md";
 import { VtmDicePanel, setVtmSheetHooks, useVtmDice, vtmW5RollAndShow, vtmW5RageCheckAndShow } from "@/components/vtm/vtm-dice";
 import { W5PrintDoc, W5PrintSummary } from "@/components/vtm/vtm-w5-print";
+import { W5HelpDialog } from "@/components/vtm/vtm-help";
 import {
   W5SheetData,
   W5GiftEntry,
@@ -62,6 +64,8 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
   const [tab, setTab] = useState<W5Tab>("identity");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [conflict, setConflict] = useState<{ serverData: W5SheetData; serverUpdatedAt: string } | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const restoreInputRef = useRef<HTMLInputElement | null>(null);
   // Режим печати: «лист» — полный бланк; «сводка» — одна страница для стола
   const [printMode, setPrintMode] = useState<"sheet" | "summary">("sheet");
   const printDoc = useCallback((mode: "sheet" | "summary") => {
@@ -213,7 +217,8 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
     if (tribe || auspice) lines.push(`${tribe?.name || "племя не выбрано"} · ${auspice?.name || "ауспиция не выбрана"}${data.info.breed ? ` · ${W5_BREEDS.find((b) => b.id === data.info.breed)?.name}` : ""}`);
     lines.push(`Концепция: ${data.info.concept || "—"}`);
     lines.push(`Ярость ${data.trackers.rage}/5 · Здоровье ${data.trackers.healthSup + data.trackers.healthAgg}/${healthMax} · Воля ${data.trackers.wpSup}/${wpMax}`);
-    lines.push(`Слава: Гордец ${data.trackers.glory} · Честь ${data.trackers.honor} · Мудрость ${data.trackers.wisdom} — ${rank.title}`);
+    // Слава чипами с рангом: Гордец 2 · Честь 1 · Мудрость 1 — Клиаит
+    lines.push(`Слава [Гордец ${data.trackers.glory}] [Честь ${data.trackers.honor}] [Мудрость ${data.trackers.wisdom}] — ${rank.title}${data.trackers.wolfLost ? " ⚠ волк потерян" : ""}${data.trackers.harano ? " · харано" : ""}`);
     if (data.gifts.length) lines.push(`Дары: ${data.gifts.map((g) => `${g.name} (${g.level})`).join(", ")}`);
     if (data.rites.length) lines.push(`Обряды: ${data.rites.map((r) => `${r.name} (${r.level})`).join(", ")}`);
     if (data.aspirations.length) lines.push(`Стремления: ${data.aspirations.map((a) => a.text).filter(Boolean).join(" | ")}`);
@@ -223,6 +228,69 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
     } catch {
       toast.error("Браузер не отдал буфер — скопируй вручную");
     }
+  };
+
+  // Надёжная запись в буфер: даже если navigator.clipboard есть, но запретил
+  // запись (старые вебвью, http, строгие разрешения) — уходим в запасной путь
+  const copyText = async (text: string) => {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return;
+      } catch {
+        // fall through к запасному пути
+      }
+    }
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  };
+
+  // «Ⓜ МД» — Markdown-сводка Гароу для Obsidian-столов и вики
+  const copySummaryMarkdown = async () => {
+    try {
+      await copyText(buildW5SummaryMarkdown(data));
+      toast.success("Сводка Гароу в Markdown", { description: "Вставь в Obsidian или вики стола — таблицы и чипы Славы оживут сами." });
+    } catch {
+      toast.error("Не удалось скопировать сводку", { description: "Браузер не пустил к буферу обмена." });
+    }
+  };
+
+  // «⇩ Копия» — полный бэкап листа Гароу в JSON
+  const exportSheet = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `w5-${(data.info.name || "garou").replace(/[^\wа-яА-ЯёЁ]+/g, "-").toLowerCase()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Лист скопирован в личный архив (JSON)");
+  };
+
+  // «⇧ Восстановить» — вернуть лист из JSON-бэкапа (кнопка в шапке, скрытый input)
+  const restoreSheet = (file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result));
+        if (!parsed || typeof parsed !== "object") throw new Error("Не лист Гароу");
+        if (parsed.kind && parsed.kind !== "werewolf") throw new Error("Это лист вампира, а не Гароу");
+        if (confirm("Восстановить лист из файла? Текущие данные Гароу будут заменены.")) {
+          setData(normalizeW5(parsed));
+          toast.success("Лист восстановлен из архива", { description: "Не забудь дождаться «Записано»." });
+        }
+      } catch (e) {
+        toast.error("Не вышло прочитать файл", { description: e instanceof Error ? e.message : "Нужен JSON-бэкап листа Гароу." });
+      }
+    };
+    reader.readAsText(file);
   };
 
   const attrPairs: { key: keyof W5SheetData["attributes"]; label: string }[] = [
@@ -260,9 +328,28 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
             >
               {status === "saving" ? "Запись…" : status === "saved" ? "Записано" : status === "error" ? "Сбой" : ""}
             </span>
-            <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={copySummary}>⧉ Копия</button>
+            <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={copySummary} title="Текстовая сводка Гароу в буфер">⧉ Копия</button>
+            <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={copySummaryMarkdown} title="Markdown-сводка для Obsidian и вики">Ⓜ <span className="hidden min-[480px]:inline">МД</span></button>
+            <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={exportSheet} title="Полный бэкап листа в JSON">⇩ <span className="hidden min-[480px]:inline">Копия</span></button>
+            <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={() => restoreInputRef.current?.click()} title="Восстановить лист из JSON-бэкапа">⇧ <span className="hidden min-[480px]:inline">Восстановить</span></button>
+            <input
+              ref={restoreInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => { restoreSheet(e.target.files?.[0]); e.target.value = ""; }}
+              aria-hidden="true"
+            />
             <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={() => printDoc("sheet")} aria-label="Печать листа Гароу" title="Печать полного листа">🖨 Лист</button>
             <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={() => printDoc("summary")} aria-label="Печать сводки Гароу" title="Печать сводки на одну страницу">🖨 Сводка</button>
+            <button
+              className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs"
+              onClick={() => setHelpOpen(true)}
+              aria-label="Открыть справку по текущей вкладке"
+              title="Справка по текущей вкладке"
+            >
+              ?
+            </button>
             <button
               className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs"
               onClick={() => {
@@ -355,6 +442,9 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
       </div>
 
       <VtmDicePanel />
+
+      {/* Справка «?» — правила той вкладки, где ты сейчас (лунное серебро) */}
+      <W5HelpDialog tabId={tab} open={helpOpen} onClose={() => setHelpOpen(false)} />
 
       {/* Конфликт версий */}
       {conflict && (

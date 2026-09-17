@@ -276,18 +276,21 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
   const [copying, setCopying] = useState<"text" | "md" | null>(null);
   const copyText = async (text: string) => {
     if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-    } else {
-      // запасной путь для старых контекстов (http/старые вебвью)
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      ta.remove();
+      try {
+        await navigator.clipboard.writeText(text);
+        return;
+      } catch {
+        // буфер запрещён (старые вебвью, http, строгие разрешения) — запасной путь
+      }
     }
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
   };
   const copySummaryText = async () => {
     if (!data || !derived || copying) return;
