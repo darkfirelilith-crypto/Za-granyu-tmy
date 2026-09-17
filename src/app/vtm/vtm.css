@@ -146,6 +146,45 @@ textarea.vtm-autogrow { resize: none; overflow: hidden; min-height: 0; max-heigh
 select.vtm-input { appearance: none; cursor: pointer; }
 select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
 
+/* ---------- Текстовый блок Досье: ширина и высота подстраиваются под содержимое ---------- */
+/* Chromium/новые Firefox: field-sizing: content. Остальные: JS-замер по зеркалу (vtm-sections.tsx). */
+.vtm-block-field {
+  display: block;
+  width: fit-content;
+  min-width: 11rem;
+  max-width: 100%;
+  min-height: 0;
+  background: rgba(0, 0, 0, 0.26);
+  border: 1px solid rgba(168, 134, 61, 0.26);
+  border-radius: 6px;
+  color: var(--vtm-bone);
+  font-family: var(--vtm-font-body), Georgia, serif;
+  font-size: 0.94rem;
+  line-height: 1.5;
+  padding: 0.34rem 0.6rem;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  field-sizing: content;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.vtm-block-field::placeholder { color: var(--vtm-ash); font-style: italic; }
+.vtm-block-field:hover { border-color: rgba(168, 134, 61, 0.5); }
+.vtm-block-field:focus {
+  border-color: var(--vtm-blood-bright);
+  box-shadow: 0 0 0 1px rgba(194, 43, 48, 0.3), 0 0 18px rgba(194, 43, 48, 0.1);
+  background: rgba(0, 0, 0, 0.44);
+}
+/* невидимое зеркало для замера ширины текста в fallback-браузерах */
+.vtm-block-mirror {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  visibility: hidden;
+  white-space: pre;
+  pointer-events: none;
+}
+
 /* Числовое поле характеристики */
 .vtm-stat-input {
   width: 100%;

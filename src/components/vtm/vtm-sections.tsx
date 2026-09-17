@@ -77,6 +77,79 @@ export function AutoTextarea({
   );
 }
 
+/**
+ * Текстовый блок Досье: ширина и высота подстраиваются под содержимое
+ * («в зависимости от наполнения имеет ширину»).
+ * Chromium/свежий Firefox: CSS field-sizing: content.
+ * Остальные браузеры: JS-замер ширины по невидимому зеркалу + авто-высота.
+ */
+export function VtmBlockField({
+  value,
+  onChange,
+  placeholder,
+  ariaLabel,
+  className = "",
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  ariaLabel?: string;
+  className?: string;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const mirrorRef = useRef<HTMLSpanElement>(null);
+  // null — ещё не проверяли; поддержка field-sizing: content выясняется в layout-эффекте (без state — без гидрационных расхождений)
+  const fsSupportedRef = useRef<boolean | null>(null);
+
+  // Fallback: ширина по содержимому (замер зеркалом), перенос/перевод строки — вся колонка
+  useLayoutEffect(() => {
+    if (fsSupportedRef.current === null) {
+      fsSupportedRef.current =
+        typeof CSS !== "undefined" &&
+        typeof CSS.supports === "function" &&
+        CSS.supports("field-sizing", "content");
+    }
+    if (fsSupportedRef.current) return; // field-sizing: content сам подгонит размер
+    const el = ref.current;
+    const mirror = mirrorRef.current;
+    const wrap = wrapRef.current;
+    if (!el || !mirror || !wrap) return;
+    const cs = window.getComputedStyle(el);
+    mirror.style.fontFamily = cs.fontFamily;
+    mirror.style.fontSize = cs.fontSize;
+    mirror.style.fontWeight = cs.fontWeight;
+    mirror.style.fontStyle = cs.fontStyle;
+    mirror.style.letterSpacing = cs.letterSpacing;
+    mirror.textContent = value || placeholder || "";
+    const natural = mirror.offsetWidth + 21; // + горизонтальный padding и рамка поля
+    const max = wrap.clientWidth || 320;
+    if (natural < max && !value.includes("\n")) {
+      el.style.width = `${Math.max(natural, 150)}px`;
+      el.style.height = "auto";
+    } else {
+      el.style.width = "100%";
+      el.style.height = "0px";
+      el.style.height = `${el.scrollHeight}px`;
+    }
+  }, [value, placeholder]);
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <span ref={mirrorRef} className="vtm-block-mirror" aria-hidden="true" />
+      <textarea
+        ref={ref}
+        rows={1}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={ariaLabel}
+        className={`vtm-block-field ${className}`}
+      />
+    </div>
+  );
+}
+
 /** Контрол точек ●●●○○ */
 function Dots({
   value,
@@ -250,38 +323,42 @@ export function DossierSection({
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="block">
                 <span className="vtm-label text-[0.73rem] text-[#c4ac9d]">Концепция</span>
-                <input
-                  className="vtm-input mt-1"
+                <VtmBlockField
+                  className="mt-1"
                   value={info.concept}
-                  onChange={(e) => mutate((d) => { d.info.concept = e.target.value; })}
+                  onChange={(v) => mutate((d) => { d.info.concept = v; })}
                   placeholder="бывший хирург, ныне доктор без диплома"
+                  ariaLabel="Концепция"
                 />
               </label>
               <label className="block">
                 <span className="vtm-label text-[0.73rem] text-[#c4ac9d]">Хроника</span>
-                <input
-                  className="vtm-input mt-1"
+                <VtmBlockField
+                  className="mt-1"
                   value={info.chronicle}
-                  onChange={(e) => mutate((d) => { d.info.chronicle = e.target.value; })}
+                  onChange={(v) => mutate((d) => { d.info.chronicle = v; })}
                   placeholder="Ночь над Невой"
+                  ariaLabel="Хроника"
                 />
               </label>
               <label className="block">
                 <span className="vtm-label text-[0.73rem] text-[#c4ac9d]">Сир</span>
-                <input
-                  className="vtm-input mt-1"
+                <VtmBlockField
+                  className="mt-1"
                   value={info.sire}
-                  onChange={(e) => mutate((d) => { d.info.sire = e.target.value; })}
+                  onChange={(v) => mutate((d) => { d.info.sire = v; })}
                   placeholder="кто и зачем даровал Становление"
+                  ariaLabel="Сир"
                 />
               </label>
               <label className="block">
                 <span className="vtm-label text-[0.73rem] text-[#c4ac9d]">Род деятельности</span>
-                <input
-                  className="vtm-input mt-1"
+                <VtmBlockField
+                  className="mt-1"
                   value={info.occupation}
-                  onChange={(e) => mutate((d) => { d.info.occupation = e.target.value; })}
+                  onChange={(v) => mutate((d) => { d.info.occupation = v; })}
                   placeholder="профессия смертной жизни / нынешнее занятие"
+                  ariaLabel="Род деятельности"
                 />
               </label>
             </div>
@@ -370,45 +447,49 @@ export function DossierSection({
             </div>
           )}
 
-          {/* Цель / Желание / принципы / опоры */}
+          {/* Цель / Желание / принципы / опоры — текстовые блоки, ширина по наполнению */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <label className="block md:col-span-2">
               <span className="vtm-label text-[0.73rem] text-[#d6a840]">Цель — к чему идёт вся хроника</span>
-              <input
-                className="vtm-input mt-1"
+              <VtmBlockField
+                className="mt-1"
                 value={info.ambition}
-                onChange={(e) => mutate((d) => { d.info.ambition = e.target.value; })}
+                onChange={(v) => mutate((d) => { d.info.ambition = v; })}
                 placeholder="великая цель, ради которой стоит вечность"
+                ariaLabel="Цель хроники"
               />
             </label>
             <label className="block md:col-span-2">
               <span className="vtm-label text-[0.73rem] text-[#d6a840]">Желание — цель этой арки</span>
-              <input
-                className="vtm-input mt-1"
+              <VtmBlockField
+                className="mt-1"
                 value={info.desire}
-                onChange={(e) => mutate((d) => { d.info.desire = e.target.value; })}
+                onChange={(v) => mutate((d) => { d.info.desire = v; })}
                 placeholder="ближний шаг к великой цели"
+                ariaLabel="Желание арки"
               />
             </label>
             {(["principle1", "principle2", "principle3"] as const).map((key, i) => (
               <label key={key} className="block">
                 <span className="vtm-label text-[0.73rem] text-[#c4ac9d]">Принцип {i + 1}</span>
-                <input
-                  className="vtm-input mt-1"
+                <VtmBlockField
+                  className="mt-1"
                   value={info[key]}
-                  onChange={(e) => mutate((d) => { d.info[key] = e.target.value; })}
+                  onChange={(v) => mutate((d) => { d.info[key] = v; })}
                   placeholder={`«${i === 0 ? "никогда не…" : i === 1 ? "всегда…" : "никогда не предаю…"}»`}
+                  ariaLabel={`Принцип ${i + 1}`}
                 />
               </label>
             ))}
             {(["anchor1", "anchor2", "anchor3"] as const).map((key, i) => (
               <label key={key} className="block">
                 <span className="vtm-label text-[0.73rem] text-[#c4ac9d]">Опора {i + 1}</span>
-                <input
-                  className="vtm-input mt-1"
+                <VtmBlockField
+                  className="mt-1"
                   value={info[key]}
-                  onChange={(e) => mutate((d) => { d.info[key] = e.target.value; })}
+                  onChange={(v) => mutate((d) => { d.info[key] = v; })}
                   placeholder="кто держит твою Человечность"
+                  ariaLabel={`Опора ${i + 1}`}
                 />
               </label>
             ))}
@@ -811,6 +892,7 @@ export function SkillsSection({
   onRoll: (pool: number, label: string) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [openSpecs, setOpenSpecs] = useState<Record<string, boolean>>({});
   const q = query.trim().toLowerCase();
 
   const skillsByGroup = (group: "physical" | "social" | "mental") =>
@@ -877,7 +959,7 @@ export function SkillsSection({
       <div className="vtm-panel p-4 flex flex-wrap items-center gap-3">
         <span className="vtm-stamp">27 навыков</span>
         <p className="vtm-hint !text-[0.77rem] flex-1 min-w-[220px]">
-          Клик по точке — уровень (0–5). Клик по строке — проверка: характеристика по умолчанию + навык, кости Голода краснеют. Специализация углубляет конкретное применение навыка.
+          Клик по точке — уровень (0–5). Клик по строке — проверка: характеристика по умолчанию + навык, кости Голода краснеют. Поле специализации скрыто — раскрой его кнопкой «◈ спец».
         </p>
         <input
           className="vtm-input !w-48"
@@ -935,14 +1017,45 @@ export function SkillsSection({
                     </div>
                     {value > 0 && (
                       <div className="px-2 pb-1.5">
-                        <input
-                          className="vtm-input !py-1 !text-[0.83rem] border-dashed"
-                          value={state?.spec || ""}
-                          onChange={(e) => setSkill(def.id, def.name, { spec: e.target.value.slice(0, 40) })}
-                          placeholder={`специализация: ${def.specExamples.slice(0, 2).join(", ")}…`}
-                          aria-label={`Специализация навыка ${def.name}`}
-                          onClick={(e) => e.stopPropagation()}
-                        />
+                        {openSpecs[def.id] ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              className="vtm-input !py-1 !text-[0.83rem] border-dashed flex-1 min-w-0"
+                              value={state?.spec || ""}
+                              autoFocus
+                              onChange={(e) => setSkill(def.id, def.name, { spec: e.target.value.slice(0, 40) })}
+                              onKeyDown={(e) => {
+                                if (e.key === "Escape" || e.key === "Enter") {
+                                  e.preventDefault();
+                                  setOpenSpecs((m) => ({ ...m, [def.id]: false }));
+                                }
+                              }}
+                              placeholder={`специализация: ${def.specExamples.slice(0, 2).join(", ")}…`}
+                              aria-label={`Специализация навыка ${def.name}`}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <button
+                              type="button"
+                              className="vtm-btn vtm-btn-ghost !py-1 !px-1.5 !text-[0.72rem] shrink-0"
+                              onClick={() => setOpenSpecs((m) => ({ ...m, [def.id]: false }))}
+                              aria-label="Свернуть поле специализации"
+                              title="Свернуть поле специализации"
+                            >
+                              ▴
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="vtm-btn vtm-btn-ghost !py-0.5 !px-1.5 !text-[0.71rem]"
+                            onClick={() => setOpenSpecs((m) => ({ ...m, [def.id]: true }))}
+                            aria-expanded={false}
+                            aria-label={`Раскрыть специализацию: ${def.name}`}
+                            title={state?.spec ? `Специализация: «${state.spec}» — нажми, чтобы изменить` : "Раскрыть поле специализации"}
+                          >
+                            {state?.spec ? "✎ спец" : "◈ спец"}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

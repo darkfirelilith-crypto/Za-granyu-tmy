@@ -75,3 +75,4 @@ download/personalities/
 .zscripts/
 
 /upload/
+.zscripts/devpg.sh

@@ -1022,6 +1022,7 @@ function W5SkillsTab({
   attrPairs: { key: keyof W5SheetData["attributes"]; label: string }[];
   onRoll: (pool: number, label: string, opts?: { damage?: boolean }) => void;
 }) {
+  const [openSpecs, setOpenSpecs] = useState<Record<string, boolean>>({});
   const skillValue = (id: string) => data.skills.find((s) => s.id === id);
   const setSkill = (id: string, patch: Partial<{ value: number; spec: string }>) => {
     mutate((d) => {
@@ -1052,7 +1053,7 @@ function W5SkillsTab({
   return (
     <div className="space-y-4">
       <p className="vtm-hint !text-[0.78rem] vtm-panel p-3">
-        Клик по точке — уровень (0–5). Клик по названию навыка — бросок: характеристика + навык + кости Ярости, успех на 6+. Специализация появляется с уровнем 1+.
+        Клик по точке — уровень (0–5). Клик по названию навыка — бросок: характеристика + навык + кости Ярости, успех на 6+. Поле специализации скрыто — раскрой его кнопкой «◈ спец».
       </p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {groups.map((g) => (
@@ -1078,13 +1079,47 @@ function W5SkillsTab({
                       <Dots value={value} color="moon" onChange={(n) => setSkill(s.id, { value: n })} ariaLabel={`${s.name}: уровень ${value}`} />
                     </div>
                     {value > 0 && (
-                      <input
-                        className="vtm-input !py-0.5 !text-[0.78rem] mt-1"
-                        value={st?.spec || ""}
-                        onChange={(e) => setSkill(s.id, { spec: e.target.value.slice(0, 80) })}
-                        placeholder={`специализация: ${s.specExamples.slice(0, 2).join(", ")}`}
-                        aria-label={`Специализация ${s.name}`}
-                      />
+                      openSpecs[s.id] ? (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <input
+                            className="vtm-input !py-0.5 !text-[0.78rem] flex-1 min-w-0"
+                            value={st?.spec || ""}
+                            autoFocus
+                            onChange={(e) => setSkill(s.id, { spec: e.target.value.slice(0, 80) })}
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape" || e.key === "Enter") {
+                                e.preventDefault();
+                                setOpenSpecs((m) => ({ ...m, [s.id]: false }));
+                              }
+                            }}
+                            placeholder={`специализация: ${s.specExamples.slice(0, 2).join(", ")}`}
+                            aria-label={`Специализация ${s.name}`}
+                          />
+                          <button
+                            type="button"
+                            className="vtm-btn vtm-btn-ghost !py-0.5 !px-1.5 !text-[0.7rem] shrink-0"
+                            onClick={() => setOpenSpecs((m) => ({ ...m, [s.id]: false }))}
+                            aria-label="Свернуть поле специализации"
+                            title="Свернуть поле специализации"
+                          >
+                            ▴
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {st?.spec && <p className="vtm-hint !text-[0.72rem] italic">«{st.spec}»</p>}
+                          <button
+                            type="button"
+                            className="vtm-btn vtm-btn-ghost !py-0.5 !px-1.5 !text-[0.68rem]"
+                            onClick={() => setOpenSpecs((m) => ({ ...m, [s.id]: true }))}
+                            aria-expanded={false}
+                            aria-label={`Раскрыть специализацию: ${s.name}`}
+                            title={st?.spec ? `Специализация: «${st.spec}» — нажми, чтобы изменить` : "Раскрыть поле специализации"}
+                          >
+                            {st?.spec ? "✎ спец" : "◈ спец"}
+                          </button>
+                        </div>
+                      )
                     )}
                   </div>
                 );
