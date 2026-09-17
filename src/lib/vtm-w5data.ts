@@ -61,7 +61,7 @@ export const W5_BREEDS: { id: string; name: string; note: string }[] = [
   { id: "wolf", name: "Волкорождённый", note: "Вырос волком: чутьё и Умбра родные, человеческий мир — чужой." },
 ];
 
-// ---------- Облики (быстрая памятка на листе) ----------
+// ---------- Облики (интерактивная панель «Облик дня») ----------
 
 export const W5_FORMS: { id: string; name: string; ru: string; note: string }[] = [
   { id: "hishu", name: "Хишу", ru: "Человек", note: "Обычный облик: город, закон, Маскарад." },
@@ -70,6 +70,45 @@ export const W5_FORMS: { id: string; name: string; ru: string; note: string }[] 
   { id: "hispo", name: "Хиспо", ru: "Почти-волк", note: "Волк-переросток: бег, охота, чутьё." },
   { id: "lupus", name: "Люпус", ru: "Волк", note: "Настоящий волк: скорость, слух, духи слышат лучше всего." },
 ];
+
+export const W5_FORM_BY_ID = new Map(W5_FORMS.map((f) => [f.id, f]));
+
+/**
+ * Модификаторы характеристик в облике — адаптация классики (W20 → девять лун W5).
+ * Официальная таблица W5 местами расходится: сверяйся с Рассказчиком.
+ * Ключ — id из W5_FORMS; числа — прибавки к «голым» характеристикам листа.
+ */
+export const W5_FORM_MODS: Record<string, Partial<W5Attributes>> = {
+  hishu: {},
+  glabro: { str: 2, sta: 1, man: -2 },
+  crinos: { str: 4, sta: 3, dex: 1, man: -3 },
+  hispo: { str: 3, dex: 2, sta: 2, man: -3 },
+  lupus: { dex: 2, sta: 1, wit: 2, man: -3 },
+};
+
+/** Модификаторы конкретного облика (пусто для Хишу/неизвестного). */
+export function w5FormMods(formId: string | undefined): Partial<W5Attributes> {
+  if (!formId) return {};
+  return W5_FORM_MODS[formId] || {};
+}
+
+/** Эффективное значение характеристики с учётом текущего облика листа. */
+export function w5EffAttr(sheet: W5SheetData, key: keyof W5Attributes): number {
+  const base = sheet.attributes[key] || 0;
+  const mod = w5FormMods(sheet.info.activeForm)[key] || 0;
+  return Math.max(0, Math.min(7, base + mod)); // в облике пул может подняться выше 5, но не выше 7
+}
+
+/** Стойкость в облике (для подсказки о максимальном Здоровье). */
+export function w5EffStamina(sheet: W5SheetData): number {
+  return w5EffAttr(sheet, "sta");
+}
+
+/** Имя активного облика или пустая строка. */
+export function w5ActiveFormName(formId: string | undefined): string {
+  if (!formId) return "";
+  return W5_FORM_BY_ID.get(formId)?.name || "";
+}
 
 // ---------- Дары (каталог: Moon — по ауспиции, Tribe — по племени, Native — общие) ----------
 
@@ -257,6 +296,8 @@ export interface W5SheetData {
     totem: string;       // тотем стаи
     chronicle: string;
     quote: string;
+    /** «Облик дня» — активная форма (id из W5_FORMS); пусто/"hishu" = человек. */
+    activeForm?: string;
     portrait?: string;
     portraitThumb?: string;
   };
@@ -334,6 +375,7 @@ export function normalizeW5(raw: any): W5SheetData {
     totem: str(info.totem, 120),
     chronicle: str(info.chronicle, 120),
     quote: str(info.quote, 300),
+    activeForm: W5_FORM_BY_ID.has(info.activeForm) ? info.activeForm : undefined,
     portrait: typeof info.portrait === "string" ? info.portrait : undefined,
     portraitThumb: typeof info.portraitThumb === "string" ? info.portraitThumb : undefined,
   };

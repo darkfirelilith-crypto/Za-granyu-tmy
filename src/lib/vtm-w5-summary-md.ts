@@ -11,6 +11,7 @@ import {
   W5_AUSPICE_BY_ID,
   W5_BREEDS,
   W5_FORMS,
+  W5_FORM_BY_ID,
   w5WillpowerMax,
   w5HealthMax,
   w5Rank,
@@ -57,6 +58,11 @@ export function buildW5SummaryMarkdown(data: W5SheetData): string {
   if (info.concept) out.push(`> «${info.concept}»`);
   if (info.totem) out.push(`> Тотем стаи: **${info.totem}**`);
   if (info.chronicle) out.push(`> Хроника: **${info.chronicle}**`);
+  // «Облик дня» — активная форма (экспортируется и парсится обратно)
+  if (info.activeForm && info.activeForm !== "hishu") {
+    const form = W5_FORM_BY_ID.get(info.activeForm);
+    if (form) out.push(`> Облик дня: **${form.name}**`);
+  }
 
   // ── Витальные треки ──
   out.push("");

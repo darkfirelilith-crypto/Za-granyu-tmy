@@ -14,6 +14,8 @@ import { VtmReturnPortal } from "@/components/vtm/portal-transition";
 import { vtmFetch } from "@/lib/vtm-api";
 import { SKILL_LIBRARY } from "@/lib/vtm-data";
 import { buildW5SummaryMarkdown } from "@/lib/vtm-w5-summary-md";
+import { applyParsedW5Md, W5MdParseResult } from "@/lib/vtm-w5-md-import";
+import { W5ImportDialog } from "@/components/vtm/vtm-w5-import-dialog";
 import { VtmDicePanel, setVtmSheetHooks, useVtmDice, vtmW5RollAndShow, vtmW5RageCheckAndShow } from "@/components/vtm/vtm-dice";
 import { W5PrintDoc, W5PrintSummary } from "@/components/vtm/vtm-w5-print";
 import { W5HelpDialog } from "@/components/vtm/vtm-help";
@@ -26,6 +28,9 @@ import {
   W5_AUSPICE_BY_ID,
   W5_BREEDS,
   W5_FORMS,
+  W5_FORM_BY_ID,
+  w5FormMods,
+  w5EffAttr,
   W5_GIFT_LIBRARY,
   W5_RITE_LIBRARY,
   emptyW5Sheet,
@@ -36,6 +41,13 @@ import {
 } from "@/lib/vtm-w5data";
 
 type W5Tab = "identity" | "nature" | "skills" | "gifts" | "tracks" | "gear" | "notes" | "codex";
+
+/** Короткие подписи характеристик для чипов модификаторов облика. */
+const ATTR_SHORT: Record<keyof W5SheetData["attributes"], string> = {
+  str: "СИЛ", dex: "ЛОВ", sta: "СТК",
+  cha: "ОБА", man: "МАН", com: "САМ",
+  int: "ИНТ", wit: "СМК", res: "УПР",
+};
 
 const TABS: { id: W5Tab; label: string; icon: string }[] = [
   { id: "identity", label: "Личность", icon: "🐺" },
@@ -65,6 +77,7 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [conflict, setConflict] = useState<{ serverData: W5SheetData; serverUpdatedAt: string } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
   // Режим печати: «лист» — полный бланк; «сводка» — одна страница для стола
   const [printMode, setPrintMode] = useState<"sheet" | "summary">("sheet");
@@ -205,6 +218,7 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
   const clanless = !data.info.tribe;
   const tribe = W5_TRIBE_BY_ID.get(data.info.tribe);
   const auspice = W5_AUSPICE_BY_ID.get(data.info.auspice);
+  const activeForm = data.info.activeForm ? W5_FORM_BY_ID.get(data.info.activeForm) || undefined : undefined;
   const healthMax = w5HealthMax(data);
   const wpMax = w5WillpowerMax(data);
   const rank = w5Rank(data.trackers.glory, data.trackers.honor, data.trackers.wisdom);
@@ -293,6 +307,17 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
     reader.readAsText(file);
   };
 
+  // «⇲ МД» — вливание «Сводки Гароу» из Obsidian в текущий лист
+  const applyMarkdownW5 = (result: W5MdParseResult) => {
+    mutate((draft) => {
+      applyParsedW5Md(draft, result.fields);
+    });
+    setImportOpen(false);
+    toast.success("Сводка влилась в лист Гароу", {
+      description: `Обновлено полей: ${result.found.length}. Луна помнит оба источника.`,
+    });
+  };
+
   const attrPairs: { key: keyof W5SheetData["attributes"]; label: string }[] = [
     { key: "str", label: "Сила" }, { key: "dex", label: "Ловкость" }, { key: "sta", label: "Стойкость" },
     { key: "cha", label: "Обаяние" }, { key: "man", label: "Манипуляция" }, { key: "com", label: "Самообладание" },
@@ -302,6 +327,12 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
   // Быстрый бросок пула с костями Ярости — используется вкладками
   const rollCheck = (pool: number, label: string, opts?: { damage?: boolean }) => {
     vtmW5RollAndShow(pool, data.trackers.rage, label, opts);
+  };
+
+  // Бросок с учётом облика: эффективная характеристика + подпись облика
+  const rollWithForm = (pool: number, label: string, opts?: { damage?: boolean }) => {
+    const mod = activeForm && activeForm.id !== "hishu" ? " 🐾" : "";
+    rollCheck(pool, `${label}${mod}`, opts);
   };
 
   return (
@@ -330,6 +361,7 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
             </span>
             <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={copySummary} title="Текстовая сводка Гароу в буфер">⧉ Копия</button>
             <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={copySummaryMarkdown} title="Markdown-сводка для Obsidian и вики">Ⓜ <span className="hidden min-[480px]:inline">МД</span></button>
+            <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={() => setImportOpen(true)} title="Влить «Сводку Гароу» из Obsidian (Markdown)">⇲ <span className="hidden min-[480px]:inline">МД</span></button>
             <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={exportSheet} title="Полный бэкап листа в JSON">⇩ <span className="hidden min-[480px]:inline">Копия</span></button>
             <button className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-xs" onClick={() => restoreInputRef.current?.click()} title="Восстановить лист из JSON-бэкапа">⇧ <span className="hidden min-[480px]:inline">Восстановить</span></button>
             <input
@@ -375,6 +407,11 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
             <span className="vtm-hint !text-[0.78rem]">Здоровье <b className="text-[#d9c7b6] not-italic">{data.trackers.healthSup + data.trackers.healthAgg}/{healthMax}</b></span>
             <span className="vtm-hint !text-[0.78rem]">Воля <b className="text-[#d9c7b6] not-italic">{data.trackers.wpSup}/{wpMax}</b></span>
             <span className="vtm-hint !text-[0.78rem]">Слава <b className="text-[#c9d3e8] not-italic">{renownTotal}</b> — {rank.title}</span>
+            {activeForm && activeForm.id !== "hishu" && (
+              <span className="vtm-form-badge" title={`Облик дня: ${activeForm.name} — модификаторы применяются к броскам`}>
+                🐾 {activeForm.name}
+              </span>
+            )}
             {data.trackers.wolfLost && <span className="vtm-label text-[0.68rem] text-[#e8636b] uppercase">волк потерян</span>}
             {data.trackers.harano && <span className="vtm-label text-[0.68rem] text-[#8ea6c9] uppercase">харано</span>}
           </div>
@@ -399,13 +436,13 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
 
         <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
           {tab === "identity" && (
-            <W5IdentityTab data={data} mutate={mutate} />
+            <W5IdentityTab data={data} mutate={mutate} onRoll={rollWithForm} />
           )}
           {tab === "nature" && (
-            <W5NatureTab data={data} mutate={mutate} attrPairs={attrPairs} attrTotal={attrTotal} onRoll={rollCheck} />
+            <W5NatureTab data={data} mutate={mutate} attrPairs={attrPairs} attrTotal={attrTotal} onRoll={rollWithForm} />
           )}
           {tab === "skills" && (
-            <W5SkillsTab data={data} mutate={mutate} attrPairs={attrPairs} onRoll={rollCheck} />
+            <W5SkillsTab data={data} mutate={mutate} attrPairs={attrPairs} onRoll={rollWithForm} />
           )}
           {tab === "gifts" && (
             <W5GiftsTab data={data} mutate={mutate} onRoll={rollCheck} />
@@ -445,6 +482,9 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
 
       {/* Справка «?» — правила той вкладки, где ты сейчас (лунное серебро) */}
       <W5HelpDialog tabId={tab} open={helpOpen} onClose={() => setHelpOpen(false)} />
+
+      {/* «⇲ МД» — влить «Сводку Гароу» из Obsidian (Markdown) */}
+      <W5ImportDialog open={importOpen} onClose={() => setImportOpen(false)} onApplyMarkdown={applyMarkdownW5} />
 
       {/* Конфликт версий */}
       {conflict && (
@@ -498,9 +538,18 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
 // Вкладка ЛИЧНОСТЬ
 // ============================================================
 
-function W5IdentityTab({ data, mutate }: { data: W5SheetData; mutate: (fn: (d: W5SheetData) => void) => void }) {
+function W5IdentityTab({
+  data,
+  mutate,
+  onRoll,
+}: {
+  data: W5SheetData;
+  mutate: (fn: (d: W5SheetData) => void) => void;
+  onRoll: (pool: number, label: string, opts?: { damage?: boolean }) => void;
+}) {
   const tribe = W5_TRIBE_BY_ID.get(data.info.tribe);
   const auspice = W5_AUSPICE_BY_ID.get(data.info.auspice);
+  const activeFormId = data.info.activeForm || "hishu";
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <section className="vtm-panel" aria-label="Личность Гароу">
@@ -615,14 +664,56 @@ function W5IdentityTab({ data, mutate }: { data: W5SheetData; mutate: (fn: (d: W
           </div>
         </section>
 
-        <section className="vtm-panel" aria-label="Пять обликов — памятка">
-          <div className="vtm-panel-head"><span className="vtm-label text-[0.81rem] text-[#c9d3e8]">Пять обликов</span></div>
-          <div className="p-3 space-y-1.5">
-            {W5_FORMS.map((f) => (
-              <p key={f.id} className="vtm-hint !text-[0.79rem]">
-                <b className="text-[#c9d3e8] not-italic">{f.name} ({f.ru}):</b> {f.note}
+        <section className="vtm-panel" aria-label="Облик дня — пять обликов">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.81rem] text-[#c9d3e8]">Облик дня</span>
+            <span className="vtm-hint !text-[0.7rem] ml-auto">клик — сменить облик; модификаторы живут в бросках</span>
+          </div>
+          <div className="p-3 space-y-2">
+            {W5_FORMS.map((f) => {
+              const active = activeFormId === f.id;
+              const mods = w5FormMods(f.id);
+              const modChips = Object.entries(mods)
+                .map(([k, v]) => `${ATTR_SHORT[k as keyof W5SheetData["attributes"]]} ${v > 0 ? `+${v}` : v}`)
+                .join(" · ");
+              return (
+                <div key={f.id} className={`vtm-form-card ${active ? "active" : ""}`}>
+                  <button
+                    type="button"
+                    className="vtm-form-card-btn"
+                    onClick={() => mutate((d) => { d.info.activeForm = active ? undefined : f.id; })}
+                    aria-pressed={active}
+                    aria-label={`Облик ${f.name} (${f.ru})${active ? " — активен" : ""}`}
+                    title={active ? "Активный облик — клик вернёт в Хишу" : "Клик — принять этот облик"}
+                  >
+                    <span className="vtm-form-card-name">
+                      {f.id === "hishu" ? "🚶" : f.id === "crinos" ? "🐺" : f.id === "lupus" ? "🐺" : f.id === "hispo" ? "🐺" : "💪"} {f.name}
+                      <span className="vtm-form-card-ru"> · {f.ru}</span>
+                    </span>
+                    {modChips && <span className="vtm-form-chips">{modChips}</span>}
+                    {active && <span className="vtm-form-card-mark" aria-hidden>✦ активен</span>}
+                  </button>
+                  <p className="vtm-form-card-note">{f.note}</p>
+                </div>
+              );
+            })}
+            {activeFormId !== "hishu" && (
+              <p className="vtm-form-warn" role="note">
+                ⚠ Броски берут модифицированные характеристики (сердечко 🐾 в подписи). {activeFormId === "crinos" && "Кринос: каждый ход без убитого — 1 Воля. Смена облика — проверка Ярости."}
               </p>
-            ))}
+            )}
+            <p className="vtm-hint !text-[0.72rem]">
+              Модификаторы — адаптация классики (W20 → девять лун W5): сверяй таблицу с Рассказчиком. Клик по названию характеристики ниже — бросок с учётом облика.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 !text-[0.76rem]"
+                onClick={() => onRoll(w5EffAttr(data, "str") + w5EffAttr(data, "sta"), "Удержать облик (Сила + Стойкость)")}
+                title="Проверка смены/удержания облика по решению Рассказчика"
+              >
+                🐾 Проверка облика (СИЛ + СТК)
+              </button>
+            </div>
           </div>
         </section>
       </div>
@@ -658,22 +749,27 @@ function W5NatureTab({
           </span>
         </div>
         <div className="p-3 md:p-4 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-          {attrPairs.map(({ key, label }) => (
-            <div key={key} className="vtm-frame rounded-md p-2.5 flex flex-col items-center gap-2" style={{ background: "rgba(0,0,0,0.2)" }}>
-              <button
-                className="vtm-label text-[0.72rem] text-[#c4ac9d] vtm-w5-roll-name"
-                onClick={() => onRoll(data.attributes[key], label)}
-                title={`Бросить пул: ${label} ${data.attributes[key]} + кости Ярости`}
-                aria-label={`Бросок ${label}`}
-              >
-                {label}
-              </button>
-              <Dots value={data.attributes[key]} color="moon" onChange={(n) => mutate((d) => { d.attributes[key] = n; })} ariaLabel={`${label}: уровень ${data.attributes[key]}`} />
-            </div>
-          ))}
+          {attrPairs.map(({ key, label }) => {
+            const eff = w5EffAttr(data, key);
+            const mod = eff - (data.attributes[key] || 0);
+            return (
+              <div key={key} className="vtm-frame rounded-md p-2.5 flex flex-col items-center gap-2" style={{ background: "rgba(0,0,0,0.2)" }}>
+                <button
+                  className="vtm-label text-[0.72rem] text-[#c4ac9d] vtm-w5-roll-name"
+                  onClick={() => onRoll(eff, `${label} ${data.attributes[key]}${mod ? ` ${mod > 0 ? "+" : "−"}${Math.abs(mod)}` : ""}`)}
+                  title={`Бросить пул: ${label} ${eff} (в облике) + кости Ярости`}
+                  aria-label={`Бросок ${label}`}
+                >
+                  {label}{mod !== 0 && <span className="vtm-form-mod-mark" aria-hidden> {mod > 0 ? `+${mod}` : mod}</span>}
+                </button>
+                <Dots value={data.attributes[key]} color="moon" onChange={(n) => mutate((d) => { d.attributes[key] = n; })} ariaLabel={`${label}: уровень ${data.attributes[key]}`} />
+                {mod !== 0 && <span className="vtm-hint !text-[0.66rem] not-italic text-[#8ea6c9]">в облике: {eff}</span>}
+              </div>
+            );
+          })}
         </div>
         <p className="vtm-hint !text-[0.75rem] px-4 pb-3">
-          Распределение по правилам: одна 4, три по 3, четыре по 2, одна 1. Клик по названию — бросок пула: характеристика + кости Ярости. Смена облика требует проверки Ярости.
+          Распределение по правилам: одна 4, три по 3, четыре по 2, одна 1. Клик по названию — бросок пула: характеристика (с учётом облика) + кости Ярости. Смена облика требует проверки Ярости.
         </p>
       </section>
 
@@ -740,13 +836,14 @@ function W5SkillsTab({
               {SKILL_LIBRARY.filter((s) => s.group === g).map((s) => {
                 const st = skillValue(s.id);
                 const value = st?.value || 0;
+                const effAttr = w5EffAttr(data, defaultAttrKey[g]);
                 return (
                   <div key={s.id} className="vtm-w5-skill-row">
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
                         className="vtm-label text-[0.84rem] text-[#d9c7b6] flex-1 min-w-[100px] text-left vtm-w5-roll-name"
-                        title={`Бросить: ${defaultAttr[g]} ${data.attributes[defaultAttrKey[g]]} + ${s.name} ${value} + кости Ярости`}
-                        onClick={() => onRoll(data.attributes[defaultAttrKey[g]] + value, `${s.name}${st?.spec ? ` (${st.spec})` : ""}`)}
+                        title={`Бросить: ${defaultAttr[g]} ${effAttr} + ${s.name} ${value} + кости Ярости`}
+                        onClick={() => onRoll(effAttr + value, `${s.name}${st?.spec ? ` (${st.spec})` : ""}`)}
                         aria-label={`Бросок ${s.name}`}
                       >
                         {s.name}
@@ -1115,6 +1212,7 @@ function W5TracksTab({
               <span className="vtm-hint !text-[0.72rem] not-italic">тяжёлые:</span>
               <HealthBoxes max={healthMax} value={data.trackers.healthAgg} color="#8a1a1d" onChange={(n) => mutate((d) => { d.trackers.healthAgg = Math.min(n, healthMax - d.trackers.healthSup); })} ariaLabel="Тяжёлый урон" />
             </div>
+            <W5DamageBar data={data} mutate={mutate} healthMax={healthMax} />
           </div>
 
           <div className="vtm-frame rounded-md p-3 space-y-2" style={{ background: "rgba(0,0,0,0.22)" }}>
@@ -1169,6 +1267,133 @@ function W5TracksTab({
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// БАРО УРОНА — серия бросков урона с применением к шкале Здоровья.
+// Жестокий исход (+4 на уроне по W5) считает сама кость (rollW5Pool).
+// ============================================================
+
+interface W5DamageResult {
+  label: string;
+  successes: number;     // итог с учётом Жестокого исхода
+  brutalDamage: boolean; // был ли Жестокий исход на уроне
+  total: number;         // пул
+  ts: number;
+}
+
+function W5DamageBar({
+  data,
+  mutate,
+  healthMax,
+}: {
+  data: W5SheetData;
+  mutate: (fn: (d: W5SheetData) => void) => void;
+  healthMax: number;
+}) {
+  const [last, setLast] = useState<W5DamageResult | null>(null);
+  const [custom, setCustom] = useState("");
+
+  const brawlVal = data.skills.find((s) => s.id === "brawl")?.value || 0;
+  const meleeVal = data.skills.find((s) => s.id === "melee")?.value || 0;
+  const clawsPool = w5EffAttr(data, "str") + brawlVal;
+  const weaponPool = w5EffAttr(data, "str") + meleeVal;
+  const freeCap = Math.max(0, healthMax - data.trackers.healthSup - data.trackers.healthAgg);
+
+  const doRoll = (pool: number, label: string) => {
+    const r = vtmW5RollAndShow(Math.max(1, pool), data.trackers.rage, label, { damage: true });
+    setLast({ label, successes: r.totalSuccesses, brutalDamage: r.brutalDamage, total: pool, ts: Date.now() });
+  };
+
+  const rollCustom = () => {
+    const p = Math.max(1, Math.min(30, Math.floor(Number(custom) || 0)));
+    if (!p) return;
+    doRoll(p, `Урон (пул ${p})`);
+  };
+
+  const applyDamage = (kind: "sup" | "agg") => {
+    if (!last || last.successes <= 0) return;
+    const n = last.successes;
+    const freeBefore = Math.max(0, healthMax - data.trackers.healthSup - data.trackers.healthAgg);
+    const applied = Math.min(n, freeBefore);
+    mutate((d) => {
+      const max = w5HealthMax(d);
+      if (kind === "sup") {
+        d.trackers.healthSup = Math.min(d.trackers.healthSup + n, max - d.trackers.healthAgg);
+      } else {
+        d.trackers.healthAgg = Math.min(d.trackers.healthAgg + n, max - d.trackers.healthSup);
+      }
+      d.rollLog = [{
+        id: `roll-${Date.now().toString(36)}`,
+        text: `Урон «${last.label}» → ${applied < n ? `+${applied} из ${n}` : `+${n}`} ${kind === "sup" ? "поверхностных" : "тяжёлых"} ран (свободно клеток было ${freeBefore})`,
+        ts: new Date().toISOString(),
+      }, ...d.rollLog].slice(0, 60);
+    });
+    setLast(null);
+    toast.success(applied < n ? `+${applied} из ${n} ран (шкала полна)` : kind === "sup" ? `+${n} поверхностных ран` : `+${n} тяжёлых ран`);
+  };
+
+  return (
+    <div className="vtm-damage-bar">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="vtm-label text-[0.72rem] text-[#e8636b]">⚔ Серия урона</span>
+        <button
+          className="vtm-btn vtm-btn-ghost !py-1 !px-2.5 !text-[0.72rem]"
+          onClick={() => doRoll(clawsPool, `Когти (СИЛ ${w5EffAttr(data, "str")} + Драка ${brawlVal})`)}
+          title={`Пул: Сила ${w5EffAttr(data, "str")} + Драка ${brawlVal} + кости Ярости; Жестокий исход на уроне даёт +4 успеха`}
+        >
+          🎲 Когти ({clawsPool})
+        </button>
+        <button
+          className="vtm-btn vtm-btn-ghost !py-1 !px-2.5 !text-[0.72rem]"
+          onClick={() => doRoll(weaponPool, `Оружие (СИЛ ${w5EffAttr(data, "str")} + Холодное ${meleeVal})`)}
+          title={`Пул: Сила ${w5EffAttr(data, "str")} + Холодное оружие ${meleeVal} + кости Ярости`}
+        >
+          🎲 Оружие ({weaponPool})
+        </button>
+        <span className="flex items-center gap-1">
+          <input
+            className="vtm-input !py-1 !text-[0.74rem] !w-14 text-center"
+            value={custom}
+            onChange={(e) => setCustom(e.target.value.replace(/[^\d]/g, "").slice(0, 2))}
+            placeholder="пул"
+            aria-label="Свой пул урона"
+            onKeyDown={(e) => e.key === "Enter" && rollCustom()}
+          />
+          <button className="vtm-btn vtm-btn-ghost !py-1 !px-2.5 !text-[0.72rem]" onClick={rollCustom} disabled={!custom} aria-label="Бросить свой пул урона">🎲</button>
+        </span>
+      </div>
+      {last && (
+        <div className="vtm-damage-result">
+          <span className={`vtm-label text-[0.78rem] ${last.successes > 0 ? "text-[#d6a840]" : "text-[#c4ac9d]"}`}>
+            {last.label}: {last.brutalDamage ? "ЖЕСТОКИЙ УСПЕХ · " : ""}{last.successes} успехов
+          </span>
+          <span className="flex gap-1.5 flex-wrap">
+            <button
+              className="vtm-btn !py-1 !px-2.5 !text-[0.72rem]"
+              onClick={() => applyDamage("sup")}
+              disabled={last.successes <= 0}
+              title={`Добавить ${last.successes} поверхностных ран (свободно ${freeCap})`}
+            >
+              + поверхностный
+            </button>
+            <button
+              className="vtm-btn vtm-btn-blood !py-1 !px-2.5 !text-[0.72rem]"
+              onClick={() => applyDamage("agg")}
+              disabled={last.successes <= 0}
+              title={`Добавить ${last.successes} тяжёлых ран (свободно ${freeCap})`}
+            >
+              + тяжёлый
+            </button>
+            <button className="vtm-btn vtm-btn-ghost !py-1 !px-2 !text-[0.72rem]" onClick={() => setLast(null)} aria-label="Сбросить бросок урона">✕</button>
+          </span>
+        </div>
+      )}
+      <p className="vtm-hint !text-[0.7rem]">
+        Успех на 6+; две десятки — крит; Жестокий исход (2+ кости Ярости на 1–2) на уроне даёт +4 успеха. Пустых клеток: {freeCap}.
+      </p>
     </div>
   );
 }

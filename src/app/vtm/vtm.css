@@ -3083,3 +3083,159 @@ button.vtm-die.vtm-die-selectable.selected {
   button.vtm-die.vtm-die-selectable:hover,
   button.vtm-die.vtm-die-selectable.selected { transform: none; }
 }
+
+/* ============================================================
+   РАУНД 19: «Облик дня», серия урона, вливание «Сводки Гароу».
+   Всё с vtm- префиксом — изоляция от соседних разделов.
+   ============================================================ */
+
+/* Облик дня: карточки обликов в лунном серебре */
+.vtm-form-card {
+  border: 1px solid rgba(142, 166, 201, 0.22);
+  border-radius: 0.5rem;
+  background: linear-gradient(165deg, rgba(142, 166, 201, 0.05), rgba(0, 0, 0, 0.22));
+  overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.vtm-form-card:hover {
+  border-color: rgba(142, 166, 201, 0.45);
+  box-shadow: 0 0 12px rgba(142, 166, 201, 0.14);
+}
+.vtm-form-card.active {
+  border-color: rgba(201, 211, 232, 0.65);
+  background: linear-gradient(165deg, rgba(142, 166, 201, 0.16), rgba(0, 0, 0, 0.3));
+  box-shadow: 0 0 16px rgba(142, 166, 201, 0.28), inset 0 1px 0 rgba(201, 211, 232, 0.18);
+}
+.vtm-form-card-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+}
+.vtm-form-card-btn:focus-visible {
+  outline: 2px solid rgba(201, 211, 232, 0.8);
+  outline-offset: -2px;
+}
+.vtm-form-card-name {
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  color: #c9d3e8;
+}
+.vtm-form-card.active .vtm-form-card-name {
+  color: #e6ecf7;
+  text-shadow: 0 0 10px rgba(142, 166, 201, 0.55);
+}
+.vtm-form-card-ru {
+  font-size: 0.76rem;
+  color: #9c8072;
+  letter-spacing: 0.02em;
+}
+.vtm-form-chips {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: #8ea6c9;
+  border: 1px solid rgba(142, 166, 201, 0.3);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+.vtm-form-card-mark {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: #c9d3e8;
+  margin-left: auto;
+}
+.vtm-form-card-note {
+  margin: 0;
+  padding: 0 0.7rem 0.55rem 0.7rem;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: #9c8072;
+  line-height: 1.45;
+}
+
+/* Чип облика в витальной строке + пометка модификатора у названия броска */
+.vtm-form-badge {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #c9d3e8;
+  border: 1px solid rgba(142, 166, 201, 0.45);
+  border-radius: 999px;
+  padding: 0.14rem 0.6rem;
+  background: linear-gradient(160deg, rgba(142, 166, 201, 0.14), rgba(0, 0, 0, 0.3));
+  box-shadow: 0 0 10px rgba(142, 166, 201, 0.2);
+  white-space: nowrap;
+}
+.vtm-form-mod-mark {
+  color: #c9d3e8;
+  font-weight: 700;
+  font-size: 0.92em;
+}
+
+/* Серия урона: тёмная полоса с тлеющей алой кромкой */
+.vtm-damage-bar {
+  border: 1px solid rgba(232, 99, 107, 0.3);
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  background: linear-gradient(160deg, rgba(138, 26, 29, 0.12), rgba(0, 0, 0, 0.28));
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.vtm-damage-bar .vtm-btn {
+  transition: border-color 0.22s ease, box-shadow 0.22s ease, text-shadow 0.22s ease;
+}
+.vtm-damage-bar .vtm-btn:hover:not(:disabled) {
+  border-color: rgba(232, 99, 107, 0.55);
+  text-shadow: 0 0 8px rgba(232, 99, 107, 0.5);
+}
+.vtm-damage-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  border-top: 1px dashed rgba(232, 99, 107, 0.28);
+  padding-top: 0.45rem;
+}
+.vtm-damage-bar button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Предупреждение в панели облика — длинный текст, поэтому блок с переносом
+   (в отличие от чипа vtm-req, который рассчитан на короткие подписи) */
+.vtm-form-warn {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  color: #c96d75;
+  border: 1px dashed rgba(194, 43, 48, 0.45);
+  border-radius: 4px;
+  padding: 0.35rem 0.55rem;
+  background: rgba(194, 43, 48, 0.06);
+}
+
+/* Мобайл: тач-цели не меньше 40px у обликов и урона */
+@media (max-width: 640px) {
+  .vtm-form-card-btn { min-height: 40px; }
+  .vtm-damage-bar .vtm-btn { min-height: 36px; }
+  .vtm-form-chips { white-space: normal; }
+}
+
+/* Бережём вестибулярный аппарат: без движения при reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .vtm-form-card,
+  .vtm-damage-bar .vtm-btn { transition: none !important; }
+}

@@ -8,7 +8,7 @@
 // ============================================================
 
 import { W5SheetData } from "@/lib/vtm-w5data";
-import { W5_TRIBE_BY_ID, W5_AUSPICE_BY_ID, W5_BREEDS, w5HealthMax, w5WillpowerMax, w5Rank } from "@/lib/vtm-w5data";
+import { W5_TRIBE_BY_ID, W5_AUSPICE_BY_ID, W5_BREEDS, W5_FORM_BY_ID, w5HealthMax, w5WillpowerMax, w5Rank } from "@/lib/vtm-w5data";
 import { SKILL_LIBRARY } from "@/lib/vtm-data";
 
 const dots = (n: number, max = 5): string => "●".repeat(Math.max(0, Math.min(max, n))) + "○".repeat(Math.max(0, max - Math.max(0, Math.min(max, n))));
@@ -62,6 +62,9 @@ function W5PrintHead({ data }: { data: W5SheetData }) {
           {info.chronicle ? ` · Хроника: ${info.chronicle}` : ""}
         </p>
         {info.pack && <p className="vtm-print-line">Стая: {info.pack}{info.totem ? ` · Тотем: ${info.totem}` : ""}</p>}
+        {info.activeForm && info.activeForm !== "hishu" && (
+          <p className="vtm-print-line">🐾 Облик дня: {W5_FORM_BY_ID.get(info.activeForm)?.name || info.activeForm}{W5_FORM_BY_ID.get(info.activeForm) ? ` (${W5_FORM_BY_ID.get(info.activeForm)!.ru})` : ""}</p>
+        )}
         {info.quote && <p className="vtm-print-line" style={{ fontStyle: "italic" }}>{info.quote}</p>}
       </div>
     </div>
