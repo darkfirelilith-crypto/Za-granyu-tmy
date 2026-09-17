@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -467,6 +467,23 @@ function SheetCard({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Двухступенчатое подтверждение (как в редакторе): первый клик взводит
+  // «В землю?!», через 3 секунды порыв гаснет — мисклик не хоронит ночь.
+  const [delArmed, setDelArmed] = useState(false);
+  useEffect(() => {
+    if (!delArmed) return;
+    const t = setTimeout(() => setDelArmed(false), 3000);
+    return () => clearTimeout(t);
+  }, [delArmed]);
+  const onDeleteClick = () => {
+    if (delArmed) {
+      setDelArmed(false);
+      del.mutate();
+    } else {
+      setDelArmed(true);
+    }
+  };
+
   const date = new Date(sheet.updatedAt).toLocaleString("ru-RU", {
     day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
   });
@@ -535,13 +552,13 @@ function SheetCard({
                   </>
                 )}
                 <button
-                  onClick={(e) => { e.stopPropagation(); del.mutate(); }}
+                  onClick={(e) => { e.stopPropagation(); onDeleteClick(); }}
                   disabled={del.isPending}
-                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-[#c22b30] hover:text-[#e8636b] text-xs vtm-label px-1.5 py-0.5 border border-transparent hover:border-[#8a1a1d] rounded"
-                  title="Предать лист земле"
-                  aria-label={`Удалить лист ${sheet.name}`}
+                  className={`opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-xs vtm-label px-1.5 py-0.5 rounded vtm-card-del ${delArmed ? "vtm-card-del-armed" : "text-[#c22b30] hover:text-[#e8636b] border border-transparent hover:border-[#8a1a1d]"}`}
+                  title={delArmed ? "Ещё раз — и ночь предадим земле" : "Предать лист земле (двойной клик)"}
+                  aria-label={delArmed ? `Подтвердить удаление листа ${sheet.name}` : `Удалить лист ${sheet.name}`}
                 >
-                  {del.isPending ? "…" : "✕ в землю"}
+                  {del.isPending ? "…" : delArmed ? "✕ в землю?!" : "✕ в землю"}
                 </button>
               </div>
             </div>

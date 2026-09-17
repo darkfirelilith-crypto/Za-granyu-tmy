@@ -257,6 +257,15 @@ export function W5Editor({ sheetId, onBack }: { sheetId: string; onBack: () => v
     lines.push(`Опыт: свободно ${data.trackers.xp} · вложено ${data.trackers.xpSpent}`);
     if (data.gifts.length) lines.push(`Дары: ${data.gifts.map((g) => `${g.name} (${g.level})`).join(", ")}`);
     if (data.rites.length) lines.push(`Обряды: ${data.rites.map((r) => `${r.name} (${r.level})`).join(", ")}`);
+    // Навыки: только ненулевые, специализации — в скобках (зеркало вампирской сводки)
+    const trained = data.skills
+      .filter((s) => s.value > 0 || s.spec.trim())
+      .map((s) => {
+        const lib = SKILL_LIBRARY.find((l) => l.id === s.id);
+        const spec = s.spec.trim() ? ` (${s.spec.trim()})` : "";
+        return `${lib?.name || s.id} ${s.value}${spec}`;
+      });
+    if (trained.length) lines.push(`Навыки: ${trained.join(", ")}`);
     if (data.aspirations.length) lines.push(`Стремления: ${data.aspirations.map((a) => a.text).filter(Boolean).join(" | ")}`);
     // Журнал опыта — последние 3 записи (покупки падают сами)
     const xpTail = (data.xpLog || []).slice(0, 3);

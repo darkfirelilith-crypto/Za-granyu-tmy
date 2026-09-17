@@ -1015,16 +1015,43 @@ export function HistoriesSection({
   const setLevel = (sheetId: string, level: number) => {
     mutate((d) => {
       const existing = d.loresheets.find((l) => l.sheetId === sheetId);
+      const prev = existing?.level || 0;
+      let next = prev;
       if (!existing) {
-        if (level > 0) d.loresheets.push({ sheetId, level, note: "" });
+        if (level > 0) {
+          d.loresheets.push({ sheetId, level, note: "" });
+          next = level;
+        }
       } else if (level === existing.level) {
         // клик по текущей ступени — снять одну
         existing.level = level - 1;
-        if (existing.level <= 0) d.loresheets = d.loresheets.filter((l) => l.sheetId !== sheetId);
+        next = level - 1;
+        if (existing.level <= 0) {
+          d.loresheets = d.loresheets.filter((l) => l.sheetId !== sheetId);
+          next = 0;
+        }
       } else if (level === 0) {
         d.loresheets = d.loresheets.filter((l) => l.sheetId !== sheetId);
+        next = 0;
       } else {
         existing.level = level;
+        next = level;
+      }
+      // Авто-запись в журнал опыта: цена ступеней известна из данных листога
+      const def = LORESHEET_BY_ID.get(sheetId);
+      if (!def || next === prev) return;
+      if (next > prev) {
+        const gained = def.levels.slice(prev, next).reduce((s, lv) => s + lv.xp, 0);
+        const top = def.levels[next - 1];
+        pushXpLog(d, `листог «${def.name}» → ступень ${next} «${top.name}» — цена ${gained} опыта (сверься с Рассказчиком)`);
+      } else {
+        const released = def.levels.slice(next, prev).reduce((s, lv) => s + lv.xp, 0);
+        pushXpLog(
+          d,
+          next === 0
+            ? `листог «${def.name}» снят (была ступень ${prev}, −${released} опыта)`
+            : `листог «${def.name}» ↓ откат к ступени ${next} (−${released} опыта)`
+        );
       }
     });
   };

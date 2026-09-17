@@ -44,11 +44,19 @@ export interface W5RollResult {
   uid?: string;
 }
 
+// Монотонный счётчик + случайный хвост: две кости за одну миллисекунду
+// (быстрые клики, авто-повтор) больше не сталкиваются ключами хроники.
+let vtmIdSeq = 0;
+function vtmHistId(prefix: string): string {
+  vtmIdSeq += 1;
+  return `${prefix}-${Date.now().toString(36)}-${vtmIdSeq.toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
 /** Бросок пула Гароу: rage — сколько костей пула являются костями Ярости. */
 export function rollW5Pool(pool: number, rage: number, label: string, opts?: { damage?: boolean; difficulty?: number }): W5RollResult {
   const p = Math.max(1, Math.min(40, Math.floor(pool)));
   const r = Math.max(0, Math.min(p, Math.min(5, Math.floor(rage))));
-  const uid = `w5-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  const uid = vtmHistId("w5");
   const dice: W5Die[] = [];
   for (let i = 0; i < p; i++) {
     const value = 1 + Math.floor(Math.random() * 10);
@@ -234,6 +242,11 @@ interface DiceState {
   w5last: W5RollResult | null;
   wrage: { ok: boolean; value: number; label: string; ts: number } | null;
   history: RollHistoryItem[];
+  // Счётчики сцены: что лист потратил/потерял с момента последнего «↺» —
+  // мини-сводка над хроникой, чтобы не листать лист ради одной цифры.
+  sceneHunger: number; // провалы Испытаний Крови → +1 Голод каждый
+  sceneWp: number;     // потраченные пункты Воли (перебросы + «⚡ Тратить волю»)
+  sceneRage: number;   // провалы Проверок Ярости → −1 Ярость каждая
   setMode: (m: "vampire" | "werewolf") => void;
   toggle: () => void;
   setOpen: (v: boolean) => void;
@@ -241,6 +254,8 @@ interface DiceState {
   pushRouse: (r: { ok: boolean; value: number; label: string }) => void;
   pushW5Roll: (r: W5RollResult) => void;
   pushRageCheck: (r: { ok: boolean; value: number; label: string }) => void;
+  spendSceneWp: () => void;
+  resetScene: () => void;
   clearHistory: () => void;
 }
 
@@ -252,7 +267,10 @@ export const useVtmDice = create<DiceState>((set) => ({
   w5last: null,
   wrage: null,
   history: [],
-  setMode: (m) => set({ mode: m, last: null, rouse: null, w5last: null, wrage: null }),
+  sceneHunger: 0,
+  sceneWp: 0,
+  sceneRage: 0,
+  setMode: (m) => set({ mode: m, last: null, rouse: null, w5last: null, wrage: null, sceneHunger: 0, sceneWp: 0, sceneRage: 0 }),
   toggle: () => set((s) => ({ open: !s.open })),
   setOpen: (v) => set({ open: v }),
   pushRoll: (r) =>
@@ -260,15 +278,17 @@ export const useVtmDice = create<DiceState>((set) => ({
       last: r,
       open: true,
       history: [
-        { id: `roll-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, label: r.label, ts: Date.now(), kind: "pool", roll: r } as RollHistoryItem,
+        { id: vtmHistId("roll"), label: r.label, ts: Date.now(), kind: "pool", roll: r } as RollHistoryItem,
         ...s.history,
       ].slice(0, HISTORY_CAP),
     })),
   pushRouse: (r) =>
     set((s) => ({
       rouse: { ...r, ts: Date.now() },
+      // провал Испытания Крови → Голод +1 — помним за сцену
+      sceneHunger: r.ok ? s.sceneHunger : s.sceneHunger + 1,
       history: [
-        { id: `rouse-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, label: r.label, ts: Date.now(), kind: "rouse", rouse: r } as RollHistoryItem,
+        { id: vtmHistId("rouse"), label: r.label, ts: Date.now(), kind: "rouse", rouse: r } as RollHistoryItem,
         ...s.history,
       ].slice(0, HISTORY_CAP),
     })),
@@ -277,18 +297,22 @@ export const useVtmDice = create<DiceState>((set) => ({
       w5last: r,
       open: true,
       history: [
-        { id: `w5-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, label: r.label, ts: Date.now(), kind: "w5pool", w5roll: r } as RollHistoryItem,
+        { id: vtmHistId("w5"), label: r.label, ts: Date.now(), kind: "w5pool", w5roll: r } as RollHistoryItem,
         ...s.history,
       ].slice(0, HISTORY_CAP),
     })),
   pushRageCheck: (r) =>
     set((s) => ({
       wrage: { ...r, ts: Date.now() },
+      // провал Проверки Ярости → Ярость −1 — помним за сцену
+      sceneRage: r.ok ? s.sceneRage : s.sceneRage + 1,
       history: [
-        { id: `wrage-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, label: r.label, ts: Date.now(), kind: "wrage", wrage: { ok: r.ok, value: r.value } } as RollHistoryItem,
+        { id: vtmHistId("wrage"), label: r.label, ts: Date.now(), kind: "wrage", wrage: { ok: r.ok, value: r.value } } as RollHistoryItem,
         ...s.history,
       ].slice(0, HISTORY_CAP),
     })),
+  spendSceneWp: () => set((s) => ({ sceneWp: s.sceneWp + 1 })),
+  resetScene: () => set({ sceneHunger: 0, sceneWp: 0, sceneRage: 0 }),
   clearHistory: () => set({ history: [] }),
 }));
 
@@ -353,7 +377,7 @@ function diceCompactW5(r: W5RollResult): string {
 // ---------- Плавающая панель ----------
 
 export function VtmDicePanel() {
-  const { open, last, rouse, w5last, wrage, mode, history, toggle, setOpen, clearHistory } = useVtmDice();
+  const { open, last, rouse, w5last, wrage, mode, history, sceneHunger, sceneWp, sceneRage, toggle, setOpen, spendSceneWp, resetScene, clearHistory } = useVtmDice();
   const [rollBtnArmed, setRollBtnArmed] = useState(false);
   const [histOpen, setHistOpen] = useState(true);
   const isW5 = mode === "werewolf";
@@ -385,6 +409,7 @@ export function VtmDicePanel() {
     const newVals = wpSel.map((i) => rerolled.dice[i].value);
     useVtmDice.getState().pushRoll({ ...rerolled, label: `${last.label} ⟲волей` });
     hooks?.logRoll(`${last.label} ⟲ переброс волей (${oldVals.join("·")} → ${newVals.join("·")}): ${describe(rerolled)}`);
+    spendSceneWp();
     toast.success("Воля −1 — кости переброшены", { description: "Каждая кость перебрасывается один раз за хронику." });
     setWpState(null);
   };
@@ -401,6 +426,7 @@ export function VtmDicePanel() {
     const newVals = wpSel.map((i) => rerolled.dice[i].value);
     useVtmDice.getState().pushW5Roll({ ...rerolled, label: `${w5last.label} ⟲волей` });
     hooks?.logRoll(`${w5last.label} ⟲ переброс волей (${oldVals.join("·")} → ${newVals.join("·")}): ${describeW5(rerolled)}`);
+    spendSceneWp();
     toast.success("Воля −1 — кости переброшены", { description: "Кости Ярости волей не перебрасываются." });
     setWpState(null);
   };
@@ -630,6 +656,7 @@ export function VtmDicePanel() {
                 className="vtm-btn vtm-btn-ghost !py-1.5 !px-3 text-[0.81rem]"
                 onClick={() => {
                   if (hooks?.spendWillpower()) {
+                    spendSceneWp();
                     toast.success("Воля −1", { description: isW5 ? "Пункт воли потрачен — удержи облик, вспомни сцену или перебрось до трёх обычных костей кнопкой «⟲ Перебросить волей»." : "Пункт воли потрачен — перебрось до трёх костей кнопкой «⟲ Перебросить волей» (или удержи Зверя)." });
                   } else {
                     toast.error("Воля иссякла", { description: "Пункт воли не потратить: шкала пуста или искалечена." });
@@ -639,6 +666,25 @@ export function VtmDicePanel() {
                 ⚡ Тратить волю
               </button>
             </div>
+
+            {/* Счётчики сцены: что потрачено/потеряно с последнего «↺» */}
+            {(sceneHunger > 0 || sceneWp > 0 || sceneRage > 0) && (
+              <div className="vtm-scene-bar" role="status" aria-label="Сводка сцены">
+                <span className="vtm-scene-moon" aria-hidden>☾</span>
+                <span className="vtm-scene-title">Сцена:</span>
+                {sceneHunger > 0 && <span className="vtm-scene-chip hunger">Голод +{sceneHunger}</span>}
+                {sceneWp > 0 && <span className="vtm-scene-chip wp">Воля −{sceneWp}</span>}
+                {sceneRage > 0 && <span className="vtm-scene-chip rage">Ярость −{sceneRage}</span>}
+                <button
+                  className="vtm-scene-reset"
+                  onClick={resetScene}
+                  title="Считать сцену закрытой — обнулить счётчики"
+                  aria-label="Обнулить счётчики сцены"
+                >
+                  ↺ новая сцена
+                </button>
+              </div>
+            )}
 
             {/* Хроника бросков: последняя дюжина ночей за этим столом */}
             {history.length > 0 && (

@@ -3510,3 +3510,133 @@ button.vtm-die.vtm-die-selectable.selected {
   .vtm-dossier-pop,
   .vtm-damage-reroll { transition: none !important; animation: none !important; transform: none !important; }
 }
+
+/* ============================================================
+   РАУНД 22 · Подтверждение удаления на карточке архива
+   ============================================================ */
+
+/* Взведённое состояние «✕ в землю?!» — тлеющая кромка, рука дрожит */
+.vtm-card-del-armed {
+  color: #ffb3a7 !important;
+  border-color: #c22b30 !important;
+  background: rgba(138, 26, 29, 0.28);
+  animation: vtm-del-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes vtm-del-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(194, 43, 48, 0.35); }
+  50% { box-shadow: 0 0 10px 2px rgba(194, 43, 48, 0.5); }
+}
+
+/* Сенсорные экраны: наведения нет — кнопка удаления всегда на виду (тише обычной) */
+@media (hover: none) {
+  .vtm-card-del { opacity: 0.72 !important; }
+}
+
+/* ============================================================
+   РАУНД 22 · Счётчики сцены в панели костей
+   ============================================================ */
+
+/* Мини-сводка над хроникой: что лист потратил/потерял за сцену */
+.vtm-scene-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.55rem;
+  padding: 0.45rem 0.65rem;
+  margin-top: 0.6rem;
+  border: 1px solid rgba(168, 134, 61, 0.28);
+  border-left: 3px solid rgba(168, 134, 61, 0.55);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(30, 17, 20, 0.85), rgba(16, 9, 11, 0.9));
+  animation: vtm-scene-in 0.28s ease-out both;
+}
+
+@keyframes vtm-scene-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.vtm-scene-moon {
+  color: #a8863d;
+  font-size: 0.95rem;
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(168, 134, 61, 0.5);
+}
+
+.vtm-scene-title {
+  font-family: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #9c8072;
+}
+
+.vtm-scene-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+/* Голод — алая кость */
+.vtm-scene-chip.hunger {
+  color: #e8636b;
+  border-color: rgba(138, 26, 29, 0.65);
+  background: rgba(138, 26, 29, 0.22);
+  text-shadow: 0 0 6px rgba(194, 43, 48, 0.4);
+}
+
+/* Воля — бледное серебро */
+.vtm-scene-chip.wp {
+  color: #c9d4e2;
+  border-color: rgba(142, 166, 201, 0.45);
+  background: rgba(142, 166, 201, 0.12);
+}
+
+/* Ярость — лунная сталь с красным */
+.vtm-scene-chip.rage {
+  color: #d8a25e;
+  border-color: rgba(216, 162, 94, 0.45);
+  background: rgba(216, 162, 94, 0.12);
+}
+
+.vtm-scene-reset {
+  margin-left: auto;
+  min-height: 26px;
+  padding: 0.1rem 0.55rem;
+  border: 1px dashed rgba(156, 128, 114, 0.5);
+  border-radius: 6px;
+  background: transparent;
+  color: #9c8072;
+  font-size: 0.71rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: color 0.18s, border-color 0.18s, text-shadow 0.18s;
+}
+
+.vtm-scene-reset:hover,
+.vtm-scene-reset:focus-visible {
+  color: #d9c7b6;
+  border-color: rgba(217, 199, 182, 0.6);
+  text-shadow: 0 0 8px rgba(217, 199, 182, 0.45);
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  .vtm-scene-bar { padding: 0.5rem 0.6rem; gap: 0.35rem 0.45rem; }
+  .vtm-scene-chip { min-height: 26px; padding: 0.15rem 0.6rem; }
+  .vtm-scene-reset { min-height: 34px; flex-basis: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vtm-card-del-armed { animation: none !important; }
+  .vtm-scene-bar { animation: none !important; }
+  .vtm-scene-reset { transition: none !important; }
+}
