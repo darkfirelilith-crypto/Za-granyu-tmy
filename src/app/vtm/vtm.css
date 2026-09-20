@@ -6055,3 +6055,103 @@ button.vtm-die.vtm-die-selectable.selected {
   gap: 0.3rem;
   align-items: flex-start;
 }
+
+/* ============================================================
+   ВКЛАДКА «СОБЫТИЯ НОЧИ» (Codex) — случайные ночи для Рассказчика.
+   Карточки: за день / угроза / гость / знак / слух / возможность.
+   ============================================================ */
+
+.vtm-night-card {
+  background: linear-gradient(180deg, rgba(20, 8, 28, 0.6), rgba(23, 10, 13, 0.75));
+  border: 1px solid var(--vtm-line-soft);
+  border-left: 3px solid var(--vtm-violet-bright);
+  border-radius: 0.5rem;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+}
+.vtm-night-card:hover {
+  border-left-color: var(--vtm-violet-bright);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(80, 40, 110, 0.2);
+}
+.vtm-night-card::before {
+  content: "🌃";
+  position: absolute;
+  top: 0.4rem;
+  right: 0.6rem;
+  font-size: 2.2rem;
+  opacity: 0.06;
+  pointer-events: none;
+  color: var(--vtm-violet-bright);
+}
+
+.vtm-night-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border-bottom: 1px dashed var(--vtm-line-soft);
+  padding-bottom: 0.4rem;
+}
+
+.vtm-night-mood-badge {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.25rem;
+  background: rgba(122, 74, 140, 0.15);
+  color: var(--vtm-violet-bright);
+  border: 1px solid rgba(122, 74, 140, 0.35);
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-weight: 700;
+  text-align: right;
+  max-width: 12rem;
+}
+
+.vtm-night-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.vtm-night-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.3rem;
+}
+.vtm-night-day {
+  background: rgba(0, 0, 0, 0.15);
+  border-left: 2px solid var(--vtm-ash);
+}
+.vtm-night-threat {
+  background: rgba(194, 43, 48, 0.08);
+  border-left: 2px solid var(--vtm-blood-bright);
+}
+.vtm-night-visitor {
+  background: rgba(168, 134, 61, 0.08);
+  border-left: 2px solid var(--vtm-gold);
+}
+.vtm-night-sign {
+  background: rgba(122, 74, 140, 0.1);
+  border-left: 2px solid var(--vtm-violet-bright);
+}
+.vtm-night-rumor {
+  background: rgba(0, 0, 0, 0.12);
+  border-left: 2px solid var(--vtm-ash);
+}
+.vtm-night-opportunity {
+  background: rgba(143, 155, 122, 0.1);
+  border-left: 2px solid var(--vtm-ash);
+}
+.vtm-night-complication {
+  background: rgba(194, 43, 48, 0.08);
+  border-left: 2px solid var(--vtm-blood-bright);
+}

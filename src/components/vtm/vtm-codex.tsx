@@ -31,9 +31,10 @@ import { ALL_CHEAT_BLOCKS, CONDITIONS, CONDITION_CATEGORIES, CheatBlock } from "
 import { CLAN_BANES, BANE_BY_CLAN, BANE_RULES, BaneSeverityDef } from "@/lib/vtm-clanbanes";
 import { generateHuntScene, generateHuntBatch, HUNT_GENERATOR_INFO, HUNT_GEN_RULES, HuntScene } from "@/lib/vtm-huntgen";
 import { generateNpc, generateNpcBatch, NPC_GENERATOR_INFO, NPC_GEN_RULES, NpcCard } from "@/lib/vtm-npcgen";
+import { generateNightEvent, generateNightBatch, NIGHT_GENERATOR_INFO, NIGHT_GEN_RULES, NightEvent } from "@/lib/vtm-nightgen";
 import { WEREWOLF_INTRO, WEREWOLF_FORMS, WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_WAYWARD, WEREWOLF_COEXIST } from "@/lib/vtm-werewolf";
 
-type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "cheatsheet" | "banes" | "huntgen" | "npcgen" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
+type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "cheatsheet" | "banes" | "huntgen" | "npcgen" | "nightgen" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
 
 const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "clans", label: "Кланы", icon: "⛧" },
@@ -45,6 +46,7 @@ const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "banes", label: "Изъяны кланов", icon: "🦇" },
   { id: "huntgen", label: "Генератор охоты", icon: "🌙" },
   { id: "npcgen", label: "Генератор NPC", icon: "👤" },
+  { id: "nightgen", label: "События ночи", icon: "🌃" },
   { id: "thinblood", label: "Слабокровные", icon: "⚗" },
   { id: "mechanics", label: "Механики", icon: "🎲" },
   { id: "predators", label: "Стили охоты", icon: "🦅" },
@@ -97,6 +99,7 @@ export function CodexSection() {
       {tab === "banes" && <BanesCodex q={q} />}
       {tab === "huntgen" && <HuntGenCodex />}
       {tab === "npcgen" && <NpcGenCodex />}
+      {tab === "nightgen" && <NightGenCodex />}
       {tab === "thinblood" && <ThinbloodCodex q={q} />}
       {tab === "mechanics" && <MechanicsCodex q={q} />}
       {tab === "predators" && <PredatorsCodex q={q} />}
@@ -479,6 +482,121 @@ function ChronicleCodex({ q }: { q: string }) {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+// ---------- Генератор событий ночи ----------
+
+function NightEventCard({ ev }: { ev: NightEvent }) {
+  return (
+    <article className="vtm-night-card">
+      <div className="vtm-night-head">
+        <span className="vtm-display text-[1.02rem] text-[#a877c0]">🌃 Ночь хроники</span>
+        <span className="vtm-night-mood-badge">{ev.mood}</span>
+      </div>
+
+      <div className="vtm-night-body">
+        <div className="vtm-night-section vtm-night-day">
+          <span className="vtm-mini-label">☀ За день</span>
+          <p className="text-[0.83rem] text-[#c4ac9d] mt-0.5 leading-relaxed">{ev.dayEvent}</p>
+        </div>
+
+        <div className="vtm-night-section vtm-night-threat">
+          <span className="vtm-mini-label">⚠ Угроза ночи</span>
+          <p className="text-[0.83rem] text-[#e8a4a8] mt-0.5 leading-relaxed">{ev.nightThreat}</p>
+        </div>
+
+        <div className="vtm-night-section vtm-night-visitor">
+          <span className="vtm-mini-label">🚪 Гость</span>
+          <p className="text-[0.83rem] text-[#d9c7b6] mt-0.5 leading-relaxed">{ev.visitor}</p>
+        </div>
+
+        <div className="vtm-night-section vtm-night-sign">
+          <span className="vtm-mini-label">✨ Знак</span>
+          <p className="text-[0.83rem] text-[#a877c0] mt-0.5 italic leading-relaxed">{ev.sign}</p>
+        </div>
+
+        <div className="vtm-night-section vtm-night-rumor">
+          <span className="vtm-mini-label"> Whisper Слух</span>
+          <p className="text-[0.83rem] text-[#c4ac9d] mt-0.5 italic leading-relaxed">{ev.rumor}</p>
+        </div>
+
+        <div className="vtm-night-section vtm-night-opportunity">
+          <span className="vtm-mini-label">✓ Возможность</span>
+          <p className="text-[0.83rem] text-[#d9c7b6] mt-0.5 leading-relaxed">{ev.opportunity}</p>
+        </div>
+
+        <div className="vtm-night-section vtm-night-complication">
+          <span className="vtm-mini-label">⚠ Осложнение</span>
+          <p className="text-[0.83rem] text-[#e8a4a8] mt-0.5 leading-relaxed">{ev.complication}</p>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function NightGenCodex() {
+  const [events, setEvents] = useState<NightEvent[]>(() => generateNightBatch(2));
+  const [count, setCount] = useState(2);
+
+  const regen = (n?: number) => {
+    const c = n ?? count;
+    setEvents(generateNightBatch(c));
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Заголовок и контролы */}
+      <section className="vtm-panel p-3 md:p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <span className="vtm-label text-[0.85rem] text-[#d6a840]">🌃 Генератор событий ночи — для Рассказчика</span>
+          <span className="vtm-hint !text-[0.68rem]">{NIGHT_GENERATOR_INFO.totalCombinations.toLocaleString("ru-RU")} комбинаций</span>
+        </div>
+        <p className="vtm-hint !text-[0.78rem] mt-2">
+          Случайные события для каждой ночи хроники: что произошло за день, что грозит ночью, кто объявился, какой знак подан, какой слух пошёл, какая возможность, какое осложнение, настроение ночи.
+        </p>
+        <div className="flex items-center gap-2 mt-3 flex-wrap">
+          <span className="vtm-mini-label">Ночей:</span>
+          {[1, 2, 3].map((n) => (
+            <button
+              key={n}
+              onClick={() => { setCount(n); setEvents(generateNightBatch(n)); }}
+              className={`vtm-btn !py-1 !px-2.5 !text-[0.74rem] ${count === n ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
+              aria-pressed={count === n}
+            >
+              {n}
+            </button>
+          ))}
+          <button onClick={() => regen()} className="vtm-btn vtm-btn-blood !py-1.5 !px-4 !text-[0.8rem] ml-auto">
+            🌃 Сгенерировать ночь
+          </button>
+        </div>
+      </section>
+
+      {/* Сводные правила */}
+      {NIGHT_GEN_RULES.map((b) => (
+        <section key={b.title} className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.81rem] text-[#d6a840]">{b.title}</span>
+          </div>
+          <div className="p-4 space-y-2">
+            {b.body.map((line, i) => (
+              <p key={i} className="text-[0.85rem] leading-relaxed text-[#c4ac9d] flex gap-2">
+                <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
+                <span>{line}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* Сгенерированные ночи */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {events.map((ev) => (
+          <NightEventCard key={ev.id} ev={ev} />
+        ))}
+      </div>
     </div>
   );
 }
