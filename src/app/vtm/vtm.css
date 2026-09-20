@@ -6296,3 +6296,75 @@ button.vtm-die.vtm-die-selectable.selected {
   opacity: 0.15;
   pointer-events: none;
 }
+
+/* ============================================================
+   ВКЛАДКА «ИМЕНА» (Codex) — генератор имён Сородичей.
+   Компактные карточки: имя + клан-бейдж + происхождение.
+   ============================================================ */
+
+.vtm-name-card {
+  background: linear-gradient(180deg, rgba(31, 14, 18, 0.55), rgba(23, 10, 13, 0.7));
+  border: 1px solid var(--vtm-line-soft);
+  border-left: 3px solid var(--vtm-gold);
+  border-radius: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.vtm-name-card:hover {
+  border-left-color: var(--vtm-gold-bright);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 12px rgba(138, 26, 29, 0.15);
+}
+.vtm-name-card[data-clan="brujah"] { border-left-color: var(--vtm-blood-bright); }
+.vtm-name-card[data-clan="ventru"] { border-left-color: var(--vtm-gold); }
+.vtm-name-card[data-clan="gangrel"] { border-left-color: #8f9b7a; }
+.vtm-name-card[data-clan="malkavian"] { border-left-color: var(--vtm-violet-bright); }
+.vtm-name-card[data-clan="nosferatu"] { border-left-color: #7a4a3c; }
+.vtm-name-card[data-clan="toreador"] { border-left-color: #c96a2e; }
+.vtm-name-card[data-clan="tremere"] { border-left-color: #c22b30; }
+.vtm-name-card[data-clan="banu_haqim"] { border-left-color: #7a4a3c; }
+.vtm-name-card[data-clan="lasombra"] { border-left-color: #4a4a4a; }
+.vtm-name-card[data-clan="hecata"] { border-left-color: #6f7f9b; }
+.vtm-name-card[data-clan="ministry"] { border-left-color: #c96a2e; }
+.vtm-name-card[data-clan="ravnos"] { border-left-color: #a8863d; }
+.vtm-name-card[data-clan="salubri"] { border-left-color: #d6a840; }
+.vtm-name-card[data-clan="tzimisce"] { border-left-color: #7a4a8c; }
+.vtm-name-card[data-clan="caitiff"] { border-left-color: var(--vtm-ash); }
+.vtm-name-card[data-clan="thinblood"] { border-left-color: #9c8072; }
+
+.vtm-name-full {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.vtm-name-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.vtm-name-clan-badge {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.2rem;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--vtm-bone-dim);
+  border: 1px solid var(--vtm-line-soft);
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-weight: 700;
+}
+
+.vtm-name-origin {
+  font-size: 0.66rem;
+  color: var(--vtm-ash);
+  font-style: italic;
+}

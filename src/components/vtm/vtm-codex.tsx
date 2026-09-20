@@ -33,9 +33,10 @@ import { generateHuntScene, generateHuntBatch, HUNT_GENERATOR_INFO, HUNT_GEN_RUL
 import { generateNpc, generateNpcBatch, NPC_GENERATOR_INFO, NPC_GEN_RULES, NpcCard } from "@/lib/vtm-npcgen";
 import { generateNightEvent, generateNightBatch, NIGHT_GENERATOR_INFO, NIGHT_GEN_RULES, NightEvent } from "@/lib/vtm-nightgen";
 import { generateQuest, generateQuestBatch, QUEST_GENERATOR_INFO, QUEST_GEN_RULES, QuestCard } from "@/lib/vtm-questgen";
+import { generateName, generateNameBatch, NAME_GENERATOR_INFO, NAME_GEN_RULES, VampireName } from "@/lib/vtm-namegen";
 import { WEREWOLF_INTRO, WEREWOLF_FORMS, WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_WAYWARD, WEREWOLF_COEXIST } from "@/lib/vtm-werewolf";
 
-type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "cheatsheet" | "banes" | "huntgen" | "npcgen" | "nightgen" | "questgen" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
+type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "cheatsheet" | "banes" | "huntgen" | "npcgen" | "nightgen" | "questgen" | "namegen" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
 
 const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "clans", label: "Кланы", icon: "⛧" },
@@ -49,6 +50,7 @@ const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "npcgen", label: "Генератор NPC", icon: "👤" },
   { id: "nightgen", label: "События ночи", icon: "🌃" },
   { id: "questgen", label: "Квесты", icon: "📜" },
+  { id: "namegen", label: "Имена", icon: "✒" },
   { id: "thinblood", label: "Слабокровные", icon: "⚗" },
   { id: "mechanics", label: "Механики", icon: "🎲" },
   { id: "predators", label: "Стили охоты", icon: "🦅" },
@@ -103,6 +105,7 @@ export function CodexSection() {
       {tab === "npcgen" && <NpcGenCodex />}
       {tab === "nightgen" && <NightGenCodex />}
       {tab === "questgen" && <QuestGenCodex />}
+      {tab === "namegen" && <NameGenCodex />}
       {tab === "thinblood" && <ThinbloodCodex q={q} />}
       {tab === "mechanics" && <MechanicsCodex q={q} />}
       {tab === "predators" && <PredatorsCodex q={q} />}
@@ -485,6 +488,113 @@ function ChronicleCodex({ q }: { q: string }) {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+// ---------- Генератор имён Сородичей ----------
+
+function NameCardView({ n }: { n: VampireName }) {
+  return (
+    <article className="vtm-name-card" data-clan={n.clan}>
+      <div className="vtm-name-full">
+        <span className="vtm-display text-[1.02rem] text-[#d9c7b6]">{n.full}</span>
+      </div>
+      <div className="vtm-name-meta">
+        <span className="vtm-name-clan-badge">{n.clanName}</span>
+        <span className="vtm-name-origin">{n.origin}</span>
+      </div>
+    </article>
+  );
+}
+
+function NameGenCodex() {
+  const [names, setNames] = useState<VampireName[]>(() => generateNameBatch(10));
+  const [clanFilter, setClanFilter] = useState<string>("");
+
+  const clanOptions = [
+    { id: "", name: "Любой клан" },
+    { id: "brujah", name: "Бруха" },
+    { id: "ventru", name: "Вентру" },
+    { id: "gangrel", name: "Гангрел" },
+    { id: "malkavian", name: "Малкавиане" },
+    { id: "nosferatu", name: "Носферату" },
+    { id: "toreador", name: "Тореадор" },
+    { id: "tremere", name: "Тремер" },
+    { id: "banu_haqim", name: "Бану Хаким" },
+    { id: "lasombra", name: "Ласомбра" },
+    { id: "hecata", name: "Геката" },
+    { id: "ministry", name: "Министерство" },
+    { id: "ravnos", name: "Равнос" },
+    { id: "salubri", name: "Салюбри" },
+    { id: "tzimisce", name: "Тзимице" },
+    { id: "caitiff", name: "Каитиф" },
+    { id: "thinblood", name: "Слабокровный" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Заголовок и контролы */}
+      <section className="vtm-panel p-3 md:p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <span className="vtm-label text-[0.85rem] text-[#d6a840]">✒ Генератор имён Сородичей</span>
+          <span className="vtm-hint !text-[0.68rem]">{NAME_GENERATOR_INFO.totalCombinations.toLocaleString("ru-RU")} комбинаций</span>
+        </div>
+        <p className="vtm-hint !text-[0.78rem] mt-2">
+          Случайные имена вампиров по кланам: имя + фамилия (стилизованы) + опционально эпитет/прозвище (50%). Для создания персонажа и быстрого именования NPC.
+        </p>
+        <div className="flex items-center gap-2 mt-3 flex-wrap">
+          <span className="vtm-mini-label">Клан:</span>
+          <select
+            className="vtm-input !py-1 !px-2 !text-[0.78rem] max-w-[10rem]"
+            value={clanFilter}
+            onChange={(e) => setClanFilter(e.target.value)}
+            aria-label="Фильтр по клану"
+          >
+            {clanOptions.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <span className="vtm-mini-label ml-2">Сколько:</span>
+          {[5, 10, 20].map((n) => (
+            <button
+              key={n}
+              onClick={() => setNames(generateNameBatch(n, clanFilter || undefined))}
+              className={`vtm-btn !py-1 !px-2.5 !text-[0.74rem] ${names.length === n ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
+              aria-pressed={names.length === n}
+            >
+              {n}
+            </button>
+          ))}
+          <button onClick={() => setNames(generateNameBatch(names.length, clanFilter || undefined))} className="vtm-btn vtm-btn-blood !py-1.5 !px-4 !text-[0.8rem] ml-auto">
+            ✒ Сгенерировать имена
+          </button>
+        </div>
+      </section>
+
+      {/* Сводные правила */}
+      {NAME_GEN_RULES.map((b) => (
+        <section key={b.title} className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.81rem] text-[#d6a840]">{b.title}</span>
+          </div>
+          <div className="p-4 space-y-2">
+            {b.body.map((line, i) => (
+              <p key={i} className="text-[0.85rem] leading-relaxed text-[#c4ac9d] flex gap-2">
+                <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
+                <span>{line}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* Сгенерированные имена */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {names.map((n) => (
+          <NameCardView key={n.id} n={n} />
+        ))}
+      </div>
     </div>
   );
 }
