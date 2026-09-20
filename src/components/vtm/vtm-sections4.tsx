@@ -878,10 +878,12 @@ function BondsGraph({ data }: { data: VtmSheetData }) {
     );
   }
 
-  // Радиальное размещение узлов вокруг центра
+  // Радиальное размещение узлов вокруг центра.
+  // Радиус зависит от числа узлов: меньше узлов — меньше радиус (чтобы не разъезжались).
   const cx = 50; // %
   const cy = 50;
-  const radius = 38;
+  const radius = externalNodes.length <= 2 ? 28 : externalNodes.length <= 4 ? 33 : 38;
+
   const placed = externalNodes.map((n, i) => {
     const angle = (i / externalNodes.length) * Math.PI * 2 - Math.PI / 2;
     return {
@@ -890,13 +892,15 @@ function BondsGraph({ data }: { data: VtmSheetData }) {
       y: cy + Math.sin(angle) * radius,
     };
   });
-  const allNodes = [{ id: "self", name: selfName, kind: "self" as const, x: cx, y: cy }, ...placed];
+  const allNodes = [{ id: "self", name: selfName, kind: "self" as const, x: cx, y: cy, vinculum: undefined as boolean | undefined }, ...placed];
 
   // SVG-рёбра: кривые Безье с контрольной точкой, смещённой к центру
   type PlacedNode = (typeof allNodes)[number];
   type EdgePath = {
     from: PlacedNode;
     to: PlacedNode;
+    midX: number;
+    midY: number;
     bendX: number;
     bendY: number;
     key: string;
@@ -909,11 +913,11 @@ function BondsGraph({ data }: { data: VtmSheetData }) {
     const from = nodeById.get(e.from);
     const to = nodeById.get(e.to);
     if (!from || !to) return;
-    const mx = (from.x + to.x) / 2;
-    const my = (from.y + to.y) / 2;
-    const bendX = mx + (cx - mx) * 0.25;
-    const bendY = my + (cy - my) * 0.25;
-    edgePaths.push({ from, to, bendX, bendY, key: `e${i}`, type: e.type, label: e.label });
+    const midX = (from.x + to.x) / 2;
+    const midY = (from.y + to.y) / 2;
+    const bendX = midX + (cx - midX) * 0.2;
+    const bendY = midY + (cy - midY) * 0.2;
+    edgePaths.push({ from, to, midX, midY, bendX, bendY, key: `e${i}`, type: e.type, label: e.label });
   });
 
   return (
@@ -923,29 +927,36 @@ function BondsGraph({ data }: { data: VtmSheetData }) {
         <span className="vtm-hint !text-[0.72rem] ml-auto">{externalNodes.length} связей</span>
       </div>
       <div className="p-3 md:p-4">
-        <p className="vtm-hint !text-[0.73rem] mb-3">
-          Ты — в центре золотым узлом. <span className="text-[#c22b30]">Красные линии</span> — ты пил его кровь (тянет к нему). <span className="text-[#d6a840]">Золотые пунктиры</span> — он пил твою (твой подданный). <span className="text-[#a877c0]">Фиолетовые</span> — Винкулум.
-        </p>
+        <div className="vtm-bonds-legend">
+          <span className="vtm-bonds-legend-item"><span className="vtm-bonds-legend-dot self-dot" />Ты</span>
+          <span className="vtm-bonds-legend-item"><span className="vtm-bonds-legend-line regard-line" />Ты пил его кровь</span>
+          <span className="vtm-bonds-legend-item"><span className="vtm-bonds-legend-line regarded-line" />Он пил твою</span>
+          <span className="vtm-bonds-legend-item"><span className="vtm-bonds-legend-line vinculum-line" />Винкулум</span>
+        </div>
         <div className="vtm-bonds-graph" role="img" aria-label={`Схема связей: ${externalNodes.length} узлов вокруг персонажа`}>
-          <svg className="vtm-bonds-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          {/* SVG-рёбра — используют viewBox 0-100, xMidYMid meet для сохранения пропорций */}
+          <svg className="vtm-bonds-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
             {edgePaths.map((e) => (
-              <g key={e.key}>
-                <path
-                  className={`vtm-bonds-edge ${e.type}`}
-                  d={`M ${e.from.x} ${e.from.y} Q ${e.bendX} ${e.bendY} ${e.to.x} ${e.to.y}`}
-                />
-                {e.label && (
-                  <text
-                    className="vtm-bonds-edge-label"
-                    x={(e.from.x + e.to.x) / 2}
-                    y={(e.from.y + e.to.y) / 2 - 0.5}
-                  >
-                    {e.label}
-                  </text>
-                )}
-              </g>
+              <path
+                key={e.key}
+                className={`vtm-bonds-edge ${e.type}`}
+                d={`M ${e.from.x} ${e.from.y} Q ${e.bendX} ${e.bendY} ${e.to.x} ${e.to.y}`}
+              />
             ))}
           </svg>
+          {/* HTML-лейблы для рёбер — позиционируются в середине линии */}
+          {edgePaths.map((e) =>
+            e.label ? (
+              <div
+                key={`lbl-${e.key}`}
+                className={`vtm-bonds-edge-label ${e.type}`}
+                style={{ left: `${e.midX}%`, top: `${e.midY}%` }}
+              >
+                {e.label}
+              </div>
+            ) : null
+          )}
+          {/* HTML-узлы — позиционируются через left/top% */}
           {allNodes.map((n) => (
             <div
               key={n.id}
@@ -958,7 +969,7 @@ function BondsGraph({ data }: { data: VtmSheetData }) {
               >
                 {n.kind === "self" ? "👤" : n.name.slice(0, 2).toUpperCase()}
               </div>
-              <span className="vtm-bonds-node-label">{n.name.slice(0, 14)}{n.name.length > 14 ? "…" : ""}</span>
+              <span className="vtm-bonds-node-label">{n.name.length > 12 ? n.name.slice(0, 11) + "…" : n.name}</span>
             </div>
           ))}
         </div>

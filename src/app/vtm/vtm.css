@@ -5103,16 +5103,81 @@ button.vtm-die.vtm-die-selectable.selected {
 }
 
 /* === Визуальная схема связей (Bonds Graph) === */
+
+/* Легенда */
+.vtm-bonds-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.7rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--vtm-line-soft);
+  border-radius: 0.35rem;
+}
+.vtm-bonds-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--vtm-bone-dim);
+  white-space: nowrap;
+}
+.vtm-bonds-legend-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  display: inline-block;
+}
+.vtm-bonds-legend-dot.self-dot {
+  background: radial-gradient(circle, var(--vtm-gold-bright), var(--vtm-gold));
+  box-shadow: 0 0 4px rgba(214, 168, 64, 0.5);
+}
+.vtm-bonds-legend-line {
+  width: 1.4rem;
+  height: 2px;
+  display: inline-block;
+  border-radius: 1px;
+}
+.vtm-bonds-legend-line.regard-line {
+  background: var(--vtm-blood-bright);
+}
+.vtm-bonds-legend-line.regarded-line {
+  background: var(--vtm-gold);
+  border-top: 2px dashed var(--vtm-gold);
+  background: transparent;
+  height: 0;
+}
+.vtm-bonds-legend-line.vinculum-line {
+  background: var(--vtm-violet-bright);
+  border-top: 2px dotted var(--vtm-violet-bright);
+  background: transparent;
+  height: 0;
+}
+
+/* Граф-контейнер: квадратный, с запасом для узлов */
 .vtm-bonds-graph {
   position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 480px;
+  margin: 0 auto;
   background: radial-gradient(ellipse at center, rgba(138, 26, 29, 0.06), transparent 70%),
     rgba(0, 0, 0, 0.3);
   border: 1px solid var(--vtm-line-soft);
   border-radius: 0.5rem;
-  padding: 1rem;
-  min-height: 220px;
-  overflow: hidden;
+  padding: 1.5rem;
+  overflow: visible;
 }
+@media (max-width: 640px) {
+  .vtm-bonds-graph {
+    aspect-ratio: 4 / 5;
+    max-width: 100%;
+    padding: 1rem;
+  }
+}
+
+/* Dot-grid фон */
 .vtm-bonds-graph::before {
   content: "";
   position: absolute;
@@ -5120,53 +5185,11 @@ button.vtm-die.vtm-die-selectable.selected {
   background-image: radial-gradient(circle, rgba(168, 134, 61, 0.08) 1px, transparent 1px);
   background-size: 24px 24px;
   pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.4;
+  border-radius: 0.5rem;
 }
-.vtm-bonds-node {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
-  z-index: 2;
-}
-.vtm-bonds-node-core {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--vtm-font-display), Georgia, serif;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--vtm-bone);
-  border: 2px solid var(--vtm-blood-bright);
-  background: radial-gradient(circle, rgba(138, 26, 29, 0.6), rgba(23, 10, 13, 0.9));
-  box-shadow: 0 0 12px rgba(194, 43, 48, 0.4), inset 0 0 8px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.vtm-bonds-node-core.vinculum {
-  border-color: var(--vtm-violet-bright);
-  background: radial-gradient(circle, rgba(122, 74, 140, 0.5), rgba(40, 20, 60, 0.9));
-  box-shadow: 0 0 12px rgba(168, 119, 192, 0.45), inset 0 0 8px rgba(0, 0, 0, 0.4);
-}
-.vtm-bonds-node-core.self {
-  border-color: var(--vtm-gold-bright);
-  background: radial-gradient(circle, rgba(168, 134, 61, 0.6), rgba(60, 40, 10, 0.9));
-  box-shadow: 0 0 16px rgba(214, 168, 64, 0.5), inset 0 0 8px rgba(0, 0, 0, 0.4);
-  width: 3.5rem;
-  height: 3.5rem;
-}
-.vtm-bonds-node-label {
-  font-size: 0.7rem;
-  color: var(--vtm-bone-dim);
-  max-width: 5rem;
-  text-align: center;
-  line-height: 1.2;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-}
+
+/* SVG-слой рёбер */
 .vtm-bonds-svg {
   position: absolute;
   inset: 0;
@@ -5174,39 +5197,151 @@ button.vtm-die.vtm-die-selectable.selected {
   height: 100%;
   pointer-events: none;
   z-index: 1;
+  overflow: visible;
 }
+
+/* Рёбра */
 .vtm-bonds-edge {
-  stroke-width: 1.5;
+  stroke-width: 0.6;
   fill: none;
-  opacity: 0.55;
+  opacity: 0.6;
   transition: opacity 0.2s ease, stroke-width 0.2s ease;
+  vector-effect: non-scaling-stroke;
 }
 .vtm-bonds-edge.regard {
   stroke: var(--vtm-blood-bright);
 }
 .vtm-bonds-edge.regarded {
   stroke: var(--vtm-gold);
-  stroke-dasharray: 4 3;
+  stroke-dasharray: 1.5 1;
 }
 .vtm-bonds-edge.vinculum {
   stroke: var(--vtm-violet-bright);
-  stroke-dasharray: 2 2;
+  stroke-dasharray: 0.8 0.8;
 }
 .vtm-bonds-edge:hover {
   opacity: 0.9;
-  stroke-width: 2.5;
+  stroke-width: 1;
 }
+
+/* HTML-лейблы рёбер — позиционируются абсолютно в середине линии */
 .vtm-bonds-edge-label {
-  fill: var(--vtm-ash);
-  font-size: 9px;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 0.62rem;
   font-family: var(--vtm-font-display), Georgia, serif;
-  text-anchor: middle;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.2rem;
+  background: rgba(7, 2, 4, 0.85);
+  border: 1px solid var(--vtm-line-soft);
+  white-space: nowrap;
+  z-index: 2;
+  pointer-events: none;
+  letter-spacing: 0.02em;
 }
+.vtm-bonds-edge-label.regard {
+  color: var(--vtm-blood-bright);
+  border-color: rgba(194, 43, 48, 0.35);
+}
+.vtm-bonds-edge-label.regarded {
+  color: var(--vtm-gold-bright);
+  border-color: rgba(168, 134, 61, 0.35);
+}
+.vtm-bonds-edge-label.vinculum {
+  color: var(--vtm-violet-bright);
+  border-color: rgba(122, 74, 140, 0.35);
+}
+
+/* Узлы графа */
+.vtm-bonds-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  z-index: 3;
+}
+.vtm-bonds-node-core {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--vtm-bone);
+  border: 2px solid var(--vtm-blood-bright);
+  background: radial-gradient(circle, rgba(138, 26, 29, 0.6), rgba(23, 10, 13, 0.95));
+  box-shadow: 0 0 10px rgba(194, 43, 48, 0.35), inset 0 0 6px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.vtm-bonds-node-core:hover {
+  transform: scale(1.12);
+  box-shadow: 0 0 14px rgba(194, 43, 48, 0.5), inset 0 0 6px rgba(0, 0, 0, 0.4);
+}
+.vtm-bonds-node-core.vinculum {
+  border-color: var(--vtm-violet-bright);
+  background: radial-gradient(circle, rgba(122, 74, 140, 0.5), rgba(40, 20, 60, 0.95));
+  box-shadow: 0 0 10px rgba(168, 119, 192, 0.4), inset 0 0 6px rgba(0, 0, 0, 0.4);
+}
+.vtm-bonds-node-core.self {
+  border-color: var(--vtm-gold-bright);
+  background: radial-gradient(circle, rgba(168, 134, 61, 0.6), rgba(60, 40, 10, 0.95));
+  box-shadow: 0 0 14px rgba(214, 168, 64, 0.45), inset 0 0 6px rgba(0, 0, 0, 0.4);
+  width: 3rem;
+  height: 3rem;
+  font-size: 1rem;
+}
+.vtm-bonds-node-core.self:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 18px rgba(214, 168, 64, 0.55), inset 0 0 6px rgba(0, 0, 0, 0.4);
+}
+.vtm-bonds-node-label {
+  font-size: 0.65rem;
+  color: var(--vtm-bone-dim);
+  max-width: 4.5rem;
+  text-align: center;
+  line-height: 1.15;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .vtm-bonds-node-core {
+    width: 2.2rem;
+    height: 2.2rem;
+    font-size: 0.68rem;
+  }
+  .vtm-bonds-node-core.self {
+    width: 2.6rem;
+    height: 2.6rem;
+    font-size: 0.85rem;
+  }
+  .vtm-bonds-node-label {
+    font-size: 0.58rem;
+    max-width: 3.5rem;
+  }
+  .vtm-bonds-edge-label {
+    font-size: 0.55rem;
+    padding: 0.05rem 0.25rem;
+  }
+  .vtm-bonds-legend {
+    gap: 0.3rem 0.6rem;
+  }
+  .vtm-bonds-legend-item {
+    font-size: 0.62rem;
+  }
+}
+
 .vtm-bonds-empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 180px;
+  min-height: 140px;
   color: var(--vtm-ash);
   font-style: italic;
   font-size: 0.85rem;
