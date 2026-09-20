@@ -6155,3 +6155,144 @@ button.vtm-die.vtm-die-selectable.selected {
   background: rgba(194, 43, 48, 0.08);
   border-left: 2px solid var(--vtm-blood-bright);
 }
+
+/* ============================================================
+   ВКЛАДКА «КВЕСТЫ» (Codex) — генератор заданий для Рассказчика.
+   Карточки: заказчик, цель, тип, награда, риск, срок, поворот.
+   ============================================================ */
+
+.vtm-quest-card {
+  background: linear-gradient(180deg, rgba(31, 14, 18, 0.6), rgba(23, 10, 13, 0.75));
+  border: 1px solid var(--vtm-line-soft);
+  border-left: 3px solid var(--vtm-gold);
+  border-radius: 0.5rem;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+}
+.vtm-quest-card:hover {
+  border-left-color: var(--vtm-gold-bright);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(138, 26, 29, 0.2);
+}
+.vtm-quest-card::before {
+  content: "📜";
+  position: absolute;
+  top: 0.4rem;
+  right: 0.6rem;
+  font-size: 2.2rem;
+  opacity: 0.06;
+  pointer-events: none;
+  color: var(--vtm-gold);
+}
+
+.vtm-quest-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border-bottom: 1px dashed var(--vtm-line-soft);
+  padding-bottom: 0.4rem;
+}
+
+.vtm-quest-diff {
+  font-size: 0.82rem;
+  color: var(--vtm-blood-bright);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.vtm-quest-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.vtm-quest-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.3rem;
+}
+.vtm-quest-client {
+  background: rgba(168, 134, 61, 0.08);
+  border-left: 2px solid var(--vtm-gold);
+}
+.vtm-quest-target {
+  background: rgba(194, 43, 48, 0.08);
+  border-left: 2px solid var(--vtm-blood-bright);
+}
+
+.vtm-quest-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.vtm-quest-tag {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--vtm-line-soft);
+  border-radius: 0.25rem;
+  color: var(--vtm-bone-dim);
+}
+.vtm-quest-deadline {
+  color: var(--vtm-gold-bright);
+  border-color: rgba(168, 134, 61, 0.35);
+}
+
+.vtm-quest-outcomes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.vtm-quest-outcome {
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.vtm-quest-outcome.success {
+  background: rgba(143, 155, 122, 0.1);
+  border-left: 2px solid var(--vtm-ash);
+}
+.vtm-quest-outcome.failure {
+  background: rgba(194, 43, 48, 0.1);
+  border-left: 2px solid var(--vtm-blood-bright);
+}
+
+@media (max-width: 480px) {
+  .vtm-quest-outcomes {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vtm-quest-twist {
+  background: linear-gradient(90deg, rgba(122, 74, 140, 0.12), transparent);
+  border-left: 3px solid var(--vtm-violet-bright);
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  position: relative;
+  overflow: hidden;
+}
+.vtm-quest-twist::before {
+  content: "🎭";
+  position: absolute;
+  top: 0.2rem;
+  right: 0.4rem;
+  font-size: 1rem;
+  opacity: 0.15;
+  pointer-events: none;
+}

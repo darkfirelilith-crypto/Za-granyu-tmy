@@ -32,9 +32,10 @@ import { CLAN_BANES, BANE_BY_CLAN, BANE_RULES, BaneSeverityDef } from "@/lib/vtm
 import { generateHuntScene, generateHuntBatch, HUNT_GENERATOR_INFO, HUNT_GEN_RULES, HuntScene } from "@/lib/vtm-huntgen";
 import { generateNpc, generateNpcBatch, NPC_GENERATOR_INFO, NPC_GEN_RULES, NpcCard } from "@/lib/vtm-npcgen";
 import { generateNightEvent, generateNightBatch, NIGHT_GENERATOR_INFO, NIGHT_GEN_RULES, NightEvent } from "@/lib/vtm-nightgen";
+import { generateQuest, generateQuestBatch, QUEST_GENERATOR_INFO, QUEST_GEN_RULES, QuestCard } from "@/lib/vtm-questgen";
 import { WEREWOLF_INTRO, WEREWOLF_FORMS, WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_WAYWARD, WEREWOLF_COEXIST } from "@/lib/vtm-werewolf";
 
-type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "cheatsheet" | "banes" | "huntgen" | "npcgen" | "nightgen" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
+type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "cheatsheet" | "banes" | "huntgen" | "npcgen" | "nightgen" | "questgen" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
 
 const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "clans", label: "Кланы", icon: "⛧" },
@@ -47,6 +48,7 @@ const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "huntgen", label: "Генератор охоты", icon: "🌙" },
   { id: "npcgen", label: "Генератор NPC", icon: "👤" },
   { id: "nightgen", label: "События ночи", icon: "🌃" },
+  { id: "questgen", label: "Квесты", icon: "📜" },
   { id: "thinblood", label: "Слабокровные", icon: "⚗" },
   { id: "mechanics", label: "Механики", icon: "🎲" },
   { id: "predators", label: "Стили охоты", icon: "🦅" },
@@ -100,6 +102,7 @@ export function CodexSection() {
       {tab === "huntgen" && <HuntGenCodex />}
       {tab === "npcgen" && <NpcGenCodex />}
       {tab === "nightgen" && <NightGenCodex />}
+      {tab === "questgen" && <QuestGenCodex />}
       {tab === "thinblood" && <ThinbloodCodex q={q} />}
       {tab === "mechanics" && <MechanicsCodex q={q} />}
       {tab === "predators" && <PredatorsCodex q={q} />}
@@ -482,6 +485,116 @@ function ChronicleCodex({ q }: { q: string }) {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+// ---------- Генератор квестов ----------
+
+function QuestCardView({ q }: { q: QuestCard }) {
+  const diffDots = "●".repeat(q.difficulty) + "○".repeat(5 - q.difficulty);
+  return (
+    <article className="vtm-quest-card">
+      <div className="vtm-quest-head">
+        <span className="vtm-display text-[1.05rem] text-[#d6a840]">📜 {q.title}</span>
+        <span className="vtm-quest-diff" title={`Сложность ${q.difficulty}/5`}>{diffDots}</span>
+      </div>
+
+      <div className="vtm-quest-body">
+        <div className="vtm-quest-section vtm-quest-client">
+          <span className="vtm-mini-label">🤝 Заказчик</span>
+          <p className="text-[0.88rem] text-[#d9c7b6] font-semibold mt-0.5">{q.client}</p>
+          <p className="text-[0.8rem] text-[#c4ac9d] italic mt-1 leading-relaxed">{q.clientDesc}</p>
+        </div>
+
+        <div className="vtm-quest-section vtm-quest-target">
+          <span className="vtm-mini-label">🎯 Цель</span>
+          <p className="text-[0.88rem] text-[#e8a4a8] font-semibold mt-0.5">{q.target}</p>
+          <p className="text-[0.8rem] text-[#c4ac9d] italic mt-1 leading-relaxed">{q.targetDesc}</p>
+        </div>
+
+        <div className="vtm-quest-meta">
+          <span className="vtm-quest-tag">Тип: {q.type}</span>
+          <span className="vtm-quest-tag vtm-quest-deadline">⏱ {q.deadline}</span>
+        </div>
+
+        <div className="vtm-quest-outcomes">
+          <div className="vtm-quest-outcome success">
+            <span className="vtm-mini-label">✓ Награда</span>
+            <p className="text-[0.8rem] text-[#d9c7b6] mt-0.5 leading-relaxed">{q.reward}</p>
+          </div>
+          <div className="vtm-quest-outcome failure">
+            <span className="vtm-mini-label">⚠ Риск</span>
+            <p className="text-[0.8rem] text-[#e8a4a8] mt-0.5 leading-relaxed">{q.risk}</p>
+          </div>
+        </div>
+
+        {q.twist && (
+          <div className="vtm-quest-twist">
+            <span className="vtm-mini-label">🎭 Поворот</span>
+            <p className="text-[0.82rem] text-[#a877c0] mt-0.5 italic leading-relaxed">{q.twist}</p>
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function QuestGenCodex() {
+  const [quests, setQuests] = useState<QuestCard[]>(() => generateQuestBatch(3));
+
+  return (
+    <div className="space-y-4">
+      {/* Заголовок и контролы */}
+      <section className="vtm-panel p-3 md:p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <span className="vtm-label text-[0.85rem] text-[#d6a840]">📜 Генератор квестов — для Рассказчика</span>
+          <span className="vtm-hint !text-[0.68rem]">{QUEST_GENERATOR_INFO.totalCombinations.toLocaleString("ru-RU")} комбинаций</span>
+        </div>
+        <p className="vtm-hint !text-[0.78rem] mt-2">
+          Случайные задания для хроники: заказчик, цель, тип, сложность 1-5, награда за успех, риск при провале, срок выполнения, иногда — поворот.
+        </p>
+        <div className="flex items-center gap-2 mt-3 flex-wrap">
+          <span className="vtm-mini-label">Квестов:</span>
+          {[1, 3, 5, 8].map((n) => (
+            <button
+              key={n}
+              onClick={() => setQuests(generateQuestBatch(n))}
+              className={`vtm-btn !py-1 !px-2.5 !text-[0.74rem] ${quests.length === n ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
+              aria-pressed={quests.length === n}
+            >
+              {n}
+            </button>
+          ))}
+          <button onClick={() => setQuests(generateQuestBatch(quests.length))} className="vtm-btn vtm-btn-blood !py-1.5 !px-4 !text-[0.8rem] ml-auto">
+            📜 Сгенерировать квесты
+          </button>
+        </div>
+      </section>
+
+      {/* Сводные правила */}
+      {QUEST_GEN_RULES.map((b) => (
+        <section key={b.title} className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.81rem] text-[#d6a840]">{b.title}</span>
+          </div>
+          <div className="p-4 space-y-2">
+            {b.body.map((line, i) => (
+              <p key={i} className="text-[0.85rem] leading-relaxed text-[#c4ac9d] flex gap-2">
+                <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
+                <span>{line}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* Сгенерированные квесты */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {quests.map((q) => (
+          <QuestCardView key={q.id} q={q} />
+        ))}
+      </div>
     </div>
   );
 }
