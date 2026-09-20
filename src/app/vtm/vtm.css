@@ -5433,3 +5433,195 @@ button.vtm-die.vtm-die-selectable.selected {
 .vtm-line-soft {
   border-color: var(--vtm-line-soft);
 }
+
+/* ============================================================
+   ВКЛАДКА «ШПАРГАЛКА» (Codex) — быстрые правила для игры.
+   Разворачивающиеся карточки с таблицами + статус-эффекты.
+   ============================================================ */
+
+.vtm-cheat-card {
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.vtm-cheat-card:hover {
+  border-color: rgba(168, 134, 61, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.vtm-cheat-card .vtm-panel-head {
+  border-bottom: 1px dashed var(--vtm-line-soft);
+}
+
+.vtm-cheat-body {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.3));
+}
+
+.vtm-cheat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.vtm-cheat-table tr {
+  border-bottom: 1px dotted var(--vtm-line-soft);
+  transition: background 0.15s ease;
+}
+.vtm-cheat-table tr:hover {
+  background: rgba(168, 134, 61, 0.06);
+}
+.vtm-cheat-table tr:last-child {
+  border-bottom: none;
+}
+.vtm-cheat-table td {
+  padding: 0.45rem 0.5rem;
+  vertical-align: top;
+}
+.vtm-cheat-label {
+  width: 32%;
+  color: var(--vtm-gold-bright);
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+.vtm-cheat-value {
+  color: var(--vtm-bone);
+  width: 38%;
+}
+.vtm-cheat-note {
+  color: var(--vtm-ash);
+  font-size: 0.74rem;
+  font-style: italic;
+  width: 30%;
+}
+@media (max-width: 768px) {
+  .vtm-cheat-table,
+  .vtm-cheat-table tbody,
+  .vtm-cheat-table tr,
+  .vtm-cheat-table td {
+    display: block;
+    width: 100%;
+  }
+  .vtm-cheat-table tr {
+    padding: 0.4rem 0;
+    border-bottom: 1px dashed var(--vtm-line-soft);
+  }
+  .vtm-cheat-table td {
+    padding: 0.15rem 0;
+  }
+  .vtm-cheat-label,
+  .vtm-cheat-value,
+  .vtm-cheat-note {
+    width: 100%;
+    font-size: 0.78rem;
+  }
+  .vtm-cheat-note {
+    font-style: italic;
+    color: var(--vtm-ash);
+  }
+}
+
+/* --- Статус-эффекты (в Codex) --- */
+.vtm-condition-card {
+  background: linear-gradient(180deg, rgba(31, 14, 18, 0.5), rgba(23, 10, 13, 0.65));
+  border: 1px solid var(--vtm-line-soft);
+  border-left: 3px solid var(--vtm-line);
+  border-radius: 0.4rem;
+  padding: 0.55rem 0.7rem;
+  transition: border-color 0.2s ease, transform 0.15s ease;
+}
+.vtm-condition-card.cat-physical {
+  border-left-color: var(--vtm-blood-bright);
+}
+.vtm-condition-card.cat-mental {
+  border-left-color: var(--vtm-violet-bright);
+}
+.vtm-condition-card.cat-supernatural {
+  border-left-color: var(--vtm-gold);
+}
+.vtm-condition-card.cat-social {
+  border-left-color: #6f7f9b;
+}
+.vtm-condition-card:hover {
+  transform: translateY(-1px);
+}
+
+/* --- Трекер статус-эффектов в листе (вкладка Узы) --- */
+.vtm-cond-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(31, 14, 18, 0.5), rgba(23, 10, 13, 0.7));
+  border: 1px solid var(--vtm-line-soft);
+  border-left: 3px solid var(--vtm-blood-bright);
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  transition: opacity 0.2s ease, border-color 0.2s ease;
+}
+.vtm-cond-row.inactive {
+  opacity: 0.5;
+  border-left-color: var(--vtm-line);
+}
+.vtm-cond-row.active {
+  border-left-color: var(--vtm-blood-bright);
+}
+
+.vtm-cond-toggle {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--vtm-line-soft);
+  border-radius: 0.3rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+}
+.vtm-cond-toggle:hover {
+  background: rgba(194, 43, 48, 0.2);
+  border-color: var(--vtm-blood-bright);
+}
+.vtm-cond-row.inactive .vtm-cond-toggle {
+  background: rgba(0, 0, 0, 0.4);
+}
+.vtm-cond-row.inactive .vtm-cond-toggle:hover {
+  background: rgba(168, 134, 61, 0.15);
+  border-color: var(--vtm-gold);
+}
+
+.vtm-cond-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.vtm-cond-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.vtm-cond-name {
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.45rem !important;
+}
+.vtm-cond-note {
+  font-size: 0.74rem;
+  font-style: italic;
+  color: var(--vtm-bone-dim);
+  padding: 0.25rem 0.45rem !important;
+}
+
+.vtm-cond-picker {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px dashed var(--vtm-line-soft);
+  border-radius: 0.4rem;
+  padding: 0.75rem;
+}
+.vtm-cond-picker .vtm-btn:hover {
+  border-color: var(--vtm-blood-bright);
+  background: rgba(194, 43, 48, 0.12);
+}

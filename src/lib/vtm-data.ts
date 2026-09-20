@@ -128,6 +128,19 @@ export interface VtmSheetData {
   boons?: VtmBoonEntry[];        // Долги престации
   convictions?: VtmConvictionEntry[]; // Убеждения и Якоря (структурированно)
   torpor?: VtmTorporState;       // Состояние торпора
+  conditions?: VtmConditionEntry[]; // Активные статус-эффекты (трекер на сцену)
+}
+
+// ---------- Статус-эффекты (Conditions tracker) ----------
+// Временные состояния, действующие на Сородича в сцене: ранен, оглушён,
+// в Френзии, под Узами, опозорен и т.д. Каждый — с заметкой и длительностью.
+
+export interface VtmConditionEntry {
+  id: string;
+  condId: string;     // id из CONDITIONS (vtm-cheatsheet.ts) или своя запись
+  name: string;       // отображаемое имя (для своих записей)
+  note: string;       // заметка: источник, длительность, детали
+  active: boolean;    // активно ли сейчас (можно деактивировать не удаляя)
 }
 
 // ---------- Резонанс крови ----------
@@ -1863,6 +1876,7 @@ export function emptySheet(): VtmSheetData {
     boons: [],
     convictions: [],
     torpor: { inTorpor: false, since: "", humanity: 7, note: "" },
+    conditions: [],
   };
 }
 
@@ -2185,6 +2199,20 @@ export function normalizeSheet(input: unknown): VtmSheetData {
       humanity: clampInt(tp.humanity, 0, 10),
       note: asString(tp.note),
     };
+  }
+
+  // --- Статус-эффекты (conditions) ---
+  if (Array.isArray(raw.conditions)) {
+    base.conditions = raw.conditions
+      .filter((c: any) => c && typeof c === "object")
+      .slice(0, 20)
+      .map((c: any, idx: number) => ({
+        id: asString(c.id) || vtmUid(`cond-${idx}`),
+        condId: asString(c.condId),
+        name: asString(c.name) || "Состояние",
+        note: asString(c.note),
+        active: c.active !== false,
+      }));
   }
 
   return base;

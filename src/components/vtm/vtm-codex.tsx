@@ -27,9 +27,10 @@ import { V20_BLOCKS } from "@/lib/vtm-v20";
 import { BLOOD_SORCERY_RITUALS, OBLIVION_CEREMONIES, RITUAL_RULES, RitualDef } from "@/lib/vtm-rituals";
 import { CHRONICLE_TENETS, CONVICTION_EXAMPLES, FRENZY_TYPES, COMPULSIONS, FRENZY_RULES } from "@/lib/vtm-chronicle";
 import { DYSCRASIAS, RESONANCE_RULES, DyscrasiaDef } from "@/lib/vtm-dyscrasias";
+import { ALL_CHEAT_BLOCKS, CONDITIONS, CONDITION_CATEGORIES, CheatBlock } from "@/lib/vtm-cheatsheet";
 import { WEREWOLF_INTRO, WEREWOLF_FORMS, WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_WAYWARD, WEREWOLF_COEXIST } from "@/lib/vtm-werewolf";
 
-type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
+type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "cheatsheet" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
 
 const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "clans", label: "Кланы", icon: "⛧" },
@@ -37,6 +38,7 @@ const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "rituals", label: "Ритуалы", icon: "🔮" },
   { id: "chronicle", label: "Хроника", icon: "⚖" },
   { id: "resonances", label: "Резонансы", icon: "🩸" },
+  { id: "cheatsheet", label: "Шпаргалка", icon: "📋" },
   { id: "thinblood", label: "Слабокровные", icon: "⚗" },
   { id: "mechanics", label: "Механики", icon: "🎲" },
   { id: "predators", label: "Стили охоты", icon: "🦅" },
@@ -85,6 +87,7 @@ export function CodexSection() {
       {tab === "rituals" && <RitualsCodex q={q} />}
       {tab === "chronicle" && <ChronicleCodex q={q} />}
       {tab === "resonances" && <ResonancesCodex q={q} />}
+      {tab === "cheatsheet" && <CheatSheetCodex q={q} />}
       {tab === "thinblood" && <ThinbloodCodex q={q} />}
       {tab === "mechanics" && <MechanicsCodex q={q} />}
       {tab === "predators" && <PredatorsCodex q={q} />}
@@ -465,6 +468,106 @@ function ChronicleCodex({ q }: { q: string }) {
               <p className="vtm-hint !text-[0.66rem] italic mt-1">⏱ {c.duration} · 📜 {c.source}</p>
             </article>
           ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ---------- Шпаргалка (Cheat Sheet) ----------
+
+function CheatBlockCard({ b }: { b: CheatBlock }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <article className="vtm-panel vtm-cheat-card">
+      <button
+        className="w-full vtm-panel-head text-left cursor-pointer"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls={`cheat-${b.id}`}
+      >
+        <span className="vtm-display text-[0.98rem] text-[#d6a840]">{b.icon} {b.title}</span>
+        <span className="vtm-hint !text-[0.66rem] ml-auto">{open ? "▴" : "▾"}</span>
+      </button>
+      {b.intro && !open && (
+        <p className="vtm-hint !text-[0.78rem] px-4 pb-2 not-italic">{b.intro}</p>
+      )}
+      {open && (
+        <div id={`cheat-${b.id}`} className="p-3 md:p-4 space-y-1.5 vtm-cheat-body">
+          {b.intro && <p className="vtm-hint !text-[0.78rem] mb-2 not-italic">{b.intro}</p>}
+          <table className="vtm-cheat-table">
+            <tbody>
+              {b.rows.map((r, i) => (
+                <tr key={i}>
+                  <td className="vtm-cheat-label">{r.label}</td>
+                  <td className="vtm-cheat-value">{r.value}</td>
+                  {r.note && <td className="vtm-cheat-note">{r.note}</td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="vtm-hint !text-[0.66rem] italic mt-2">📜 {b.source}</p>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function CheatSheetCodex({ q }: { q: string }) {
+  const blocks = ALL_CHEAT_BLOCKS.filter((b) =>
+    !q || `${b.title} ${b.intro ?? ""} ${b.rows.map((r) => `${r.label} ${r.value} ${r.note ?? ""}`).join(" ")}`.toLowerCase().includes(q)
+  );
+
+  return (
+    <div className="space-y-4">
+      <section className="vtm-panel p-3 md:p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <span className="vtm-label text-[0.85rem] text-[#d6a840]">📋 Шпаргалка — быстрые правила для игры</span>
+          <span className="vtm-hint !text-[0.72rem]">{blocks.length} из {ALL_CHEAT_BLOCKS.length} блоков</span>
+        </div>
+        <p className="vtm-hint !text-[0.78rem] mt-2">
+          Все ключевые правила в одном месте: броски костей, урон и бой, социальный бой, Человечность/Раскаяние, Сила Крови, охота, Френзия, Маскарад. Разворачивай нужный блок — внутри таблица с механикой.
+        </p>
+      </section>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {blocks.map((b) => (
+          <CheatBlockCard key={b.id} b={b} />
+        ))}
+      </div>
+      {blocks.length === 0 && (
+        <p className="vtm-hint text-center py-6">Шпаргалка молчит по этому запросу.</p>
+      )}
+
+      {/* Каталог статус-эффектов */}
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#d6a840]">⚡ Статус-эффекты (Conditions)</span>
+          <span className="vtm-hint !text-[0.68rem] uppercase ml-auto">{CONDITIONS.length} состояний</span>
+        </div>
+        <div className="p-3 md:p-4 space-y-3">
+          {CONDITION_CATEGORIES.map((cat) => {
+            const catConditions = CONDITIONS.filter((c) => c.category === cat.id);
+            if (catConditions.length === 0) return null;
+            return (
+              <div key={cat.id}>
+                <p className="vtm-display text-[0.82rem] text-[#a8863d] mb-2">{cat.icon} {cat.name}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {catConditions.map((c) => (
+                    <article key={c.id} className={`vtm-condition-card cat-${c.category}`}>
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="vtm-display text-[0.88rem]">{c.icon} {c.name}</span>
+                      </div>
+                      <p className="text-[0.8rem] text-[#d9c7b6] leading-relaxed mt-1">{c.effect}</p>
+                      <p className="vtm-hint !text-[0.68rem] mt-1">
+                        <span className="text-[#9c8072]">⏱ {c.duration}</span> · <span className="text-[#9c8072]">📜 {c.source}</span>
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
     </div>

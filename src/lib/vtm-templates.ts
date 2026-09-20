@@ -91,6 +91,7 @@ export function buildTemplateSheet(templateId: string): VtmSheetData | null {
     boons: [],
     convictions: [],
     torpor: { inTorpor: false, since: "", humanity: s.trackers.humanity, note: "" },
+    conditions: [],
   };
 }
 

@@ -15,12 +15,14 @@ import {
   VtmCoterieMember,
   VtmBoonEntry,
   VtmConvictionEntry,
+  VtmConditionEntry,
   CLANS,
   SECTS,
   ADVANTAGE_LIBRARY,
 } from "@/lib/vtm-data";
 import { DerivedStats } from "@/lib/vtm-calc";
 import { vtmUid } from "@/lib/vtm-id";
+import { CONDITIONS, CONDITION_BY_ID, CONDITION_CATEGORIES } from "@/lib/vtm-cheatsheet";
 
 // ---------- Небольшие помощники интерфейса ----------
 
@@ -965,6 +967,181 @@ function BondsGraph({ data }: { data: VtmSheetData }) {
   );
 }
 
+// ============================================================
+// СТАТУС-ЭФФЕКТЫ (Conditions tracker) — активные состояния сцены.
+// Быстрый трекер: выбираешь состояние из каталога → добавляешь →
+// видно на листе. Можно деактивировать (active=false) или удалить.
+// ============================================================
+
+function ConditionsBlock({
+  data,
+  mutate,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (d: VtmSheetData) => void) => void;
+}) {
+  const [showPicker, setShowPicker] = useState(false);
+  const list = data.conditions ?? [];
+  const activeCount = list.filter((c) => c.active).length;
+
+  const addCondition = (condId: string) => {
+    const def = CONDITION_BY_ID.get(condId);
+    const entry: VtmConditionEntry = {
+      id: vtmUid("cond"),
+      condId,
+      name: def?.name || "Состояние",
+      note: def ? `${def.effect}` : "",
+      active: true,
+    };
+    mutate((d) => {
+      if (!d.conditions) d.conditions = [];
+      if (d.conditions.length >= 15) {
+        toast.warning("Не больше 15 активных состояний — очисти старые.");
+        return;
+      }
+      d.conditions.push(entry);
+    });
+    setShowPicker(false);
+  };
+
+  const addCustom = () => {
+    const entry: VtmConditionEntry = {
+      id: vtmUid("cond"),
+      condId: "",
+      name: "Своё состояние",
+      note: "",
+      active: true,
+    };
+    mutate((d) => {
+      if (!d.conditions) d.conditions = [];
+      d.conditions.push(entry);
+    });
+    setShowPicker(false);
+  };
+
+  return (
+    <section className="vtm-panel vtm-uz-panel" aria-label="Статус-эффекты">
+      <div className="vtm-panel-head">
+        <span className="vtm-label text-[0.81rem] text-[#d6a840]">⚡ Статус-эффекты</span>
+        <span className="vtm-hint !text-[0.72rem] ml-auto">{activeCount} активных · {list.length} всего</span>
+      </div>
+      <div className="p-3 md:p-4 space-y-3">
+        <p className="vtm-hint !text-[0.75rem]">
+          Временные состояния сцены: ранен, оглушён, в Френзии, под Узами, опозорен. Добавляй из каталога или своё — и отслеживай, пока действует. Деактивируй, не удаляя, чтобы сохранить историю.
+        </p>
+
+        {/* Активные состояния */}
+        {list.length === 0 ? (
+          <p className="vtm-hint text-center py-4">
+            Сородич в порядке. Ни ран, ни Уз, ни Френзии. Пока что.
+          </p>
+        ) : (
+          <div className="space-y-2 max-h-72 overflow-y-auto vtm-scroll pr-1">
+            {list.map((c) => {
+              const def = c.condId ? CONDITION_BY_ID.get(c.condId) : null;
+              const icon = def?.icon || "•";
+              return (
+                <div key={c.id} className={`vtm-cond-row ${c.active ? "active" : "inactive"}`}>
+                  <button
+                    onClick={() =>
+                      mutate((d) => {
+                        const t = d.conditions?.find((x) => x.id === c.id);
+                        if (t) t.active = !t.active;
+                      })
+                    }
+                    className="vtm-cond-toggle"
+                    title={c.active ? "Деактивировать" : "Активировать"}
+                    aria-label={c.active ? "Деактивировать состояние" : "Активировать состояние"}
+                  >
+                    <span className="vtm-cond-icon">{icon}</span>
+                  </button>
+                  <div className="vtm-cond-body">
+                    <input
+                      className="vtm-input vtm-cond-name"
+                      value={c.name}
+                      onChange={(e) =>
+                        mutate((d) => {
+                          const t = d.conditions?.find((x) => x.id === c.id);
+                          if (t) t.name = e.target.value;
+                        })
+                      }
+                      placeholder="название состояния"
+                      aria-label="Название состояния"
+                    />
+                    <input
+                      className="vtm-input vtm-cond-note"
+                      value={c.note}
+                      onChange={(e) =>
+                        mutate((d) => {
+                          const t = d.conditions?.find((x) => x.id === c.id);
+                          if (t) t.note = e.target.value;
+                        })
+                      }
+                      placeholder="источник, длительность, детали"
+                      aria-label="Заметка о состоянии"
+                    />
+                  </div>
+                  <button
+                    onClick={() =>
+                      mutate((d) => {
+                        d.conditions = (d.conditions ?? []).filter((x) => x.id !== c.id);
+                      })
+                    }
+                    className="vtm-btn vtm-btn-ghost !py-1 !px-2 text-xs"
+                    title="Удалить"
+                    aria-label="Удалить состояние"
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Кнопка добавления */}
+        {!showPicker ? (
+          <button onClick={() => setShowPicker(true)} className="vtm-btn vtm-btn-add w-full">
+            + Добавить состояние
+          </button>
+        ) : (
+          <div className="vtm-cond-picker space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="vtm-label text-[0.78rem] text-[#c4ac9d]">Выбери из каталога</span>
+              <button onClick={() => setShowPicker(false)} className="vtm-btn vtm-btn-ghost !py-1 !px-2 text-xs">
+                ✕ закрыть
+              </button>
+            </div>
+            {CONDITION_CATEGORIES.map((cat) => {
+              const catConds = CONDITIONS.filter((c) => c.category === cat.id);
+              return (
+                <div key={cat.id}>
+                  <p className="vtm-mini-label mb-1.5">{cat.icon} {cat.name}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {catConds.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => addCondition(c.id)}
+                        className="vtm-btn vtm-btn-ghost !py-1 !px-2 !text-[0.72rem]"
+                        title={c.effect}
+                      >
+                        {c.icon} {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            <button onClick={addCustom} className="vtm-btn vtm-btn-ghost w-full !text-[0.78rem]">
+              + Своё состояние (вручную)
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function BondsSection({
   data,
   mutate,
@@ -975,6 +1152,7 @@ export function BondsSection({
   return (
     <div className="space-y-4">
       <BondsGraph data={data} />
+      <ConditionsBlock data={data} mutate={mutate} />
       <ConvictionsBlock data={data} mutate={mutate} />
       <BondsBlock data={data} mutate={mutate} />
       <CoterieBlock data={data} mutate={mutate} />
