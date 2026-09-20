@@ -28,9 +28,10 @@ import { BLOOD_SORCERY_RITUALS, OBLIVION_CEREMONIES, RITUAL_RULES, RitualDef } f
 import { CHRONICLE_TENETS, CONVICTION_EXAMPLES, FRENZY_TYPES, COMPULSIONS, FRENZY_RULES } from "@/lib/vtm-chronicle";
 import { DYSCRASIAS, RESONANCE_RULES, DyscrasiaDef } from "@/lib/vtm-dyscrasias";
 import { ALL_CHEAT_BLOCKS, CONDITIONS, CONDITION_CATEGORIES, CheatBlock } from "@/lib/vtm-cheatsheet";
+import { CLAN_BANES, BANE_BY_CLAN, BANE_RULES, BaneSeverityDef } from "@/lib/vtm-clanbanes";
 import { WEREWOLF_INTRO, WEREWOLF_FORMS, WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_WAYWARD, WEREWOLF_COEXIST } from "@/lib/vtm-werewolf";
 
-type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "cheatsheet" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
+type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "cheatsheet" | "banes" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
 
 const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "clans", label: "Кланы", icon: "⛧" },
@@ -39,6 +40,7 @@ const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "chronicle", label: "Хроника", icon: "⚖" },
   { id: "resonances", label: "Резонансы", icon: "🩸" },
   { id: "cheatsheet", label: "Шпаргалка", icon: "📋" },
+  { id: "banes", label: "Изъяны кланов", icon: "🦇" },
   { id: "thinblood", label: "Слабокровные", icon: "⚗" },
   { id: "mechanics", label: "Механики", icon: "🎲" },
   { id: "predators", label: "Стили охоты", icon: "🦅" },
@@ -88,6 +90,7 @@ export function CodexSection() {
       {tab === "chronicle" && <ChronicleCodex q={q} />}
       {tab === "resonances" && <ResonancesCodex q={q} />}
       {tab === "cheatsheet" && <CheatSheetCodex q={q} />}
+      {tab === "banes" && <BanesCodex q={q} />}
       {tab === "thinblood" && <ThinbloodCodex q={q} />}
       {tab === "mechanics" && <MechanicsCodex q={q} />}
       {tab === "predators" && <PredatorsCodex q={q} />}
@@ -470,6 +473,123 @@ function ChronicleCodex({ q }: { q: string }) {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+// ---------- Изъяны кланов (Clan Banes) ----------
+
+function BaneCard({ b, open, onToggle }: { b: BaneSeverityDef; open: boolean; onToggle: () => void }) {
+  return (
+    <article className="vtm-panel vtm-bane-card">
+      <button
+        className="w-full vtm-panel-head text-left cursor-pointer"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={`bane-${b.id}`}
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="vtm-display text-[1.02rem] text-[#c22b30]">{b.clanName}</span>
+          <span className="vtm-hint !text-[0.7rem] uppercase ml-1">{b.name}</span>
+          <span className="vtm-bane-trigger-badge">{b.trigger.includes("Постоянно") ? "постоянно" : "триггер"}</span>
+        </div>
+        <span className="vtm-hint !text-[0.72rem] block mt-1 not-italic">{b.mechanics.slice(0, 80)}…</span>
+      </button>
+      {open && (
+        <div id={`bane-${b.id}`} className="p-3 md:p-4 space-y-3 vtm-bane-body">
+          <div className="vtm-bane-section">
+            <span className="vtm-mini-label">Триггер</span>
+            <p className="text-[0.83rem] text-[#c4ac9d] leading-relaxed">{b.trigger}</p>
+          </div>
+          <div className="vtm-bane-section">
+            <span className="vtm-mini-label">Механика</span>
+            <p className="text-[0.83rem] text-[#d9c7b6] leading-relaxed">{b.mechanics}</p>
+          </div>
+
+          {/* Таблица тяжести */}
+          <div className="vtm-bane-section">
+            <span className="vtm-mini-label">Тяжесть по Силе Крови</span>
+            <table className="vtm-bane-table">
+              <thead>
+                <tr>
+                  <th>BP</th>
+                  <th>Тяжесть</th>
+                  <th>Эффект</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>0-1</td><td>0</td><td>{b.severity0}</td></tr>
+                <tr><td>2</td><td>1</td><td>{b.severity1}</td></tr>
+                <tr><td>3</td><td>2</td><td>{b.severity2}</td></tr>
+                <tr><td>4-5</td><td>3</td><td>{b.severity3}</td></tr>
+                <tr><td>6-7</td><td>4</td><td>{b.severity4}</td></tr>
+                <tr><td>8-10</td><td>5</td><td>{b.severity5}</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Принуждение */}
+          <div className="vtm-bane-compulsion">
+            <span className="vtm-mini-label">⚡ Принуждение клана</span>
+            <div className="flex items-baseline gap-2 flex-wrap mt-1">
+              <span className="vtm-display text-[0.88rem] text-[#a877c0]">{b.compulsionName}</span>
+              <span className="vtm-hint !text-[0.66rem]">⏱ {b.compulsionDuration}</span>
+            </div>
+            <p className="text-[0.82rem] text-[#c4ac9d] leading-relaxed mt-1">{b.compulsionEffect}</p>
+          </div>
+
+          <p className="vtm-hint !text-[0.66rem] italic mt-2">📜 {b.source}</p>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function BanesCodex({ q }: { q: string }) {
+  const [openId, setOpenId] = useState<string | null>("bane_brujah");
+  const banes = CLAN_BANES.filter((b) =>
+    !q || `${b.clanName} ${b.name} ${b.trigger} ${b.mechanics} ${b.severity0} ${b.severity1} ${b.severity2} ${b.severity3} ${b.severity4} ${b.severity5} ${b.compulsionName} ${b.compulsionEffect}`.toLowerCase().includes(q)
+  );
+  const rules = BANE_RULES.filter((b) => !q || `${b.title} ${b.body.join(" ")}`.toLowerCase().includes(q));
+
+  return (
+    <div className="space-y-4">
+      {/* Сводные правила */}
+      {rules.map((b) => (
+        <section key={b.title} className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.81rem] text-[#d6a840]">🦇 {b.title}</span>
+          </div>
+          <div className="p-4 space-y-2">
+            {b.body.map((line, i) => (
+              <p key={i} className="text-[0.86rem] leading-relaxed text-[#c4ac9d] flex gap-2">
+                <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
+                <span>{line}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* Каталог изъянов */}
+      <section className="vtm-panel p-3 md:p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+          <span className="vtm-label text-[0.85rem] text-[#d6a840]">Изъяны 16 кланов — тяжесть по Силе Крови</span>
+          <span className="vtm-hint !text-[0.72rem]">{banes.length} из {CLAN_BANES.length}</span>
+        </div>
+        <p className="vtm-hint !text-[0.78rem]">
+          Каждый клан имеет уникальное проклятие: триггер, механику и прогрессию тяжести (0-5) с Силой Крови. Плюс Принуждение — «срыв» Зверя при ЖЕСТОКОМ ИСХОДЕ. Кликни клан, чтобы развернуть таблицу тяжести.
+        </p>
+      </section>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {banes.map((b) => (
+          <BaneCard key={b.id} b={b} open={openId === b.id} onToggle={() => setOpenId(openId === b.id ? null : b.id)} />
+        ))}
+      </div>
+      {banes.length === 0 && (
+        <p className="vtm-hint text-center py-6">Тьма молчит по этому запросу.</p>
+      )}
     </div>
   );
 }

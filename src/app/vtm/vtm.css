@@ -5625,3 +5625,157 @@ button.vtm-die.vtm-die-selectable.selected {
   border-color: var(--vtm-blood-bright);
   background: rgba(194, 43, 48, 0.12);
 }
+
+/* ============================================================
+   ВКЛАДКА «ИЗЪЯНЫ КЛАНОВ» (Codex) — Bane Severity по Силе Крови.
+   Карточки с таблицей тяжести 0-5 + Принуждение клана.
+   ============================================================ */
+
+.vtm-bane-card {
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.vtm-bane-card:hover {
+  border-color: rgba(194, 43, 48, 0.4);
+  box-shadow: 0 4px 16px rgba(138, 26, 29, 0.2);
+}
+.vtm-bane-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--vtm-blood-deep), var(--vtm-blood-bright));
+  opacity: 0.7;
+}
+
+.vtm-bane-body {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.3));
+}
+
+.vtm-bane-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed var(--vtm-line-soft);
+}
+.vtm-bane-section:last-of-type {
+  border-bottom: none;
+}
+
+.vtm-bane-trigger-badge {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--vtm-ash);
+  border: 1px solid var(--vtm-line-soft);
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-weight: 700;
+  margin-left: auto;
+}
+
+.vtm-bane-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+}
+.vtm-bane-table thead th {
+  text-align: left;
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vtm-gold-bright);
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--vtm-line);
+  background: rgba(0, 0, 0, 0.25);
+}
+.vtm-bane-table tbody tr {
+  border-bottom: 1px dotted var(--vtm-line-soft);
+  transition: background 0.15s ease;
+}
+.vtm-bane-table tbody tr:hover {
+  background: rgba(194, 43, 48, 0.06);
+}
+.vtm-bane-table tbody tr:last-child {
+  border-bottom: none;
+}
+.vtm-bane-table td {
+  padding: 0.4rem 0.5rem;
+  vertical-align: top;
+  color: var(--vtm-bone-dim);
+}
+.vtm-bane-table td:nth-child(1) {
+  width: 14%;
+  color: var(--vtm-gold-bright);
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-weight: 700;
+  font-size: 0.74rem;
+}
+.vtm-bane-table td:nth-child(2) {
+  width: 12%;
+  text-align: center;
+  color: var(--vtm-blood-bright);
+  font-weight: 700;
+}
+.vtm-bane-table td:nth-child(3) {
+  color: var(--vtm-bone);
+  font-size: 0.78rem;
+}
+
+.vtm-bane-compulsion {
+  background: linear-gradient(180deg, rgba(122, 74, 140, 0.12), rgba(60, 30, 80, 0.18));
+  border-left: 3px solid var(--vtm-violet-bright);
+  border-radius: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  margin-top: 0.5rem;
+  position: relative;
+  overflow: hidden;
+}
+.vtm-bane-compulsion::before {
+  content: "⚡";
+  position: absolute;
+  top: 0.3rem;
+  right: 0.5rem;
+  font-size: 1.2rem;
+  opacity: 0.1;
+  pointer-events: none;
+  color: var(--vtm-violet-bright);
+}
+
+@media (max-width: 640px) {
+  .vtm-bane-table,
+  .vtm-bane-table tbody,
+  .vtm-bane-table tr,
+  .vtm-bane-table td,
+  .vtm-bane-table th {
+    display: block;
+    width: 100%;
+  }
+  .vtm-bane-table thead {
+    display: none;
+  }
+  .vtm-bane-table tbody tr {
+    padding: 0.4rem 0;
+    border-bottom: 1px dashed var(--vtm-line-soft);
+  }
+  .vtm-bane-table td {
+    padding: 0.1rem 0;
+  }
+  .vtm-bane-table td:nth-child(1)::before {
+    content: "BP ";
+    color: var(--vtm-gold-bright);
+    font-weight: 700;
+  }
+  .vtm-bane-table td:nth-child(2)::before {
+    content: "Тяжесть: ";
+    color: var(--vtm-blood-bright);
+    font-weight: 700;
+  }
+}
