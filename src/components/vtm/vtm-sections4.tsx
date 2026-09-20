@@ -814,6 +814,157 @@ function TorporBlock({
 // ОСНОВНАЯ СЕКЦИЯ «УЗЫ»
 // ============================================================
 
+// ============================================================
+// ВИЗУАЛЬНАЯ СХЕМА СВЯЗЕЙ (Bonds Graph)
+// Радиальный граф: персонаж в центре, его узы по кругу.
+// Линии: regard (ты пил его кровь) — красные сплошные,
+// regarded (он пил твою) — золотые пунктир, vinculum — фиолет пунктир.
+// ============================================================
+
+function BondsGraph({ data }: { data: VtmSheetData }) {
+  const bonds = data.bonds ?? [];
+  const coterie = data.coterie;
+  const selfName = data.info.name?.trim() || "Ты";
+
+  // Собираем узлы: персонаж в центре + участники котерии + узы
+  type Node = { id: string; name: string; kind: "self" | "coterie" | "bond"; vinculum?: boolean };
+  const nodes: Node[] = [{ id: "self", name: selfName, kind: "self" }];
+  const edges: { from: string; to: string; type: "regard" | "regarded" | "vinculum"; label: string }[] = [];
+
+  // Котерия — участники как узлы, связь vinculum к персонажу (для Саббата)
+  if (coterie?.members?.length) {
+    for (const m of coterie.members) {
+      if (!m.name?.trim()) continue;
+      const id = m.id;
+      nodes.push({ id, name: m.name, kind: "coterie", vinculum: !!m.vinculum });
+      if (m.vinculum && m.vinculum >= 1) {
+        edges.push({ from: "self", to: id, type: "vinculum", label: `V${m.vinculum}` });
+      } else {
+        edges.push({ from: "self", to: id, type: "regarded", label: "стая" });
+      }
+    }
+  }
+
+  // Узы — отдельные узлы, рёбра regard/regarded
+  for (const b of bonds) {
+    if (!b.name?.trim()) continue;
+    const id = b.id;
+    nodes.push({ id, name: b.name, kind: "bond", vinculum: b.vinculum !== undefined });
+    const stageLabel = b.vinculum ? `V${b.vinculum}` : b.stage > 0 ? `S${b.stage}` : "";
+    edges.push({
+      from: b.direction === "regard" ? "self" : id,
+      to: b.direction === "regard" ? id : "self",
+      type: b.vinculum ? "vinculum" : b.direction === "regard" ? "regard" : "regarded",
+      label: stageLabel,
+    });
+  }
+
+  // Только узы/котерия без персонажа — показываем заглушку
+  const externalNodes = nodes.filter((n) => n.kind !== "self");
+  if (externalNodes.length === 0) {
+    return (
+      <section className="vtm-panel vtm-uz-panel" aria-label="Схема связей">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#d6a840]">🕸 Схема связей</span>
+        </div>
+        <div className="p-3 md:p-4">
+          <div className="vtm-bonds-empty">
+            Пока ни уз, ни стаи. Добавь запись выше — и граф оживёт.
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Радиальное размещение узлов вокруг центра
+  const cx = 50; // %
+  const cy = 50;
+  const radius = 38;
+  const placed = externalNodes.map((n, i) => {
+    const angle = (i / externalNodes.length) * Math.PI * 2 - Math.PI / 2;
+    return {
+      ...n,
+      x: cx + Math.cos(angle) * radius,
+      y: cy + Math.sin(angle) * radius,
+    };
+  });
+  const allNodes = [{ id: "self", name: selfName, kind: "self" as const, x: cx, y: cy }, ...placed];
+
+  // SVG-рёбра: кривые Безье с контрольной точкой, смещённой к центру
+  type PlacedNode = (typeof allNodes)[number];
+  type EdgePath = {
+    from: PlacedNode;
+    to: PlacedNode;
+    bendX: number;
+    bendY: number;
+    key: string;
+    type: "regard" | "regarded" | "vinculum";
+    label: string;
+  };
+  const nodeById = new Map<string, PlacedNode>(allNodes.map((n) => [n.id, n]));
+  const edgePaths: EdgePath[] = [];
+  edges.forEach((e, i) => {
+    const from = nodeById.get(e.from);
+    const to = nodeById.get(e.to);
+    if (!from || !to) return;
+    const mx = (from.x + to.x) / 2;
+    const my = (from.y + to.y) / 2;
+    const bendX = mx + (cx - mx) * 0.25;
+    const bendY = my + (cy - my) * 0.25;
+    edgePaths.push({ from, to, bendX, bendY, key: `e${i}`, type: e.type, label: e.label });
+  });
+
+  return (
+    <section className="vtm-panel vtm-uz-panel" aria-label="Схема связей">
+      <div className="vtm-panel-head">
+        <span className="vtm-label text-[0.81rem] text-[#d6a840]">🕸 Схема связей</span>
+        <span className="vtm-hint !text-[0.72rem] ml-auto">{externalNodes.length} связей</span>
+      </div>
+      <div className="p-3 md:p-4">
+        <p className="vtm-hint !text-[0.73rem] mb-3">
+          Ты — в центре золотым узлом. <span className="text-[#c22b30]">Красные линии</span> — ты пил его кровь (тянет к нему). <span className="text-[#d6a840]">Золотые пунктиры</span> — он пил твою (твой подданный). <span className="text-[#a877c0]">Фиолетовые</span> — Винкулум.
+        </p>
+        <div className="vtm-bonds-graph" role="img" aria-label={`Схема связей: ${externalNodes.length} узлов вокруг персонажа`}>
+          <svg className="vtm-bonds-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            {edgePaths.map((e) => (
+              <g key={e.key}>
+                <path
+                  className={`vtm-bonds-edge ${e.type}`}
+                  d={`M ${e.from.x} ${e.from.y} Q ${e.bendX} ${e.bendY} ${e.to.x} ${e.to.y}`}
+                />
+                {e.label && (
+                  <text
+                    className="vtm-bonds-edge-label"
+                    x={(e.from.x + e.to.x) / 2}
+                    y={(e.from.y + e.to.y) / 2 - 0.5}
+                  >
+                    {e.label}
+                  </text>
+                )}
+              </g>
+            ))}
+          </svg>
+          {allNodes.map((n) => (
+            <div
+              key={n.id}
+              className="vtm-bonds-node"
+              style={{ left: `${n.x}%`, top: `${n.y}%` }}
+              title={n.name}
+            >
+              <div
+                className={`vtm-bonds-node-core ${n.kind === "self" ? "self" : n.vinculum ? "vinculum" : ""}`}
+              >
+                {n.kind === "self" ? "👤" : n.name.slice(0, 2).toUpperCase()}
+              </div>
+              <span className="vtm-bonds-node-label">{n.name.slice(0, 14)}{n.name.length > 14 ? "…" : ""}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function BondsSection({
   data,
   mutate,
@@ -823,6 +974,7 @@ export function BondsSection({
 }) {
   return (
     <div className="space-y-4">
+      <BondsGraph data={data} />
       <ConvictionsBlock data={data} mutate={mutate} />
       <BondsBlock data={data} mutate={mutate} />
       <CoterieBlock data={data} mutate={mutate} />

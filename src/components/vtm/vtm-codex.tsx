@@ -18,17 +18,21 @@ import {
   ADVANTAGE_LIBRARY,
   THINBLOOD_FORMULAS,
   THINBLOOD_RULES,
+  ELYSIUM_RULES,
+  COURT_TITLES,
 } from "@/lib/vtm-data";
 import { LORESHEETS, LORESHEET_RULES, DIABLERIE_BLOCKS } from "@/lib/vtm-histories";
 import { POWER_SYSTEMS, DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
 import { V20_BLOCKS } from "@/lib/vtm-v20";
+import { BLOOD_SORCERY_RITUALS, OBLIVION_CEREMONIES, RITUAL_RULES, RitualDef } from "@/lib/vtm-rituals";
 import { WEREWOLF_INTRO, WEREWOLF_FORMS, WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_WAYWARD, WEREWOLF_COEXIST } from "@/lib/vtm-werewolf";
 
-type CodexTab = "clans" | "disciplines" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
+type CodexTab = "clans" | "disciplines" | "rituals" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
 
 const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "clans", label: "Кланы", icon: "⛧" },
   { id: "disciplines", label: "Дисциплины", icon: "✦" },
+  { id: "rituals", label: "Ритуалы", icon: "🔮" },
   { id: "thinblood", label: "Слабокровные", icon: "⚗" },
   { id: "mechanics", label: "Механики", icon: "🎲" },
   { id: "predators", label: "Стили охоты", icon: "🩸" },
@@ -74,6 +78,7 @@ export function CodexSection() {
 
       {tab === "clans" && <ClansCodex q={q} />}
       {tab === "disciplines" && <DisciplinesCodex q={q} />}
+      {tab === "rituals" && <RitualsCodex q={q} />}
       {tab === "thinblood" && <ThinbloodCodex q={q} />}
       {tab === "mechanics" && <MechanicsCodex q={q} />}
       {tab === "predators" && <PredatorsCodex q={q} />}
@@ -212,6 +217,124 @@ function DisciplinesCodex({ q }: { q: string }) {
         );
       })}
       {list.length === 0 && <p className="vtm-hint text-center py-6">Тьма молчит по этому запросу.</p>}
+    </div>
+  );
+}
+
+// ---------- Ритуалы и Церемонии ----------
+
+function RitualCard({ r }: { r: RitualDef }) {
+  const [open, setOpen] = useState(false);
+  const isOblivion = r.kind === "oblivion";
+  return (
+    <article className={`vtm-panel vtm-ritual-card ${isOblivion ? "is-oblivion" : "is-blood"}`}>
+      <button
+        className="w-full vtm-panel-head text-left cursor-pointer"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls={`ritual-${r.id}`}
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`vtm-ritual-lvl ${isOblivion ? "oblivion" : "blood"}`}>{"•".repeat(r.level)}</span>
+          <span className={`vtm-display text-[1rem] ${isOblivion ? "text-[#a877c0]" : "text-[#c22b30]"}`}>
+            {isOblivion ? "🌑 " : "🩸 "}{r.name}
+          </span>
+          {r.school && <span className="vtm-hint !text-[0.68rem] uppercase ml-1">{r.school}</span>}
+        </div>
+        <span className="vtm-hint !text-[0.75rem] block mt-1 not-italic">{r.brief}</span>
+      </button>
+      {open && (
+        <div id={`ritual-${r.id}`} className="p-4 space-y-2 vtm-ritual-body">
+          <p className="text-[0.88rem] text-[#d9c7b6] leading-relaxed">{r.effect}</p>
+          <div className="vtm-ritual-grid">
+            <div><span className="vtm-mini-label">Цена</span><p className="text-[0.82rem] text-[#c4ac9d]">{r.cost}</p></div>
+            <div><span className="vtm-mini-label">Длительность</span><p className="text-[0.82rem] text-[#c4ac9d]">{r.duration}</p></div>
+            {r.dicepool && <div><span className="vtm-mini-label">Пул</span><p className="text-[0.82rem] text-[#c4ac9d]">{r.dicepool}</p></div>}
+            {r.ingredients && <div><span className="vtm-mini-label">Ингредиенты</span><p className="text-[0.82rem] text-[#c4ac9d]">{r.ingredients}</p></div>}
+          </div>
+          <p className="vtm-hint !text-[0.72rem] italic mt-2">📜 {r.source}</p>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function RitualsCodex({ q }: { q: string }) {
+  const [filter, setFilter] = useState<"all" | "blood_sorcery" | "oblivion">("all");
+  const [levelFilter, setLevelFilter] = useState<number>(0);
+
+  const filtered = useMemo(() => {
+    const pool = [
+      ...(filter === "all" || filter === "blood_sorcery" ? BLOOD_SORCERY_RITUALS : []),
+      ...(filter === "all" || filter === "oblivion" ? OBLIVION_CEREMONIES : []),
+    ];
+    return pool.filter((r) => {
+      if (levelFilter && r.level !== levelFilter) return false;
+      if (!q) return true;
+      return `${r.name} ${r.school ?? ""} ${r.brief} ${r.effect}`.toLowerCase().includes(q);
+    });
+  }, [filter, levelFilter, q]);
+
+  return (
+    <div className="space-y-4">
+      <section className="vtm-panel p-3 md:p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <span className="vtm-label text-[0.85rem] text-[#d6a840]">🔮 Ритуалы Кровавой магии и Церемонии Забвения</span>
+          <span className="vtm-hint !text-[0.72rem]">{filtered.length} из {BLOOD_SORCERY_RITUALS.length + OBLIVION_CEREMONIES.length}</span>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-3">
+          {(["all", "blood_sorcery", "oblivion"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`vtm-btn !py-1 !px-2.5 !text-[0.74rem] ${filter === f ? (f === "oblivion" ? "vtm-btn-violet" : f === "blood_sorcery" ? "vtm-btn-blood" : "vtm-btn-blood") : "vtm-btn-ghost"}`}
+              aria-pressed={filter === f}
+            >
+              {f === "all" ? "Все" : f === "blood_sorcery" ? "🩸 Кровавая магия" : "🌑 Забвение"}
+            </button>
+          ))}
+          {[0, 1, 2, 3, 4, 5].map((lvl) => (
+            <button
+              key={lvl}
+              onClick={() => setLevelFilter(lvl)}
+              className={`vtm-btn !py-1 !px-2 !text-[0.72rem] ${levelFilter === lvl ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
+              aria-pressed={levelFilter === lvl}
+            >
+              {lvl === 0 ? "Все ур." : `Ур. ${lvl}`}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Сводные правила */}
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#d6a840]">Правила ритуалистики</span>
+        </div>
+        <div className="p-4 space-y-3">
+          {RITUAL_RULES.map((block) => (
+            <div key={block.title} className="vtm-ritual-rule-block">
+              <p className="vtm-display text-[0.92rem] text-[#d6a840] mb-1">{block.title}</p>
+              {block.body.map((line, i) => (
+                <p key={i} className="text-[0.85rem] leading-relaxed text-[#c4ac9d] flex gap-2 mb-1">
+                  <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
+                  <span>{line}</span>
+                </p>
+              ))}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Каталог ритуалов */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {filtered.map((r) => (
+          <RitualCard key={r.id} r={r} />
+        ))}
+      </div>
+      {filtered.length === 0 && (
+        <p className="vtm-hint text-center py-6">Кодекс молчит по этому запросу.</p>
+      )}
     </div>
   );
 }
@@ -530,6 +653,8 @@ function AdvantagesCodex({ q }: { q: string }) {
 
 function SectsCodex({ q }: { q: string }) {
   const list = SECTS.filter((s) => !q || `${s.name} ${s.description}`.toLowerCase().includes(q));
+  const elysiumRules = ELYSIUM_RULES.filter((b) => !q || `${b.title} ${b.body.join(" ")}`.toLowerCase().includes(q));
+  const titles = COURT_TITLES.filter((t) => !q || `${t.name} ${t.en} ${t.holder} ${t.duty} ${t.power}`.toLowerCase().includes(q));
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -540,6 +665,49 @@ function SectsCodex({ q }: { q: string }) {
           </article>
         ))}
       </div>
+
+      {/* Элизиум */}
+      {elysiumRules.map((b) => (
+        <section key={b.title} className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.81rem] text-[#d6a840]">🏛 {b.title}</span>
+          </div>
+          <div className="p-4 space-y-2">
+            {b.body.map((line, i) => (
+              <p key={i} className="text-[0.88rem] leading-relaxed text-[#c4ac9d] flex gap-2">
+                <span className="text-[#8a1a1d] shrink-0" aria-hidden>❦</span>
+                <span>{line}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* Титулы двора Принца */}
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#d6a840]">👑 Титулы двора Принца</span>
+          <span className="vtm-hint !text-[0.68rem] uppercase ml-auto">Camarilla court positions</span>
+        </div>
+        <div className="p-3 md:p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {titles.map((t) => (
+            <article key={t.id} className="vtm-elysium-card">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="vtm-display text-[0.98rem] text-[#d6a840]">{t.name}</span>
+                <span className="vtm-hint !text-[0.7rem] italic">({t.en})</span>
+              </div>
+              <p className="text-[0.78rem] text-[#9c8072] mt-1">{t.holder}</p>
+              <p className="text-[0.85rem] text-[#d9c7b6] mt-2 leading-relaxed">
+                <span className="text-[#c22b30] font-semibold">Долг: </span>{t.duty}
+              </p>
+              <p className="text-[0.85rem] text-[#c4ac9d] mt-1 leading-relaxed">
+                <span className="text-[#a8863d] font-semibold">Власть: </span>{t.power}
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="vtm-panel">
         <div className="vtm-panel-head">
           <span className="vtm-label text-[0.81rem] text-[#d6a840]">Памятка Маскарада</span>
