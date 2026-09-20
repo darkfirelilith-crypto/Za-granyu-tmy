@@ -30,9 +30,10 @@ import { DYSCRASIAS, RESONANCE_RULES, DyscrasiaDef } from "@/lib/vtm-dyscrasias"
 import { ALL_CHEAT_BLOCKS, CONDITIONS, CONDITION_CATEGORIES, CheatBlock } from "@/lib/vtm-cheatsheet";
 import { CLAN_BANES, BANE_BY_CLAN, BANE_RULES, BaneSeverityDef } from "@/lib/vtm-clanbanes";
 import { generateHuntScene, generateHuntBatch, HUNT_GENERATOR_INFO, HUNT_GEN_RULES, HuntScene } from "@/lib/vtm-huntgen";
+import { generateNpc, generateNpcBatch, NPC_GENERATOR_INFO, NPC_GEN_RULES, NpcCard } from "@/lib/vtm-npcgen";
 import { WEREWOLF_INTRO, WEREWOLF_FORMS, WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_WAYWARD, WEREWOLF_COEXIST } from "@/lib/vtm-werewolf";
 
-type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "cheatsheet" | "banes" | "huntgen" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
+type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "cheatsheet" | "banes" | "huntgen" | "npcgen" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
 
 const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "clans", label: "Кланы", icon: "⛧" },
@@ -43,6 +44,7 @@ const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "cheatsheet", label: "Шпаргалка", icon: "📋" },
   { id: "banes", label: "Изъяны кланов", icon: "🦇" },
   { id: "huntgen", label: "Генератор охоты", icon: "🌙" },
+  { id: "npcgen", label: "Генератор NPC", icon: "👤" },
   { id: "thinblood", label: "Слабокровные", icon: "⚗" },
   { id: "mechanics", label: "Механики", icon: "🎲" },
   { id: "predators", label: "Стили охоты", icon: "🦅" },
@@ -94,6 +96,7 @@ export function CodexSection() {
       {tab === "cheatsheet" && <CheatSheetCodex q={q} />}
       {tab === "banes" && <BanesCodex q={q} />}
       {tab === "huntgen" && <HuntGenCodex />}
+      {tab === "npcgen" && <NpcGenCodex />}
       {tab === "thinblood" && <ThinbloodCodex q={q} />}
       {tab === "mechanics" && <MechanicsCodex q={q} />}
       {tab === "predators" && <PredatorsCodex q={q} />}
@@ -476,6 +479,161 @@ function ChronicleCodex({ q }: { q: string }) {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+// ---------- Генератор NPC-Сородичей ----------
+
+function NpcCardView({ npc }: { npc: NpcCard }) {
+  return (
+    <article className="vtm-npc-card">
+      <div className="vtm-npc-head">
+        <div className="vtm-npc-name-row">
+          <span className="vtm-display text-[1.05rem] text-[#d6a840]">{npc.name}</span>
+          <span className="vtm-npc-clan-badge">{npc.clanName}</span>
+        </div>
+        <div className="vtm-npc-tags">
+          <span className="vtm-npc-tag" title="Поколение">{npc.generation}е пок.</span>
+          <span className="vtm-npc-tag" title="Сила Крови">BP {npc.bloodPotency}</span>
+          <span className="vtm-npc-tag" title="Секта">{npc.sectName}</span>
+          <span className="vtm-npc-tag" title="Стиль охоты">{npc.predatorName}</span>
+        </div>
+      </div>
+
+      <div className="vtm-npc-body">
+        <div className="vtm-npc-section">
+          <span className="vtm-mini-label">👤 Роль</span>
+          <p className="text-[0.85rem] text-[#d9c7b6] mt-0.5">{npc.role}</p>
+          <p className="vtm-hint !text-[0.72rem] italic mt-0.5">{npc.age}</p>
+        </div>
+
+        <div className="vtm-npc-section">
+          <span className="vtm-mini-label">✦ Дисциплины</span>
+          <div className="vtm-npc-disc-list">
+            {npc.disciplines.map((d, i) => (
+              <span key={i} className="vtm-npc-disc">
+                {d.name} <span className="vtm-npc-disc-lvl">{"•".repeat(d.level)}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="vtm-npc-section">
+          <span className="vtm-mini-label">🎭 Черта</span>
+          <p className="text-[0.82rem] text-[#c4ac9d] mt-0.5 leading-relaxed">{npc.demeanor}</p>
+        </div>
+
+        <div className="vtm-npc-section vtm-npc-hook">
+          <span className="vtm-mini-label">🪝 Крючок</span>
+          <p className="text-[0.82rem] text-[#e8a4a8] mt-0.5 leading-relaxed">{npc.hook}</p>
+        </div>
+
+        <div className="vtm-npc-section">
+          <span className="vtm-mini-label">👁 К игрокам</span>
+          <p className="text-[0.82rem] text-[#c4ac9d] mt-0.5 leading-relaxed">{npc.attitude}</p>
+        </div>
+
+        <div className="vtm-npc-quote">
+          <span className="text-[#8a1a1d] mr-1" aria-hidden>❝</span>
+          <span className="italic text-[0.82rem] text-[#d9c7b6]">{npc.quote}</span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function NpcGenCodex() {
+  const [npcs, setNpcs] = useState<NpcCard[]>(() => generateNpcBatch(3));
+  const [clanFilter, setClanFilter] = useState<string>("");
+
+  const clanOptions = [
+    { id: "", name: "Любой клан" },
+    { id: "brujah", name: "Бруха" },
+    { id: "ventru", name: "Вентру" },
+    { id: "gangrel", name: "Гангрел" },
+    { id: "malkavian", name: "Малкавиане" },
+    { id: "nosferatu", name: "Носферату" },
+    { id: "toreador", name: "Тореадор" },
+    { id: "tremere", name: "Тремер" },
+    { id: "banu_haqim", name: "Бану Хаким" },
+    { id: "lasombra", name: "Ласомбра" },
+    { id: "hecata", name: "Геката" },
+    { id: "ministry", name: "Министерство" },
+    { id: "ravnos", name: "Равнос" },
+    { id: "salubri", name: "Салюбри" },
+    { id: "tzimisce", name: "Тзимице" },
+    { id: "caitiff", name: "Каитиф" },
+    { id: "thinblood", name: "Слабокровный" },
+  ];
+
+  const regen = (count?: number) => {
+    setNpcs(generateNpcBatch(count ?? npcs.length, clanFilter || undefined));
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Заголовок и контролы */}
+      <section className="vtm-panel p-3 md:p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <span className="vtm-label text-[0.85rem] text-[#d6a840]">👤 Генератор NPC-Сородичей — для Рассказчика</span>
+          <span className="vtm-hint !text-[0.68rem]">{NPC_GENERATOR_INFO.clansCount} кланов · {NPC_GENERATOR_INFO.hooksCount} крючков · {NPC_GENERATOR_INFO.attitudesCount} отношений</span>
+        </div>
+        <p className="vtm-hint !text-[0.78rem] mt-2">
+          Быстрые карточки неигровых персонажей: имя, клан, поколение/Сила Крови, секта, Дисциплины, роль при дворе, черта характера, сюжетный крючок, отношение к игрокам, колоритная фраза.
+        </p>
+        <div className="flex items-center gap-2 mt-3 flex-wrap">
+          <span className="vtm-mini-label">Клан:</span>
+          <select
+            className="vtm-input !py-1 !px-2 !text-[0.78rem] max-w-[10rem]"
+            value={clanFilter}
+            onChange={(e) => { setClanFilter(e.target.value); }}
+            aria-label="Фильтр по клану"
+          >
+            {clanOptions.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <span className="vtm-mini-label ml-2">Сколько:</span>
+          {[1, 3, 5, 8].map((n) => (
+            <button
+              key={n}
+              onClick={() => { setNpcs(generateNpcBatch(n, clanFilter || undefined)); }}
+              className={`vtm-btn !py-1 !px-2.5 !text-[0.74rem] ${npcs.length === n ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
+              aria-pressed={npcs.length === n}
+            >
+              {n}
+            </button>
+          ))}
+          <button onClick={() => regen()} className="vtm-btn vtm-btn-blood !py-1.5 !px-4 !text-[0.8rem] ml-auto">
+            🎲 Сгенерировать
+          </button>
+        </div>
+      </section>
+
+      {/* Сводные правила */}
+      {NPC_GEN_RULES.map((b) => (
+        <section key={b.title} className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.81rem] text-[#d6a840]">{b.title}</span>
+          </div>
+          <div className="p-4 space-y-2">
+            {b.body.map((line, i) => (
+              <p key={i} className="text-[0.85rem] leading-relaxed text-[#c4ac9d] flex gap-2">
+                <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
+                <span>{line}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* Сгенерированные NPC */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {npcs.map((n) => (
+          <NpcCardView key={n.id} npc={n} />
+        ))}
+      </div>
     </div>
   );
 }

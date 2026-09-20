@@ -5925,3 +5925,133 @@ button.vtm-die.vtm-die-selectable.selected {
   opacity: 0.15;
   pointer-events: none;
 }
+
+/* ============================================================
+   ВКЛАДКА «ГЕНЕРАТОР NPC» (Codex) — карточки Сородичей.
+   Быстрые NPC для Рассказчика: имя, клан, Дисциплины, роль, крючок.
+   ============================================================ */
+
+.vtm-npc-card {
+  background: linear-gradient(180deg, rgba(31, 14, 18, 0.6), rgba(23, 10, 13, 0.75));
+  border: 1px solid var(--vtm-line-soft);
+  border-left: 3px solid var(--vtm-gold);
+  border-radius: 0.5rem;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+}
+.vtm-npc-card:hover {
+  border-left-color: var(--vtm-gold-bright);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(138, 26, 29, 0.2);
+}
+.vtm-npc-card::before {
+  content: "👤";
+  position: absolute;
+  top: 0.4rem;
+  right: 0.6rem;
+  font-size: 2rem;
+  opacity: 0.06;
+  pointer-events: none;
+  color: var(--vtm-gold);
+}
+
+.vtm-npc-head {
+  border-bottom: 1px dashed var(--vtm-line-soft);
+  padding-bottom: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.vtm-npc-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.vtm-npc-clan-badge {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.25rem;
+  background: rgba(194, 43, 48, 0.15);
+  color: var(--vtm-blood-bright);
+  border: 1px solid rgba(194, 43, 48, 0.35);
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-weight: 700;
+}
+
+.vtm-npc-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.vtm-npc-tag {
+  font-size: 0.66rem;
+  padding: 0.12rem 0.4rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--vtm-line-soft);
+  border-radius: 0.25rem;
+  color: var(--vtm-bone-dim);
+}
+
+.vtm-npc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.vtm-npc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.vtm-npc-disc-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+}
+
+.vtm-npc-disc {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.5rem;
+  background: rgba(168, 134, 61, 0.1);
+  border: 1px solid rgba(168, 134, 61, 0.25);
+  border-radius: 0.25rem;
+  color: var(--vtm-bone);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.vtm-npc-disc-lvl {
+  color: var(--vtm-gold-bright);
+  letter-spacing: 0.03em;
+  font-size: 0.72rem;
+}
+
+.vtm-npc-hook {
+  background: rgba(194, 43, 48, 0.08);
+  border-left: 2px solid var(--vtm-blood-bright);
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.3rem;
+}
+
+.vtm-npc-quote {
+  margin-top: 0.3rem;
+  padding-top: 0.4rem;
+  border-top: 1px dotted var(--vtm-line-soft);
+  display: flex;
+  gap: 0.3rem;
+  align-items: flex-start;
+}
