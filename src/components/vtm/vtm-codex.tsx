@@ -29,9 +29,10 @@ import { CHRONICLE_TENETS, CONVICTION_EXAMPLES, FRENZY_TYPES, COMPULSIONS, FRENZ
 import { DYSCRASIAS, RESONANCE_RULES, DyscrasiaDef } from "@/lib/vtm-dyscrasias";
 import { ALL_CHEAT_BLOCKS, CONDITIONS, CONDITION_CATEGORIES, CheatBlock } from "@/lib/vtm-cheatsheet";
 import { CLAN_BANES, BANE_BY_CLAN, BANE_RULES, BaneSeverityDef } from "@/lib/vtm-clanbanes";
+import { generateHuntScene, generateHuntBatch, HUNT_GENERATOR_INFO, HUNT_GEN_RULES, HuntScene } from "@/lib/vtm-huntgen";
 import { WEREWOLF_INTRO, WEREWOLF_FORMS, WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_WAYWARD, WEREWOLF_COEXIST } from "@/lib/vtm-werewolf";
 
-type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "cheatsheet" | "banes" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
+type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "cheatsheet" | "banes" | "huntgen" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
 
 const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "clans", label: "Кланы", icon: "⛧" },
@@ -41,6 +42,7 @@ const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "resonances", label: "Резонансы", icon: "🩸" },
   { id: "cheatsheet", label: "Шпаргалка", icon: "📋" },
   { id: "banes", label: "Изъяны кланов", icon: "🦇" },
+  { id: "huntgen", label: "Генератор охоты", icon: "🌙" },
   { id: "thinblood", label: "Слабокровные", icon: "⚗" },
   { id: "mechanics", label: "Механики", icon: "🎲" },
   { id: "predators", label: "Стили охоты", icon: "🦅" },
@@ -91,6 +93,7 @@ export function CodexSection() {
       {tab === "resonances" && <ResonancesCodex q={q} />}
       {tab === "cheatsheet" && <CheatSheetCodex q={q} />}
       {tab === "banes" && <BanesCodex q={q} />}
+      {tab === "huntgen" && <HuntGenCodex />}
       {tab === "thinblood" && <ThinbloodCodex q={q} />}
       {tab === "mechanics" && <MechanicsCodex q={q} />}
       {tab === "predators" && <PredatorsCodex q={q} />}
@@ -473,6 +476,125 @@ function ChronicleCodex({ q }: { q: string }) {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+// ---------- Генератор сцен охоты ----------
+
+function HuntSceneCard({ scene }: { scene: HuntScene }) {
+  const diffDots = "●".repeat(scene.difficulty) + "○".repeat(5 - scene.difficulty);
+  const intDots = "●".repeat(scene.resonanceIntensity) + "○".repeat(5 - scene.resonanceIntensity);
+  return (
+    <article className="vtm-hunt-card">
+      <div className="vtm-hunt-head">
+        <div>
+          <span className="vtm-display text-[1rem] text-[#d6a840]">🌙 {scene.location}</span>
+        </div>
+        <span className="vtm-hunt-diff" title={`Сложность ${scene.difficulty}/5`}>{diffDots}</span>
+      </div>
+
+      <div className="vtm-hunt-victim">
+        <span className="vtm-mini-label">🧛 Жертва</span>
+        <p className="text-[0.9rem] text-[#d9c7b6] font-semibold mt-0.5">{scene.victim}</p>
+        <p className="text-[0.8rem] text-[#c4ac9d] italic mt-1 leading-relaxed">{scene.victimDesc}</p>
+        <div className="vtm-hunt-meta">
+          <span className="vtm-hunt-tag">Резонанс: {scene.resonance} <span className="vtm-hunt-dots">{intDots}</span></span>
+          <span className="vtm-hunt-tag">Стиль: {scene.predatorStyle}</span>
+        </div>
+      </div>
+
+      <div className="vtm-hunt-section">
+        <span className="vtm-mini-label">🎲 Пул охоты</span>
+        <p className="text-[0.82rem] text-[#c4ac9d] mt-0.5">{scene.diceHint}</p>
+      </div>
+
+      <div className="vtm-hunt-section vtm-hunt-complication">
+        <span className="vtm-mini-label">⚠ Осложнение</span>
+        <p className="text-[0.82rem] text-[#e8a4a8] mt-0.5 leading-relaxed">{scene.complication}</p>
+      </div>
+
+      <div className="vtm-hunt-outcomes">
+        <div className="vtm-hunt-outcome success">
+          <span className="vtm-mini-label">✓ При успехе</span>
+          <p className="text-[0.8rem] text-[#d9c7b6] mt-0.5">{scene.reward}</p>
+        </div>
+        <div className="vtm-hunt-outcome failure">
+          <span className="vtm-mini-label">✗ При провале</span>
+          <p className="text-[0.8rem] text-[#e8a4a8] mt-0.5">{scene.risk}</p>
+        </div>
+      </div>
+
+      {scene.twist && (
+        <div className="vtm-hunt-twist">
+          <span className="vtm-mini-label">🎭 Поворот</span>
+          <p className="text-[0.82rem] text-[#a877c0] mt-0.5 italic leading-relaxed">{scene.twist}</p>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function HuntGenCodex() {
+  const [scenes, setScenes] = useState<HuntScene[]>(() => [generateHuntScene(), generateHuntScene(), generateHuntScene()]);
+  const [batchSize, setBatchSize] = useState(3);
+
+  const regen = () => {
+    setScenes(generateHuntBatch(batchSize));
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Заголовок и контролы */}
+      <section className="vtm-panel p-3 md:p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <span className="vtm-label text-[0.85rem] text-[#d6a840]">🌙 Генератор сцен охоты — для Рассказчика</span>
+          <span className="vtm-hint !text-[0.68rem]">{HUNT_GENERATOR_INFO.totalCombinations.toLocaleString("ru-RU")} комбинаций</span>
+        </div>
+        <p className="vtm-hint !text-[0.78rem] mt-2">
+          Случайные сценарии охоты: локация, жертва с резонансом, осложнение, награда за успех, риск при провале. Сложность зависит от интенсивности резонанса. Иногда — неожиданный поворот.
+        </p>
+        <div className="flex items-center gap-2 mt-3 flex-wrap">
+          <span className="vtm-mini-label">Сколько сцен:</span>
+          {[1, 2, 3, 5].map((n) => (
+            <button
+              key={n}
+              onClick={() => { setBatchSize(n); setScenes(generateHuntBatch(n)); }}
+              className={`vtm-btn !py-1 !px-2.5 !text-[0.74rem] ${batchSize === n ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
+              aria-pressed={batchSize === n}
+            >
+              {n}
+            </button>
+          ))}
+          <button onClick={regen} className="vtm-btn vtm-btn-blood !py-1.5 !px-4 !text-[0.8rem] ml-auto">
+            🎲 Сгенерировать ещё
+          </button>
+        </div>
+      </section>
+
+      {/* Сводные правила */}
+      {HUNT_GEN_RULES.map((b) => (
+        <section key={b.title} className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.81rem] text-[#d6a840]">{b.title}</span>
+          </div>
+          <div className="p-4 space-y-2">
+            {b.body.map((line, i) => (
+              <p key={i} className="text-[0.85rem] leading-relaxed text-[#c4ac9d] flex gap-2">
+                <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
+                <span>{line}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* Сгенерированные сцены */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {scenes.map((s, i) => (
+          <HuntSceneCard key={s.id} scene={s} />
+        ))}
+      </div>
     </div>
   );
 }
