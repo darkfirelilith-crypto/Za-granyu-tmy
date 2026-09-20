@@ -9,6 +9,7 @@ import { deriveStats, DerivedStats } from "@/lib/vtm-calc";
 import { DossierSection, AttributesSection, SkillsSection } from "@/components/vtm/vtm-sections";
 import { DisciplinesSection, AdvantagesSection, HistoriesSection } from "@/components/vtm/vtm-sections2";
 import { GearSection, NotesSection } from "@/components/vtm/vtm-sections3";
+import { BondsSection } from "@/components/vtm/vtm-sections4";
 import { GlossarySection } from "@/components/vtm/vtm-glossary";
 import { CodexSection } from "@/components/vtm/vtm-codex";
 import { VtmDicePanel, setVtmSheetHooks, vtmRollAndShow, useVtmDice } from "@/components/vtm/vtm-dice";
@@ -37,6 +38,7 @@ const TABS = [
   { id: "disciplines", label: "Дисциплины" },
   { id: "advantages", label: "Преимущества" },
   { id: "histories", label: "Истории" },
+  { id: "bonds", label: "Узы" },
   { id: "gear", label: "Имущество" },
   { id: "notes", label: "Заметки" },
   { id: "glossary", label: "Словарь" },
@@ -600,6 +602,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
           {tab === "disciplines" && <DisciplinesSection data={data} mutate={mutate} derived={derived} />}
           {tab === "advantages" && <AdvantagesSection data={data} mutate={mutate} derived={derived} />}
           {tab === "histories" && <HistoriesSection data={data} mutate={mutate} />}
+          {tab === "bonds" && <BondsSection data={data} mutate={mutate} />}
           {tab === "gear" && <GearSection data={data} mutate={mutate} derived={derived} />}
           {tab === "notes" && <NotesSection data={data} mutate={mutate} />}
           {tab === "glossary" && <GlossarySection />}

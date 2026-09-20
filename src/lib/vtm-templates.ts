@@ -85,6 +85,12 @@ export function buildTemplateSheet(templateId: string): VtmSheetData | null {
     rollLog: [],
     xpLog: [],
     resonance: { kind: "", intensity: 0 },
+    // Новые механики (V5 Companion / Gehenna War / In Memoriam)
+    bonds: [],
+    coterie: { name: "", type: "", tieKind: "", tieNote: "", clanMerit: "", members: [] },
+    boons: [],
+    convictions: [],
+    torpor: { inTorpor: false, since: "", humanity: s.trackers.humanity, note: "" },
   };
 }
 

@@ -4542,3 +4542,406 @@ button.vtm-die.vtm-die-selectable.selected {
   .vtm-hist-filter,
   .vtm-glos-filter { transition: none !important; }
 }
+
+/* ============================================================
+   ВКЛАДКА «УЗЫ» — кровные узы, котерия, долги, убеждения, торпор.
+   Готическая гамма связей: кровь, тени, золото долгов.
+   ============================================================ */
+
+.vtm-uz-panel {
+  position: relative;
+}
+.vtm-uz-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--vtm-blood-bright), transparent);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* --- Мини-поля (компактные label + input/select) --- */
+.vtm-mini-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.vtm-mini-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vtm-ash);
+  font-family: var(--vtm-font-display), Georgia, serif;
+}
+.vtm-mini-field .vtm-input {
+  padding: 0.45rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+.vtm-btn-add {
+  background: linear-gradient(180deg, rgba(138, 26, 29, 0.18), rgba(92, 16, 20, 0.28));
+  border: 1px solid rgba(168, 134, 61, 0.35);
+  color: var(--vtm-bone);
+  letter-spacing: 0.04em;
+  font-family: var(--vtm-font-display), Georgia, serif;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+.vtm-btn-add:hover {
+  background: linear-gradient(180deg, rgba(194, 43, 48, 0.28), rgba(138, 26, 29, 0.4));
+  border-color: var(--vtm-gold);
+  transform: translateY(-1px);
+}
+
+/* === Кровные узы / Винкулум === */
+.vtm-bond-card {
+  background: linear-gradient(180deg, rgba(31, 14, 18, 0.6), rgba(23, 10, 13, 0.7));
+  border: 1px solid var(--vtm-line-soft);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.vtm-bond-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--vtm-blood-deep), var(--vtm-blood-bright));
+  opacity: 0.6;
+}
+.vtm-bond-card.is-slave {
+  border-color: rgba(194, 43, 48, 0.5);
+  box-shadow: 0 0 0 1px rgba(194, 43, 48, 0.15), 0 4px 18px rgba(138, 26, 29, 0.25);
+}
+.vtm-bond-card.is-vinculum::before {
+  background: linear-gradient(180deg, var(--vtm-violet), var(--vtm-violet-bright));
+}
+.vtm-bond-head {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.vtm-bond-name {
+  flex: 1;
+  font-weight: 600;
+  font-family: var(--vtm-font-display), Georgia, serif;
+}
+.vtm-bond-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.vtm-bond-card .vtm-bond-grid .vtm-mini-field:last-child {
+  grid-column: 1 / -1;
+}
+.vtm-bond-card.is-vinculum .vtm-bond-grid {
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+.vtm-bond-card.is-vinculum .vtm-bond-grid .vtm-mini-field:nth-child(4) {
+  grid-column: auto;
+}
+.vtm-bond-note {
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--vtm-bone-dim);
+}
+.vtm-bond-stagebar {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding-top: 0.3rem;
+  border-top: 1px dashed var(--vtm-line-soft);
+}
+.vtm-bond-pip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  border: 1px solid var(--vtm-line);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--vtm-ash);
+  background: rgba(0, 0, 0, 0.25);
+  transition: all 0.2s ease;
+}
+.vtm-bond-pip.filled {
+  background: radial-gradient(circle, var(--vtm-blood-bright), var(--vtm-blood-deep));
+  border-color: var(--vtm-blood-bright);
+  color: var(--vtm-bone);
+  box-shadow: 0 0 8px rgba(194, 43, 48, 0.5);
+}
+.vtm-bond-vinculum-tag {
+  font-size: 0.74rem;
+  color: var(--vtm-violet-bright);
+  font-family: var(--vtm-font-display), Georgia, serif;
+  letter-spacing: 0.03em;
+}
+
+/* === Котерия === */
+.vtm-coterie-roster {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px dashed var(--vtm-line-soft);
+  border-radius: 0.5rem;
+  padding: 0.7rem;
+}
+.vtm-coterie-row {
+  display: grid;
+  grid-template-columns: 2fr 1.3fr 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+.vtm-coterie-row:has(.vtm-coterie-vinculum) {
+  grid-template-columns: 1.8fr 1.2fr 1fr 0.7fr auto;
+}
+.vtm-coterie-row .vtm-input {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.78rem;
+}
+.vtm-coterie-name {
+  font-family: var(--vtm-font-display), Georgia, serif;
+}
+@media (max-width: 640px) {
+  .vtm-coterie-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .vtm-coterie-row .vtm-coterie-name {
+    grid-column: 1 / -1;
+  }
+}
+
+/* === Долги престации === */
+.vtm-boon-form {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 2fr auto;
+  gap: 0.4rem;
+  align-items: stretch;
+}
+.vtm-boon-form .vtm-input,
+.vtm-boon-form .vtm-btn {
+  font-size: 0.78rem;
+}
+@media (max-width: 640px) {
+  .vtm-boon-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .vtm-boon-form .vtm-boon-party {
+    grid-column: 1 / -1;
+  }
+  .vtm-boon-form .vtm-btn-add {
+    grid-column: 1 / -1;
+  }
+}
+.vtm-boon-row {
+  background: linear-gradient(180deg, rgba(31, 14, 18, 0.5), rgba(23, 10, 13, 0.6));
+  border-left: 3px solid var(--vtm-line);
+  border-radius: 0.4rem;
+  padding: 0.55rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  transition: border-color 0.2s ease;
+}
+.vtm-boon-row.owed {
+  border-left-color: var(--vtm-gold);
+}
+.vtm-boon-row.owing {
+  border-left-color: var(--vtm-blood-bright);
+}
+.vtm-boon-row.paid {
+  opacity: 0.55;
+}
+.vtm-boon-row.broken {
+  border-left-color: #5a3a3a;
+  background: rgba(40, 12, 12, 0.4);
+}
+.vtm-boon-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.8rem;
+}
+.vtm-boon-kind {
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.72rem;
+  background: rgba(168, 134, 61, 0.15);
+  color: var(--vtm-gold-bright);
+}
+.vtm-boon-kind.life {
+  background: rgba(194, 43, 48, 0.2);
+  color: var(--vtm-blood-bright);
+}
+.vtm-boon-kind.blood {
+  background: rgba(122, 74, 140, 0.2);
+  color: var(--vtm-violet-bright);
+}
+.vtm-boon-arrow {
+  color: var(--vtm-ash);
+  font-size: 0.74rem;
+}
+.vtm-boon-party {
+  color: var(--vtm-bone);
+  font-weight: 600;
+}
+.vtm-boon-status {
+  margin-left: auto;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+}
+.vtm-boon-status.open {
+  background: rgba(168, 134, 61, 0.12);
+  color: var(--vtm-gold-bright);
+}
+.vtm-boon-status.paid {
+  background: rgba(143, 155, 122, 0.15);
+  color: var(--vtm-ash);
+}
+.vtm-boon-status.broken {
+  background: rgba(194, 43, 48, 0.2);
+  color: var(--vtm-blood-bright);
+}
+.vtm-boon-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+/* === Убеждения и Якоря === */
+.vtm-conv-card {
+  background: linear-gradient(180deg, rgba(31, 14, 18, 0.5), rgba(23, 10, 13, 0.65));
+  border: 1px solid var(--vtm-line-soft);
+  border-radius: 0.5rem;
+  padding: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  transition: border-color 0.25s ease;
+}
+.vtm-conv-card.is-broken {
+  border-color: rgba(194, 43, 48, 0.5);
+  background: linear-gradient(180deg, rgba(40, 12, 12, 0.5), rgba(23, 10, 13, 0.7));
+}
+.vtm-conv-card.is-broken::after {
+  content: "⚓ утрачен";
+  position: absolute;
+  top: 0.5rem;
+  right: 2.5rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vtm-blood-bright);
+  opacity: 0.8;
+}
+.vtm-conv-head {
+  display: flex;
+  gap: 0.4rem;
+}
+.vtm-conv-conviction {
+  flex: 1;
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-weight: 600;
+}
+.vtm-conv-anchor {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.vtm-conv-anchor .vtm-input {
+  flex: 1;
+  font-size: 0.8rem;
+}
+.vtm-conv-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+.vtm-conv-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  color: var(--vtm-bone-dim);
+  cursor: pointer;
+  user-select: none;
+}
+.vtm-conv-toggle input[type="checkbox"] {
+  accent-color: var(--vtm-blood-bright);
+  width: 1rem;
+  height: 1rem;
+}
+.vtm-conv-note {
+  font-size: 0.76rem;
+  font-style: italic;
+  color: var(--vtm-bone-dim);
+}
+
+/* === Торпор === */
+.vtm-torpor-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  user-select: none;
+  padding: 0.6rem 0.8rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px dashed var(--vtm-line-soft);
+  border-radius: 0.4rem;
+  font-family: var(--vtm-font-display), Georgia, serif;
+  letter-spacing: 0.03em;
+}
+.vtm-torpor-toggle input[type="checkbox"] {
+  accent-color: var(--vtm-blood-bright);
+  width: 1.1rem;
+  height: 1.1rem;
+}
+.vtm-torpor-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 0.3rem;
+}
+.vtm-torpor-duration {
+  font-size: 0.85rem;
+  color: var(--vtm-bone-dim);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.4rem 0.7rem;
+  border-radius: 0.3rem;
+  border-left: 2px solid var(--vtm-gold);
+}
+.vtm-torpor-duration strong {
+  font-family: var(--vtm-font-display), Georgia, serif;
+}
+
+/* === Адаптив вкладки «Узы» === */
+@media (max-width: 640px) {
+  .vtm-bond-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .vtm-bond-card.is-vinculum .vtm-bond-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .vtm-boon-main {
+    font-size: 0.74rem;
+  }
+  .vtm-boon-status {
+    margin-left: 0;
+  }
+}

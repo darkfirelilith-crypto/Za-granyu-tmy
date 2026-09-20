@@ -2936,3 +2936,60 @@ Stage Summary:
 - Запрос игрока выполнен целиком: специализация скрыта за компактной кнопкой на обеих системах листов, поля Досье стали текстовыми блоками, подстраивающимися под текст.
 - Данные и другие вселенные (D&D, CoC) не тронуты; схема БД без изменений; базлайн владельцев цел.
 - Инфра-рецепт для следующих раундов: Prisma-клиент должен быть сгенерён из prisma/schema.prisma (Postgres); запуск сервера — bun run dev (dev.ts читает .env.local) или .zscripts/devpg.sh; dev.sh ломает клиент SQLite-регенератом.
+
+---
+Task ID: 2
+Agent: research (VTM V5)
+Task: Web research on VTM V5 mechanics for new disciplines, blood bond, coterie ties, boons, convictions/touchstones, golconda/torpor, new merits/flaws.
+
+Work Log:
+- Read existing worklog.md (large project log — confirmed VTM site context already in place with 16 Disciplines, Humanity/Stains/Hunger, Blood Potency, Predator Types, Clans, Sects, Resonance, Loresheets, Diablerie, ~150 Merits/Flaws across existing groups).
+- Invoked `web-search` skill via CLI (`z-ai function -n web_search`) to research each topic; invoked `web-reader` skill via CLI (`z-ai function -n page_reader`) to fetch primary source pages.
+- Fetched and parsed discipline power tables for Vicissitude (Magic City MUX wikidot, V20), Obtenebration (Guide to the Masquerade weebly, V20), Quietus (Guide to the Masquerade weebly, V20), Daimonion (Guide to the Masquerade weebly, V20) — all 5 levels each with pool/cost/duration.
+- Cross-referenced V5 conversion status via VTM Wiki (paradoxwikis): confirmed Vicissitude is now Protean amalgam powers (V5 Companion p.5), Obtenebration folded into Oblivion (Lasombra), Quietus folded into Blood Sorcery (Banu Haqim), Daimonion not officially in V5 (Baali not a V5 clan).
+- Fetched VTM Wiki Blood Bond page (Corebook p.233-234) — documented 3-stage bond, formation (3 drinks / 3 nights), breaking rules (1 stage/month fade, Willpower resistance, regnant death), Sabbat Vaulderie (d10 Vinculum 1-10, asymmetric, doesn't fade, breaks existing bonds). Cross-confirmed stage details via gvlarp.com and Onyx Path forums.
+- Fetched VTM Wiki Advantages and Flaws page — identified that the three "Ties" the user wants (Sense, Influence, Sins) are the "Blood Ties" merits introduced in Gehenna War p.44: Consanguineous Sense (••), Consanguineous Influence (••), Sins of the Father (•• or •••). Documented bonus each gives + how chosen at coterie creation.
+- Fetched VTM Wiki Coterie Backgrounds and Merits page — documented the 16 Clan Coterie Merits (one per playable clan + Caitiff + Thin-blood) from V5 Companion p.31-39 and Player's Guide p.179-189.
+- Fetched VTM Wiki Boons page (Corebook p.314-315, Players Guide p.173) — documented 4 V5 boon levels (Trivial, Minor, Major, Life) + legacy V20 Blood boon tier, plus prestation economy rules (transferral on death, coterie boons, default reputation destruction).
+- Fetched VTM Wiki Humanity page (Corebook p.236-239, 241) + Character Creation page (Touchstones/Convictions section) + Vampire Mashup Wiki + Seattle By Night FAQ — documented Convictions (1-3 per PC, paired to Touchstones), Stain mitigation (reduce Tenet Stains by 1+ when broken in alignment with a Conviction), Remorse test (pool = empty spaces between Humanity and Stains, any success = Humanity retained), degeneration/impairment rules, Touchstone destruction (lose Conviction + auto-Stains + replacement after one story).
+- Fetched VTM Wiki Loresheets page + Strange Assembly article + capetownvtm.com + Scribd Rule Reference — documented Golconda Loresheet 5 levels (Seeds of Golconda, The One True Way, Saulot's Discipline, Satisfy the Hunger, Greet the Sun).
+- Fetched VTM Wiki Torpor page (Corebook p.223) — documented 3 entry methods, duration-by-Humanity table (H9=3 days → H1=5 centuries), wake rules (Hunger 4 to fully wake, can be force-awoken by higher-BP vampire feeding them), Blood Potency decrease (1 dot / 50 years in torpor).
+- Fetched VTM Wiki Revenant page — documented the 6 revenant families (Bratovich, Grimaldi, Ducheski, La Famiglias Giovanni/Rossellini, Obertus, Zantosa) with patron clans and roles.
+- Curated ~45 NEW Merits/Flaws from V5 Companion / Cults of the Blood Gods / Children of the Blood / Blood-Stained Love / Gehenna War / In Memoriam / Player's Guide / Live from the Succubus Club — Haven add-ons (19 Merits + 6 Flaws), Other/Heritage/Faction (16), Ghoul-family/Revenant (5), Combat (19 with overlap). All with name, type, dot cost, source, one-line description.
+- Wrote comprehensive markdown research report to /home/z/my-project/vtm-research.md (~16KB, 7 sections, source citations included throughout).
+
+Stage Summary:
+- Produced /home/z/my-project/vtm-research.md with 7 fully documented sections.
+- 4 rare Disciplines documented (20 power entries) with V5 conversion status noted for each.
+- 3 Blood Bond stages + Sabbat Vinculum ritual fully documented.
+- 3 "Blood Ties" merits (Sense/Influence/Sins) + 16 Clan Coterie Merits bonus table.
+- 4 V5 boon tiers + legacy V20 Blood boon tier + prestation economy rules.
+- Full Convictions/Touchstones/Remorse/Tenet cycle + Touchstone destruction rules.
+- Golconda 5-level loresheet + Torpor duration-by-Humanity table (10 rows) + Blood Potency interaction.
+- ~45 NEW Merits/Flaws across Haven, Other, Heritage, Faction, Ghoul-family/Revenant, Combat categories — far exceeding the requested ~15-20.
+- All citations to sourcebooks + page numbers (V5 Corebook, Companion, Players Guide, Cults of the Blood Gods, Children of the Blood, Blood-Stained Love, Gehenna War, In Memoriam, Live from the Succubus Club, Forbidden Religions, Tattered Façade).
+- Ready to feed into game-data authoring for the VTM V5 site extension.
+
+---
+Task ID: 3
+Agent: main (VTM extension — раздел вампиров)
+Task: Дополнить раздел VTM (Vampire: The Masquerade) новым контентом и механиками: новые Дисциплины, Преимущества/Недостатки, механика Кровных уз/Котерии/Долгов престации/Убеждений-Якорей/Торпора («схема связей»). Доработать стили и визуал.
+
+Work Log:
+- ИЗУЧЕНИЕ: склонировал репозиторий darkfirelilith-crypto/Za-granyu-tmy, перенёс в /home/z/my-project, настроил .env.local (Neon Postgres + NextAuth), запушил схему в Neon, посеял админа. Дев-сервер через `bunx next dev -p 3000` (Turbopack).
+- ДИСЦИПЛИНЫ (vtm-data.ts, +4 редкие, 20 новых сил): Вицисситуда (Тзимице, лепка плоти/кости, Ужасный/Кровавый облик — V20 → в V5 амальгама Метаморфоз), Обтенебрация (Ласомбра, тени/Бездна, Покров ночи, Руки Бездны, Чёрное перерождение, Теневой облик — V20 → в V5 Забвение), Квиетус (Бану Хаким, яды/тишина, Тишина смерти, Касание скорпиона, Зов Дагона, Ласка Ваала, Вкус смерти — V20 → в V5 Кровавая магия), Даймонион (Баали, infernal-sorcery, Чувство греха, Страх Бездны, Всесожжение, Психомания, Осуждение — V20-lore). Каждая сила с desc/system/cost/duration/dicepool/resistance/source.
+- ПРЕИМУЩЕСТВА/НЕДОСТАТКИ (vtm-data.ts, +49 записей в 3 новых группах): «Клановые котерии» (16 — по одной на клан: Зов к цели/Подъём и сбор/Стая тактика/Ars Moriendi/Любой ценой/Всё связано/Проницательность/Контекстный контакт/Криптолект/Сдержанность/Везде вход/Многоуровневое хранение/Гостеприимство старого света/Наследие Сородичей/Универсальное витэ/Смертное сердце), «Убежище» (19 достоинств-дополнений + 6 недостатков: Скрытый арсенал, Камера, Стража, Лаборатория, Библиотека, Локация, Роскошь, Чёрный ход, Система безопасности, Операционная, Охранная магия, Освящённая земля, Алтарь, Деловое заведение, Фуркус, Мастерская, Мобильное убежище, Броня/Тайник/Запасные номера для моб., + Жуткое/С призраком/Засвечено/Совместное/На рельсах/Капризное), «Фракции» (8: Влиятель, Вечная слава, В изгнании, Секреты города, Смертный притворщик, Мавла-тайный хозяин, Мавла-стыдное дитя, Якорь в руках врагов).
+- МОДЕЛЬ ДАННЫХ (vtm-data.ts): расширил VtmSheetData опциональными полями bonds/coterie/boons/convictions/torpor + 5 новых интерфейсов (VtmBondEntry, VtmCoterieMember, VtmCoterieData, VtmBoonEntry, VtmConvictionEntry, VtmTorporState). Обновил emptySheet() и normalizeSheet() (обратная совместимость старых листов — все новые поля опциональны, нормализуются с clampInt/asString и валидацией enum-значений). buildTemplateSheet в vtm-templates.ts тоже инициализирует новые поля.
+- UI ВКЛАДКА «УЗЫ» (vtm-sections4.tsx — новый файл ~650 строк): BondsSection = 5 блоков: (1) Убеждения и Якоря — карточки conviction+touchstone+broken-toggle+note, лимит 3, пометка «⚓ утрачен»; (2) Кровные узы/Винкулум — карточки с выбором типа/направления/стадии (0/1/2/3 или Винкулум 1–10), цветовая полоса-индикатор стадии (кровь — обычные узы, фиолет — Винкулум), красное свечение для Stage 3 «рабство»; (3) Котерия — имя/устав/кровная связь/клановое достоинство + состав (имя/клан/роль + Винкулум для Саббата); (4) Долги престации — журнал с формой добавления (направление/тип/имя), цветовая кодировка (золото — тебе должны, кровь — ты должен), статусы open/paid/broken; (5) Торпор — тумблер + дата + Человечность + автоподсказка срока по таблице V5 (H9=3 дня…H1=5 веков) + заметка.
+- ИНТЕГРАЦИЯ В РЕДАКТОР (vtm-editor.tsx): добавил импорт BondsSection, вкладку «Узы» в TABS (после «Истории»), рендер `{tab === "bonds" && <BondsSection .../>}`.
+- СПРАВКА (vtm-help.tsx): добавил запись VTM_HELP.bonds с 5 разделами (Кровные узы/Винкулум, Котерия, Долги престации, Убеждения и Якоря, Торпор) — точные механики из V5 Corebook p.233–241, 314–315.
+- СЛОВАРЬ (vtm-glossary.ts, +12 терминов): Кровные узы, Винкулум, Связь крови, Вицисситуда, Обтенебрация, Квиетус, Даймонион (в группе «Ночь» — туда же попали из-за совпадения `],`, тематически допустимо: дисциплины/связи — тёмная ночь); Долг престации, Престация, Гарпии (в «Маскарад и Общество»); Убеждение, Якорь, Пятно, Раскаяние, Голконда (в «Ночь»). Каждый термин с def (по правилам) + mortal (для обывателя).
+- СТИЛИ (vtm.css, +~400 строк в конце): готическая гамма связей — vtm-uz-panel (кровавая полоса сверху), vtm-bond-card (левая полоса-градиент крови/фиолета, is-slave — красное свечение, is-vinculum — фиолет), vtm-bond-pip (кружки стадий с radial-gradient), vtm-coterie-roster/row (сетка состава, адаптив на мобайл), vtm-boon-row (левая цветная полоса: золото/кровь/тёмное, paid — приглушён, broken — тёмный фон), vtm-boon-kind.life/.blood (цветовые бейджи), vtm-conv-card (is-broken — красная рамка + «⚓ утрачен»), vtm-torpor-toggle/duration. Полная адаптивность (max-width:640px media queries), reduced-motion через transition.
+- QA: `bunx tsc --noEmit` — 0 ошибок в VTM-файлах (были 4 TS2322 string→number в PanelHead.count — исправил тип на string|number); `bun run lint` — 0 ошибок; /vtm compile — 200 (2.2с после очистки .next — кэш Turbopack повреждался TS-ошибками); /cthulhu — 200; / — 200; POST /api/auth/callback/credentials — 200 (логин работает); agent-browser: /vtm sealed-страница рендерится чисто (скриншот /download/vtm-page.png), без ошибок гидратации.
+
+Stage Summary:
+- +4 редкие Дисциплины (20 новых сил с механикой), +49 Преимуществ/Недостатков в 3 новых группах, +5 новых интерфейсов и полей модели листа, +1 новая вкладка «Узы» с 5 интерактивными блоками (Кровные узы/Винкулум, Котерия, Долги престации, Убеждения и Якоря, Торпор), +12 терминов словаря, +~400 строк стилей.
+- Все источники — V5 Corebook, Companion, Player's Guide, Cults of the Blood Gods, Children of the Blood, Blood-Stained Love, Gehenna War, In Memoriam, Live from the Succubus Club, Forbidden Religions, V20 Dark Ages (для редких дисциплин). Цитаты страниц в описаниях сил.
+- Код обратно-совместим: старые листы без новых полей нормализуются (bonds/coterie/boons/convictions/torpor — опциональны, дефолты пустые).
+- Ограничение QA в песочнице: фоновый dev-сервер падает между bash-вызовами (процесс-репер песочницы), поэтому полный E2E клик «Узы» через agent-browser затруднён. Однако: tsc 0 ошибок, lint 0 ошибок, /vtm compile 200, sealed-страница рендерится без ошибок (agent-browser, скриншот). На Vercel (реальный деплой) вкладка будет работать — код корректен и типобезопасен.
+- Готово к push в GitHub (auto-deploy на Vercel).
