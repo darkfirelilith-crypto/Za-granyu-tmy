@@ -25,14 +25,16 @@ import { LORESHEETS, LORESHEET_RULES, DIABLERIE_BLOCKS } from "@/lib/vtm-histori
 import { POWER_SYSTEMS, DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
 import { V20_BLOCKS } from "@/lib/vtm-v20";
 import { BLOOD_SORCERY_RITUALS, OBLIVION_CEREMONIES, RITUAL_RULES, RitualDef } from "@/lib/vtm-rituals";
+import { CHRONICLE_TENETS, CONVICTION_EXAMPLES, FRENZY_TYPES, COMPULSIONS, FRENZY_RULES } from "@/lib/vtm-chronicle";
 import { WEREWOLF_INTRO, WEREWOLF_FORMS, WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_WAYWARD, WEREWOLF_COEXIST } from "@/lib/vtm-werewolf";
 
-type CodexTab = "clans" | "disciplines" | "rituals" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
+type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
 
 const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "clans", label: "Кланы", icon: "⛧" },
   { id: "disciplines", label: "Дисциплины", icon: "✦" },
   { id: "rituals", label: "Ритуалы", icon: "🔮" },
+  { id: "chronicle", label: "Хроника", icon: "⚖" },
   { id: "thinblood", label: "Слабокровные", icon: "⚗" },
   { id: "mechanics", label: "Механики", icon: "🎲" },
   { id: "predators", label: "Стили охоты", icon: "🩸" },
@@ -79,6 +81,7 @@ export function CodexSection() {
       {tab === "clans" && <ClansCodex q={q} />}
       {tab === "disciplines" && <DisciplinesCodex q={q} />}
       {tab === "rituals" && <RitualsCodex q={q} />}
+      {tab === "chronicle" && <ChronicleCodex q={q} />}
       {tab === "thinblood" && <ThinbloodCodex q={q} />}
       {tab === "mechanics" && <MechanicsCodex q={q} />}
       {tab === "predators" && <PredatorsCodex q={q} />}
@@ -335,6 +338,132 @@ function RitualsCodex({ q }: { q: string }) {
       {filtered.length === 0 && (
         <p className="vtm-hint text-center py-6">Кодекс молчит по этому запросу.</p>
       )}
+    </div>
+  );
+}
+
+// ---------- Хроника: Запреты, Убеждения, Френзия, Принуждения ----------
+
+function ChronicleCodex({ q }: { q: string }) {
+  const tenets = CHRONICLE_TENETS.filter((t) => !q || `${t.name} ${t.desc} ${t.stains}`.toLowerCase().includes(q));
+  const convictions = CONVICTION_EXAMPLES.filter((c) => !q || `${c.text} ${c.aligns}`.toLowerCase().includes(q));
+  const frenzies = FRENZY_TYPES.filter((f) => !q || `${f.name} ${f.en} ${f.trigger} ${f.effect}`.toLowerCase().includes(q));
+  const compulsions = COMPULSIONS.filter((c) => !q || `${c.name} ${c.clan} ${c.effect}`.toLowerCase().includes(q));
+  const rules = FRENZY_RULES.filter((b) => !q || `${b.title} ${b.body.join(" ")}`.toLowerCase().includes(q));
+
+  return (
+    <div className="space-y-4">
+      {/* Запреты хроники */}
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#d6a840]">⚖ Запреты хроники (Chronicle Tenets)</span>
+          <span className="vtm-hint !text-[0.68rem] uppercase ml-auto">общие для всей хроники</span>
+        </div>
+        <div className="p-3 md:p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {tenets.map((t) => (
+            <article key={t.id} className="vtm-tenet-card">
+              <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                <span className="vtm-display text-[0.95rem] text-[#c22b30]">{t.name}</span>
+                <span className="vtm-tenet-severity">{t.severity}</span>
+              </div>
+              <p className="text-[0.84rem] text-[#c4ac9d] leading-relaxed mt-1">{t.desc}</p>
+              <p className="vtm-tenet-stains mt-2">
+                <span className="vtm-mini-label">Пятна: </span>{t.stains}
+              </p>
+              <p className="vtm-hint !text-[0.68rem] italic mt-1">📜 {t.source}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Примеры Убеждений */}
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#d6a840]">🕯 Примеры Убеждений (Convictions)</span>
+          <span className="vtm-hint !text-[0.68rem] uppercase ml-auto">личный код Сородича</span>
+        </div>
+        <div className="p-3 md:p-4">
+          <p className="vtm-hint !text-[0.78rem] mb-3">
+            Убеждения — 1–3 на лист. Не обязаны быть добрыми: это просто правило, по которому вампир хочет жить. Убеждение снимает 1+ Пятно, когда Запрет нарушен в согласии с ним; нарушенное Убеждение насылает Пятно сверху.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {convictions.map((c, i) => (
+              <div key={i} className="vtm-conviction-example">
+                <span className="text-[#d6a840] mr-1.5" aria-hidden>❦</span>
+                <div>
+                  <p className="text-[0.85rem] text-[#d9c7b6] italic">«{c.text}»</p>
+                  <p className="vtm-hint !text-[0.7rem] mt-0.5">{c.aligns}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Френзия */}
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#d6a840]">🔥 Френзия и Принуждения</span>
+        </div>
+        <div className="p-3 md:p-4 space-y-3">
+          {rules.map((b) => (
+            <div key={b.title} className="vtm-ritual-rule-block">
+              <p className="vtm-display text-[0.9rem] text-[#d6a840] mb-1">{b.title}</p>
+              {b.body.map((line, i) => (
+                <p key={i} className="text-[0.82rem] leading-relaxed text-[#c4ac9d] flex gap-2 mb-1">
+                  <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
+                  <span>{line}</span>
+                </p>
+              ))}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Типы Френзии */}
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#c22b30]">Три вида Френзии</span>
+        </div>
+        <div className="p-3 md:p-4 grid grid-cols-1 gap-3">
+          {frenzies.map((f) => (
+            <article key={f.id} className="vtm-frenzy-card">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="vtm-display text-[0.98rem] text-[#c22b30]">{f.name}</span>
+                <span className="vtm-hint !text-[0.72rem] italic">({f.en})</span>
+              </div>
+              <div className="vtm-frenzy-grid mt-2">
+                <div><span className="vtm-mini-label">Триггер</span><p className="text-[0.8rem] text-[#c4ac9d]">{f.trigger}</p></div>
+                <div><span className="vtm-mini-label">Пул</span><p className="text-[0.8rem] text-[#c4ac9d]">{f.dicepool}</p></div>
+                <div><span className="vtm-mini-label">Сложность</span><p className="text-[0.8rem] text-[#c4ac9d]">{f.difficulty}</p></div>
+                <div><span className="vtm-mini-label">Длительность</span><p className="text-[0.8rem] text-[#c4ac9d]">{f.duration}</p></div>
+              </div>
+              <p className="text-[0.83rem] text-[#d9c7b6] leading-relaxed mt-2">{f.effect}</p>
+              <p className="vtm-hint !text-[0.68rem] italic mt-1">📜 {f.source}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Принуждения клана */}
+      <section className="vtm-panel">
+        <div className="vtm-panel-head">
+          <span className="vtm-label text-[0.81rem] text-[#a877c0]">⚡ Принуждения клана (Compulsions)</span>
+          <span className="vtm-hint !text-[0.68rem] uppercase ml-auto">при критическом провале с костями Голода</span>
+        </div>
+        <div className="p-3 md:p-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+          {compulsions.map((c) => (
+            <article key={c.id} className="vtm-compulsion-card">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="vtm-display text-[0.9rem] text-[#a877c0]">{c.name}</span>
+                <span className="vtm-hint !text-[0.68rem] uppercase">{c.clan === "any" ? "общее" : c.clan}</span>
+              </div>
+              <p className="text-[0.82rem] text-[#c4ac9d] leading-relaxed mt-1">{c.effect}</p>
+              <p className="vtm-hint !text-[0.66rem] italic mt-1">⏱ {c.duration} · 📜 {c.source}</p>
+            </article>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

@@ -5211,3 +5211,145 @@ button.vtm-die.vtm-die-selectable.selected {
   font-style: italic;
   font-size: 0.85rem;
 }
+
+/* ============================================================
+   ВКЛАДКА «ХРОНИКА» (Codex) — Запреты, Убеждения, Френзия, Принуждения.
+   Тёмные законы хроники: тяжесть, Пятна, триггеры Зверя.
+   ============================================================ */
+
+/* --- Запреты хроники --- */
+.vtm-tenet-card {
+  background: linear-gradient(180deg, rgba(40, 14, 16, 0.55), rgba(23, 10, 13, 0.7));
+  border: 1px solid var(--vtm-line-soft);
+  border-left: 3px solid var(--vtm-blood-bright);
+  border-radius: 0.5rem;
+  padding: 0.75rem 0.85rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+}
+.vtm-tenet-card:hover {
+  border-left-color: var(--vtm-blood-bright);
+  border-color: rgba(194, 43, 48, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(138, 26, 29, 0.25);
+}
+.vtm-tenet-card::before {
+  content: "⚖";
+  position: absolute;
+  top: 0.4rem;
+  right: 0.6rem;
+  font-size: 1.4rem;
+  opacity: 0.08;
+  pointer-events: none;
+  color: var(--vtm-blood-bright);
+}
+.vtm-tenet-severity {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.12rem 0.5rem;
+  border-radius: 0.25rem;
+  background: rgba(194, 43, 48, 0.18);
+  color: var(--vtm-blood-bright);
+  border: 1px solid rgba(194, 43, 48, 0.3);
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-weight: 700;
+}
+.vtm-tenet-stains {
+  font-size: 0.76rem;
+  color: var(--vtm-bone-dim);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.3rem;
+  border-left: 2px solid var(--vtm-gold);
+}
+
+/* --- Примеры Убеждений --- */
+.vtm-conviction-example {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding: 0.5rem 0.7rem;
+  background: linear-gradient(90deg, rgba(168, 134, 61, 0.05), transparent);
+  border-left: 2px solid var(--vtm-gold);
+  border-radius: 0.3rem;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+.vtm-conviction-example:hover {
+  background: linear-gradient(90deg, rgba(168, 134, 61, 0.12), transparent);
+  transform: translateX(2px);
+}
+
+/* --- Френзия --- */
+.vtm-frenzy-card {
+  background: linear-gradient(180deg, rgba(40, 14, 16, 0.5), rgba(23, 10, 13, 0.7));
+  border: 1px solid var(--vtm-line-soft);
+  border-radius: 0.5rem;
+  padding: 0.8rem 0.95rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.vtm-frenzy-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--vtm-blood-bright), transparent);
+  opacity: 0.6;
+}
+.vtm-frenzy-card:hover {
+  border-color: rgba(194, 43, 48, 0.4);
+  box-shadow: 0 0 0 1px rgba(194, 43, 48, 0.15), 0 4px 18px rgba(138, 26, 29, 0.2);
+}
+.vtm-frenzy-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-top: 1px dotted var(--vtm-line-soft);
+  border-bottom: 1px dotted var(--vtm-line-soft);
+}
+.vtm-frenzy-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+@media (max-width: 768px) {
+  .vtm-frenzy-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .vtm-frenzy-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Принуждения клана --- */
+.vtm-compulsion-card {
+  background: linear-gradient(180deg, rgba(30, 18, 40, 0.55), rgba(23, 10, 13, 0.7));
+  border: 1px solid var(--vtm-line-soft);
+  border-left: 3px solid var(--vtm-violet-bright);
+  border-radius: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.vtm-compulsion-card::before {
+  content: "⚡";
+  position: absolute;
+  top: 0.3rem;
+  right: 0.5rem;
+  font-size: 1.1rem;
+  opacity: 0.1;
+  pointer-events: none;
+  color: var(--vtm-violet-bright);
+}
+.vtm-compulsion-card:hover {
+  border-left-color: var(--vtm-violet-bright);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 12px rgba(122, 74, 140, 0.2);
+}
