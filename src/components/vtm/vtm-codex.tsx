@@ -26,18 +26,20 @@ import { POWER_SYSTEMS, DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
 import { V20_BLOCKS } from "@/lib/vtm-v20";
 import { BLOOD_SORCERY_RITUALS, OBLIVION_CEREMONIES, RITUAL_RULES, RitualDef } from "@/lib/vtm-rituals";
 import { CHRONICLE_TENETS, CONVICTION_EXAMPLES, FRENZY_TYPES, COMPULSIONS, FRENZY_RULES } from "@/lib/vtm-chronicle";
+import { DYSCRASIAS, RESONANCE_RULES, DyscrasiaDef } from "@/lib/vtm-dyscrasias";
 import { WEREWOLF_INTRO, WEREWOLF_FORMS, WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_WAYWARD, WEREWOLF_COEXIST } from "@/lib/vtm-werewolf";
 
-type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
+type CodexTab = "clans" | "disciplines" | "rituals" | "chronicle" | "resonances" | "thinblood" | "mechanics" | "predators" | "advantages" | "histories" | "sects" | "v20" | "werewolf";
 
 const TABS: { id: CodexTab; label: string; icon: string }[] = [
   { id: "clans", label: "Кланы", icon: "⛧" },
   { id: "disciplines", label: "Дисциплины", icon: "✦" },
   { id: "rituals", label: "Ритуалы", icon: "🔮" },
   { id: "chronicle", label: "Хроника", icon: "⚖" },
+  { id: "resonances", label: "Резонансы", icon: "🩸" },
   { id: "thinblood", label: "Слабокровные", icon: "⚗" },
   { id: "mechanics", label: "Механики", icon: "🎲" },
-  { id: "predators", label: "Стили охоты", icon: "🩸" },
+  { id: "predators", label: "Стили охоты", icon: "🦅" },
   { id: "advantages", label: "Преимущества", icon: "◈" },
   { id: "histories", label: "Истории", icon: "📜" },
   { id: "sects", label: "Секты и эпохи", icon: "👑" },
@@ -82,6 +84,7 @@ export function CodexSection() {
       {tab === "disciplines" && <DisciplinesCodex q={q} />}
       {tab === "rituals" && <RitualsCodex q={q} />}
       {tab === "chronicle" && <ChronicleCodex q={q} />}
+      {tab === "resonances" && <ResonancesCodex q={q} />}
       {tab === "thinblood" && <ThinbloodCodex q={q} />}
       {tab === "mechanics" && <MechanicsCodex q={q} />}
       {tab === "predators" && <PredatorsCodex q={q} />}
@@ -464,6 +467,111 @@ function ChronicleCodex({ q }: { q: string }) {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+// ---------- Резонансы и Дисфразии ----------
+
+function DyscrasiaCard({ d }: { d: DyscrasiaDef }) {
+  const resColor = { sanguine: "#c96a2e", choleric: "#c22b30", melancholic: "#6f7f9b", phlegmatic: "#8f9b7a", animal: "#7a4a3c" }[d.resonance] || "#8a1a1d";
+  return (
+    <article className="vtm-dyscrasia-card" style={{ borderLeftColor: resColor }}>
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <span className="vtm-display text-[0.95rem]" style={{ color: resColor }}>{d.name}</span>
+        <span className="vtm-dyscrasia-int">инт. {d.intensity}+</span>
+      </div>
+      <p className="text-[0.78rem] text-[#9c8072] italic mt-0.5">{d.brief}</p>
+      <div className="vtm-dyscrasia-grid mt-2">
+        <div>
+          <span className="vtm-mini-label">Эффект</span>
+          <p className="text-[0.8rem] text-[#d9c7b6]">{d.effect}</p>
+        </div>
+        <div>
+          <span className="vtm-mini-label">Побочный</span>
+          <p className="text-[0.8rem] text-[#c4ac9d]">{d.sideEffect}</p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-dashed vtm-line-soft">
+        <span className="vtm-dyscrasia-bonus">{d.bonus}</span>
+        <span className="vtm-hint !text-[0.66rem] italic">📜 {d.source}</span>
+      </div>
+    </article>
+  );
+}
+
+function ResonancesCodex({ q }: { q: string }) {
+  const dyscrasias = DYSCRASIAS.filter((d) => !q || `${d.name} ${d.brief} ${d.effect} ${d.sideEffect} ${d.bonus} ${d.resonance}`.toLowerCase().includes(q));
+  const rules = RESONANCE_RULES.filter((b) => !q || `${b.title} ${b.body.join(" ")}`.toLowerCase().includes(q));
+  const [filter, setFilter] = useState<string>("all");
+  const filtered = filter === "all" ? dyscrasias : dyscrasias.filter((d) => d.resonance === filter);
+  const resLabels: { id: string; name: string; color: string }[] = [
+    { id: "sanguine", name: "Сангвинный", color: "#c96a2e" },
+    { id: "choleric", name: "Холерный", color: "#c22b30" },
+    { id: "melancholic", name: "Меланхолийный", color: "#6f7f9b" },
+    { id: "phlegmatic", name: "Флегматийный", color: "#8f9b7a" },
+    { id: "animal", name: "Звериный", color: "#7a4a3c" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Сводные правила */}
+      {rules.map((b) => (
+        <section key={b.title} className="vtm-panel">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.81rem] text-[#d6a840]">🩸 {b.title}</span>
+          </div>
+          <div className="p-4 space-y-2">
+            {b.body.map((line, i) => (
+              <p key={i} className="text-[0.86rem] leading-relaxed text-[#c4ac9d] flex gap-2">
+                <span className="text-[#8a1a1d] shrink-0" aria-hidden>❧</span>
+                <span>{line}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* Фильтры по резонансу */}
+      <section className="vtm-panel p-3 md:p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <span className="vtm-label text-[0.85rem] text-[#d6a840]">Дисфразии — эффекты резонанса крови</span>
+          <span className="vtm-hint !text-[0.72rem]">{filtered.length} из {DYSCRASIAS.length}</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setFilter("all")}
+            className={`vtm-btn !py-1 !px-2.5 !text-[0.74rem] ${filter === "all" ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
+            aria-pressed={filter === "all"}
+          >
+            Все ({DYSCRASIAS.length})
+          </button>
+          {resLabels.map((r) => {
+            const count = DYSCRASIAS.filter((d) => d.resonance === r.id).length;
+            return (
+              <button
+                key={r.id}
+                onClick={() => setFilter(r.id)}
+                className={`vtm-btn !py-1 !px-2.5 !text-[0.74rem] ${filter === r.id ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
+                aria-pressed={filter === r.id}
+                style={filter === r.id ? { background: `linear-gradient(180deg, ${r.color}40, ${r.color}60)`, borderColor: r.color } : undefined}
+              >
+                <span style={{ color: r.color }} aria-hidden>●</span> {r.name} ({count})
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Каталог дисфразий */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {filtered.map((d) => (
+          <DyscrasiaCard key={d.id} d={d} />
+        ))}
+      </div>
+      {filtered.length === 0 && (
+        <p className="vtm-hint text-center py-6">Кровь молчит по этому запросу.</p>
+      )}
     </div>
   );
 }

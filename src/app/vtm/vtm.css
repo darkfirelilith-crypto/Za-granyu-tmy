@@ -5353,3 +5353,83 @@ button.vtm-die.vtm-die-selectable.selected {
   transform: translateY(-1px);
   box-shadow: 0 3px 12px rgba(122, 74, 140, 0.2);
 }
+
+/* ============================================================
+   ВКЛАДКА «РЕЗОНАНСЫ» (Codex) — Дисфразии крови.
+   Пять резонансов, пять цветов: радость/гнев/печаль/покой/зверь.
+   ============================================================ */
+
+.vtm-dyscrasia-card {
+  background: linear-gradient(180deg, rgba(31, 14, 18, 0.55), rgba(23, 10, 13, 0.7));
+  border: 1px solid var(--vtm-line-soft);
+  border-left: 3px solid var(--vtm-blood-bright);
+  border-radius: 0.5rem;
+  padding: 0.75rem 0.85rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+}
+.vtm-dyscrasia-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(138, 26, 29, 0.2);
+}
+.vtm-dyscrasia-card::after {
+  content: "";
+  position: absolute;
+  top: 0; right: 0;
+  width: 60px; height: 60px;
+  background: radial-gradient(circle at top right, var(--vtm-blood-bright), transparent 70%);
+  opacity: 0.08;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.vtm-dyscrasia-card:hover::after {
+  opacity: 0.15;
+}
+
+.vtm-dyscrasia-int {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--vtm-ash);
+  border: 1px solid var(--vtm-line-soft);
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-weight: 700;
+}
+
+.vtm-dyscrasia-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+  padding: 0.5rem 0;
+}
+.vtm-dyscrasia-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+@media (max-width: 640px) {
+  .vtm-dyscrasia-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vtm-dyscrasia-bonus {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--vtm-gold-bright);
+  font-family: var(--vtm-font-display), Georgia, serif;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.4rem;
+  background: rgba(168, 134, 61, 0.12);
+  border-radius: 0.25rem;
+  border: 1px solid rgba(168, 134, 61, 0.25);
+}
+
+/* Линия-разделитель для border-t border-dashed */
+.vtm-line-soft {
+  border-color: var(--vtm-line-soft);
+}
