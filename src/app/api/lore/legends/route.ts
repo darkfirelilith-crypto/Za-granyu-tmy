@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { slimImages, wantsFull } from "@/lib/lore-images";
 import { requireAdmin } from "@/lib/session";
 
-export async function GET() {
-  const items = await db.legend.findMany({ orderBy: { createdAt: "desc" } });
+export async function GET(req: NextRequest) {
+const _full = wantsFull(req);
+const items = _full
+  ? slimImages("legend", await db.legend.findMany({ orderBy: { createdAt: "desc" } }), true)
+  : slimImages("legend", await db.legend.findMany({ orderBy: { createdAt: "desc" }, omit: { image: true } }), false);
   return NextResponse.json(items);
 }
 

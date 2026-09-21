@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { slimImages, wantsFull } from "@/lib/lore-images";
 import { requireAdmin } from "@/lib/session";
 
 // Public read (it's world lore); only admin can create
-export async function GET() {
-  const items = await db.labEntry.findMany({ orderBy: [{ kind: "asc" }, { order: "asc" }] });
+export async function GET(req: NextRequest) {
+  const _full = wantsFull(req);
+const items = _full
+  ? slimImages("labEntry", await db.labEntry.findMany({ orderBy: [{ kind: "asc" }, { order: "asc" }] }), true)
+  : slimImages("labEntry", await db.labEntry.findMany({ orderBy: [{ kind: "asc" }, { order: "asc" }], omit: { image: true } }), false);
   return NextResponse.json(items);
 }
 

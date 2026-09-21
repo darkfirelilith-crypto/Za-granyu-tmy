@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { slimImages, wantsFull } from "@/lib/lore-images";
 import { requireAdmin, requireUser } from "@/lib/session";
 
 // GET — list beings visible to caller (admin sees all; player filtered by group)
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await requireUser();
   if (!session) return NextResponse.json({ error: "Войдите" }, { status: 401 });
   const isAdmin = session.user.role === "ADMIN";
   let items: any[];
   if (isAdmin) {
-    items = await db.importantBeing.findMany({ orderBy: { name: "asc" } });
+const _full = wantsFull(req);
+items = _full
+  ? slimImages("importantBeing", await db.importantBeing.findMany({ orderBy: { name: "asc" } }), true)
+  : slimImages("importantBeing", await db.importantBeing.findMany({ orderBy: { name: "asc" }, omit: { portrait: true } }), false);
   } else {
     const char = await db.character.findUnique({ where: { userId: session.user.id }, select: { id: true } });
     const memberships = await db.groupMember.findMany({ where: { characterId: char?.id ?? "none" }, select: { groupId: true } });

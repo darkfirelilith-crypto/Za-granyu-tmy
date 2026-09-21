@@ -138,9 +138,11 @@ export function VtmPrintSummary({ data, derived }: { data: VtmSheetData; derived
               {data.loresheets.map((l) => {
                 const def = LORESHEET_BY_ID.get(l.sheetId);
                 if (!def || l.level <= 0) return null;
+                const bonuses = def.levels.slice(0, l.level).map((lv, i) => (lv.bonus ? `★ ${lv.bonus}` : "")).filter(Boolean);
                 return (
                   <p key={l.sheetId} className="vtm-sum-adv-item">
                     <i>листог</i> {def.name} {"●".repeat(l.level)}{"○".repeat(4 - l.level)}{l.note ? ` — ${l.note}` : ""}
+                    {bonuses.length > 0 && <span className="vtm-sum-bonus"> {bonuses.join(" · ")}</span>}
                   </p>
                 );
               })}

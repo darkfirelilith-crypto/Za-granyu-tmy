@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { slimImages, wantsFull } from "@/lib/lore-images";
 import { requireAdmin, requireUser } from "@/lib/session";
 
 // GET — list personalities visible to the caller.
 // Admin sees all. Player sees: personalities with visibleGroupId null OR
 // where their character is a member of the personality's group.
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await requireUser();
   if (!session) return NextResponse.json({ error: "Войдите" }, { status: 401 });
 
@@ -33,7 +34,7 @@ export async function GET() {
       orderBy: { name: "asc" },
     });
   }
-  return NextResponse.json(items);
+  return NextResponse.json(slimImages("personality", items, wantsFull(req)));
 }
 
 export async function POST(req: NextRequest) {

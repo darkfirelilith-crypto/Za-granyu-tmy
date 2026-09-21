@@ -1157,6 +1157,49 @@ export function HistoriesSection({
     return sum + def.levels.slice(0, l.level).reduce((s, lv) => s + lv.xp, 0);
   }, 0);
 
+  // ★ Активные бафы: агрегат всех купленных ступеней листогов — шпаргалка за столом
+  const ownedBonuses = useMemo(
+    () =>
+      data.loresheets
+        .map((l) => {
+          const def = LORESHEET_BY_ID.get(l.sheetId);
+          if (!def || l.level <= 0) return null;
+          const bonuses = def.levels
+            .slice(0, l.level)
+            .map((lv, i) => (lv.bonus ? { lvl: i + 1, text: lv.bonus } : null))
+            .filter((x): x is { lvl: number; text: string } => !!x);
+          return { name: def.name, level: l.level, bonuses };
+        })
+        .filter((x): x is { name: string; level: number; bonuses: { lvl: number; text: string }[] } => !!x && x.bonuses.length > 0),
+    [data.loresheets]
+  );
+  const bonusCount = ownedBonuses.reduce((n, x) => n + x.bonuses.length, 0);
+
+  const [bonusCopied, setBonusCopied] = useState(false);
+  const copyBonuses = async () => {
+    const text = ownedBonuses
+      .map((x) => `★ ${x.name} (ур. ${x.level}):
+` + x.bonuses.map((b) => `  • ${b.text}`).join("\n"))
+      .join("\n");
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+      else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+      }
+      setBonusCopied(true);
+      setTimeout(() => setBonusCopied(false), 2200);
+    } catch {
+      toast.error("Буфер обмена недоступен — скопируй вручную");
+    }
+  };
+
   // Каталог: взятые сверху, затем по алфавиту; фильтр «только взятые» + поиск
   const catalogList = useMemo(() => {
     const q = catQuery.trim().toLowerCase();
@@ -1209,6 +1252,38 @@ export function HistoriesSection({
           <span className="text-[#d6a840] not-italic">★</span> — механический баф ступени: держи его на виду за столом (кости к проверкам, услуги, перебросы). Покупка ступени списывает цену из Кошелька Крови автоматически.
         </p>
       </div>
+
+      {/* ★ Активные бафы: собраны со всех взятых листогов */}
+      {ownedBonuses.length > 0 && (
+        <section className="vtm-panel vtm-bonus-panel" aria-label="Активные бафы листогов">
+          <div className="vtm-panel-head">
+            <span className="vtm-label text-[0.81rem] text-[#d6a840]">★ Активные бафы</span>
+            <span className="vtm-hint !text-[0.72rem] ml-2">{bonusCount} бафов с {ownedBonuses.length} листогов</span>
+            <button
+              type="button"
+              className={`vtm-btn ${bonusCopied ? "vtm-btn-gold" : "vtm-btn-ghost"} !py-1 !px-2 !text-[0.72rem] ml-auto`}
+              onClick={copyBonuses}
+              title="Скопировать все бафы текстом — вставить в чат стола"
+            >
+              {bonusCopied ? "✓ скопировано" : "⧉ копировать"}
+            </button>
+          </div>
+          <div className="p-3 md:p-4 flex flex-wrap gap-1.5">
+            {ownedBonuses.flatMap((x) =>
+              x.bonuses.map((b) => (
+                <span
+                  key={`${x.name}-${b.lvl}`}
+                  className="vtm-hist-bonus-chip owned"
+                  title={`Листог «${x.name}», ступень ${b.lvl}`}
+                >
+                  <b className="not-italic">{x.name}</b>
+                  <span aria-hidden>★</span> {b.text}
+                </span>
+              ))
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Каталог слева + выбранный листог в основном блоке */}
       <div className="vtm-hist-layout grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-4 items-start">

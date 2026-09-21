@@ -20,12 +20,12 @@ import { Plus, Pencil, Trash2, Crown, Lock, Unlock, Award, BookOpen, MapPin, Use
 import { plainText } from "@/components/fantasy/formatted-text";
 
 const ENTITIES = {
-  countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries", fields: ["name","description","emblem","banner","capital","government","population","culture","climate"] },
-  personalities: { label: "Персонажи", icon: UsersIcon, api: "/api/lore/personalities", fields: ["name","title","race","age","gender","appearance","description","portrait","affiliation","role","status","isNpc","isKeyNpc","isAdventurer"] },
+  countries: { label: "Страны", icon: MapPin, api: "/api/lore/countries?full=1", fields: ["name","description","emblem","banner","capital","government","population","culture","climate"] },
+  personalities: { label: "Персонажи", icon: UsersIcon, api: "/api/lore/personalities?full=1", fields: ["name","title","race","age","gender","appearance","description","portrait","affiliation","role","status","isNpc","isKeyNpc","isAdventurer"] },
   relations: { label: "Отношения", icon: Link2, api: "/api/lore/relations", fields: ["countryAName","countryBName","relationType","description"] },
-  systems: { label: "Мир. Система", icon: Scale, api: "/api/lore/systems", fields: ["title","category","description","icon","image"] },
-  gods: { label: "Пантеон", icon: Sun, api: "/api/lore/gods", fields: ["name","title","domain","description","symbol","image","alignment","pantheon"] },
-  legends: { label: "Легенды", icon: BookMarked, api: "/api/lore/legends", fields: ["title","content","era","icon","image"] },
+  systems: { label: "Мир. Система", icon: Scale, api: "/api/lore/systems?full=1", fields: ["title","category","description","icon","image"] },
+  gods: { label: "Пантеон", icon: Sun, api: "/api/lore/gods?full=1", fields: ["name","title","domain","description","symbol","image","alignment","pantheon"] },
+  legends: { label: "Легенды", icon: BookMarked, api: "/api/lore/legends?full=1", fields: ["title","content","era","icon","image"] },
 } as const;
 
 type EntityKey = keyof typeof ENTITIES;
@@ -140,12 +140,12 @@ function Overview() {
     queryKey: ["admin-overview"],
     queryFn: async () => {
       const [c,p,r,s,g,l,ks,qs,gr,ach,ch] = await Promise.all([
-        fetch("/api/lore/countries").then(r=>r.json()),
-        fetch("/api/lore/personalities").then(r=>r.json()),
+        fetch("/api/lore/countries?full=1").then(r=>r.json()),
+        fetch("/api/lore/personalities?full=1").then(r=>r.json()),
         fetch("/api/lore/relations").then(r=>r.json()),
-        fetch("/api/lore/systems").then(r=>r.json()),
-        fetch("/api/lore/gods").then(r=>r.json()),
-        fetch("/api/lore/legends").then(r=>r.json()),
+        fetch("/api/lore/systems?full=1").then(r=>r.json()),
+        fetch("/api/lore/gods?full=1").then(r=>r.json()),
+        fetch("/api/lore/legends?full=1").then(r=>r.json()),
         fetch("/api/guild/ranks").then(r=>r.json()),
         fetch("/api/guild/quests").then(r=>r.json()),
         fetch("/api/grimoire").then(r=>r.json()),
@@ -246,7 +246,7 @@ const FIELD_META: Record<string, { type: "text"|"textarea"|"select"|"image"|"che
 function CountrySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const { data } = useQuery<any[]>({
     queryKey: ["countries-for-select"],
-    queryFn: () => fetch("/api/lore/countries").then((r) => r.json()).catch(() => []),
+    queryFn: () => fetch("/api/lore/countries?full=1").then((r) => r.json()).catch(() => []),
   });
   const countries = (Array.isArray(data) ? data : []).sort((a, b) => a.name.localeCompare(b.name));
   return (
@@ -1252,7 +1252,7 @@ function CharacterInventoryDialog({ character, onClose }: { character: any; onCl
   // All lab entries — used for the grant dropdown
   const { data: labEntries } = useQuery<any[]>({
     queryKey: ["lab-for-grant"],
-    queryFn: () => fetch("/api/lab").then((r) => r.json()),
+    queryFn: () => fetch("/api/lab?full=1").then((r) => r.json()),
   });
 
   const grant = useMutation({
@@ -1421,7 +1421,7 @@ const SPELL_SCHOOLS = ["Ограждение", "Вызов", "Прорицани
 const RARITIES = ["COMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC"].map((v) => ({ value: v, label: RARITY_LABEL[v] }));
 
 function LabEditor() {
-  const { data } = useQuery<any[]>({ queryKey: ["lab"], queryFn: () => fetch("/api/lab").then((r) => r.json()) });
+  const { data } = useQuery<any[]>({ queryKey: ["lab"], queryFn: () => fetch("/api/lab?full=1").then((r) => r.json()) });
   const qc = useQueryClient();
   const { toast } = useToast();
   const [editing, setEditing] = useState<any>(null);
@@ -1432,7 +1432,7 @@ function LabEditor() {
     mutationFn: async (item: any) => {
       const { id, ...rest } = item;
       if (id) return fetch(`/api/lab/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rest) }).then((r) => r.json());
-      return fetch("/api/lab", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: 0, kind: "RACE", ...rest }) }).then((r) => r.json());
+      return fetch("/api/lab?full=1", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: 0, kind: "RACE", ...rest }) }).then((r) => r.json());
     },
     onSuccess: () => { setOpen(false); qc.invalidateQueries({ queryKey: ["lab"] }); toast({ title: "Свиток Алого записан" }); },
   });
@@ -1989,7 +1989,7 @@ function GroupsEditor() {
   const { toast } = useToast();
   const { data: groups } = useQuery<any[]>({ queryKey: ["groups"], queryFn: () => fetch("/api/groups").then((r) => r.json()) });
   const { data: characters } = useQuery<any[]>({ queryKey: ["characters"], queryFn: () => fetch("/api/characters").then((r) => r.json()) });
-  const { data: personalities } = useQuery<any[]>({ queryKey: ["personalities"], queryFn: () => fetch("/api/lore/personalities").then((r) => r.json()) });
+  const { data: personalities } = useQuery<any[]>({ queryKey: ["personalities"], queryFn: () => fetch("/api/lore/personalities?full=1").then((r) => r.json()) });
   const [creating, setCreating] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [addMemberGroup, setAddMemberGroup] = useState<string | null>(null);
@@ -2174,7 +2174,7 @@ const CONTENT_KEYS = [
 function ContentEditor() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const { data } = useQuery<any[]>({ queryKey: ["site-content"], queryFn: () => fetch("/api/content").then((r) => r.json()) });
+  const { data } = useQuery<any[]>({ queryKey: ["site-content"], queryFn: () => fetch("/api/content?full=1").then((r) => r.json()) });
   const map: Record<string, any> = {};
   (Array.isArray(data) ? data : []).forEach((c: any) => { map[c.key] = c; });
   const [drafts, setDrafts] = useState<Record<string, { title: string; body: string; image: string | null }>>({});
