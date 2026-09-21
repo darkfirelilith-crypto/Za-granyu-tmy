@@ -6,7 +6,7 @@
 // 7 пунктов фактов биографии, Человечность 7.
 // ============================================================
 
-import { VtmSheetData, VtmSkillState, VtmDisciplineState, VtmAdvantageEntry, SKILL_LIBRARY, DISCIPLINE_BY_ID, ADVANTAGE_BY_ID } from "./vtm-data";
+import { VtmSheetData, VtmSkillState, VtmDisciplineState, VtmAdvantageEntry, SKILL_LIBRARY, DISCIPLINE_BY_ID, ADVANTAGE_BY_ID, DEFAULT_CREATION_POOL } from "./vtm-data";
 
 export interface VtmTemplate {
   id: string;
@@ -79,6 +79,8 @@ export function buildTemplateSheet(templateId: string): VtmSheetData | null {
       wpAgg: 0,
       xp: s.trackers.xp,
       xpSpent: 0,
+      creationPool: DEFAULT_CREATION_POOL,
+      creationSpent: 0,
       huntCount: 0,
       lastHunt: "",
     },

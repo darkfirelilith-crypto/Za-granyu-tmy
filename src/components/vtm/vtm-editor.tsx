@@ -738,9 +738,10 @@ function VitalStrip({
         </>
       )}
       <span className="vtm-vs-sep" aria-hidden>·</span>
-      <span className="vtm-vs-item" title={`Опыт: свободно ${data.trackers.xp}, вложено ${data.trackers.xpSpent}`}>
-        <span className="vtm-vs-label text-[#d6a840]">Опыт</span>
-        <b className="text-[#d6a840]">{data.trackers.xp}</b>
+      <span className="vtm-vs-item" title={`Кошелёк: стартовый лимит ${Math.max(0, (data.trackers.creationPool ?? 0) - (data.trackers.creationSpent ?? 0))}/${data.trackers.creationPool ?? 0} пт · свободный опыт ${data.trackers.xp}${data.trackers.xp < 0 ? " (ДОЛГ)" : ""}`}>
+        <span className="vtm-vs-label text-[#d6a840]">Кошелёк</span>
+        <b className="text-[#d6a840]">{Math.max(0, (data.trackers.creationPool ?? 0) - (data.trackers.creationSpent ?? 0))}<span className="text-[#9c8072]">/</span>{data.trackers.creationPool ?? 0}</b>
+        <b className={data.trackers.xp < 0 ? "text-[#e8636b]" : "text-[#d6a840]"}> {data.trackers.xp}</b>
       </span>
       {data.trackers.hunger >= 5 && <span className="vtm-vs-beast">ЗВЕРЬ У РУЛЯ</span>}
     </button>

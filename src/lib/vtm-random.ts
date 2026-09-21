@@ -19,6 +19,7 @@ import {
   PREDATOR_TYPES,
   ADVANTAGE_BY_ID,
   RESONANCES,
+  DEFAULT_CREATION_POOL,
 } from "./vtm-data";
 
 // ---------- утилиты ----------
@@ -550,6 +551,8 @@ export function buildRandomSheet(): VtmSheetData {
       wpAgg: 0,
       xp: 0,
       xpSpent: 0,
+      creationPool: DEFAULT_CREATION_POOL,
+      creationSpent: 0,
       huntCount: 0,
       lastHunt: "",
     },

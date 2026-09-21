@@ -2,7 +2,7 @@
 
 // ============================================================
 // Секции: Дисциплины (уровни + силы) и Преимущества
-// (факты биографии 7 пунктов + достоинства/недостатки).
+// (факты биографии, достоинства/недостатки — покупки через Кошелёк Крови).
 // ============================================================
 
 import { useMemo, useState } from "react";
@@ -21,6 +21,9 @@ import {
   INCOMPATIBLE_ADVANTAGES,
   XP_COSTS,
   pushXpLog,
+  spendEconomy,
+  refundEconomy,
+  creationLeft,
 } from "@/lib/vtm-data";
 import { LORESHEETS, LORESHEET_BY_ID, LORESHEET_RULES } from "@/lib/vtm-histories";
 import { DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
@@ -94,14 +97,24 @@ export function DisciplinesSection({
     mutate((d) => pushXpLog(d, text));
   };
 
-  /** Подъём уровня Дисциплины (каталожной или своей) + авто-запись цены в журнал опыта. */
+  /** Подъём уровня Дисциплины (каталожной или своей) + авто-списание из Кошелька Крови (стартовый лимит → опыт). */
   const raiseDisc = (key: string | null, name: string, n: number, idx: number) => {
     const prev = key
       ? data.disciplines.find((x) => x.key === key)?.value || 0
       : data.disciplines[idx]?.value || 0;
     if (key) setDisc(key, name, { value: n });
     else setAt(idx, { value: n });
-    if (n > prev) logXp(`покупка: «${name}» ↑ до ${n} — цена ${XP_COSTS.discipline(n)} опыта (сверься с Рассказчиком)`);
+    if (n > prev) spendEconomyPrice(XP_COSTS.discipline(n), `«${name}» ↑ до ${n} (цена ${XP_COSTS.discipline(n)})`);
+    else if (n < prev) refundEconomyPrice(XP_COSTS.discipline(prev) - XP_COSTS.discipline(n), `«${name}» ↓ до ${n}`);
+  };
+
+  /** Списать цену через mutate-черновик (без тоста — журнал всё помнит). */
+  const spendEconomyPrice = (cost: number, label: string) => {
+    mutate((d) => spendEconomy(d, cost, label));
+  };
+  /** Вернуть очки через mutate-черновик. */
+  const refundEconomyPrice = (amount: number, label: string) => {
+    mutate((d) => refundEconomy(d, amount, label));
   };
 
   /** Удалить запись листа по индексу — работает и для библиотечных, и для своих. */
@@ -116,10 +129,12 @@ export function DisciplinesSection({
       toast.error("Эта Дисциплина уже на листе");
       return;
     }
+    const cost = XP_COSTS.discipline(1);
     mutate((d) => {
+      spendEconomy(d, cost, `новая Дисциплина «${def.name}» (цена ${cost})`);
       d.disciplines.push({ key: def.id, name: def.name, value: 1, powers: {}, xp: 0 });
     });
-    toast(`«${def.name}» внесена в лист — подними уровень точками и выбери силу`);
+    toast(`«${def.name}» внесена в лист за ${cost} пт — подними уровень точками и выбери силу`);
   };
 
   const addCustom = () => {
@@ -357,7 +372,7 @@ export function DisciplinesSection({
                             disc.powers[lvl] = name;
                           });
                           if (name && name !== (state?.powers?.[lvl] || "")) {
-                            logXp(`формула: «${name}» (${lvl} ур. · Алхимия) — цена ${XP_COSTS.disciplinePower(lvl)} опыта (сверься с Рассказчиком)`);
+                            spendEconomyPrice(XP_COSTS.disciplinePower(lvl), `формула: «${name}» (${lvl} ур. · Алхимия) (цена ${XP_COSTS.disciplinePower(lvl)})`);
                           }
                         }}
                       />
@@ -463,7 +478,7 @@ export function DisciplinesSection({
             disc.powers[powerModal.lvl] = name;
           });
           if (name && name !== (state?.powers?.[powerModal.lvl] || "")) {
-            logXp(`сила: «${name}» (${powerModal.lvl} ур. · «${def.name}») — цена ${XP_COSTS.disciplinePower(powerModal.lvl)} опыта (сверься с Рассказчиком)`);
+            spendEconomyPrice(XP_COSTS.disciplinePower(powerModal.lvl), `сила: «${name}» (${powerModal.lvl} ур. · «${def.name}») (цена ${XP_COSTS.disciplinePower(powerModal.lvl)})`);
           }
         };
         return (
@@ -664,7 +679,11 @@ export function AdvantagesSection({
   const clan = CLAN_BY_ID.get(data.info.clan);
   const presetIds = useMemo(() => (clan ? CLAN_FLAW_PRESETS[clan.id] || [] : []), [clan]);
 
-  const bgLeft = 7 - derived.backgroundPoints;
+  const bgPoints = derived.backgroundPoints;
+  const bgOver = Math.max(0, bgPoints - 7); // сверх стартового лимита — не запрещено, просто оплачено опытом
+
+  /** Приход очков от недостатка уровня n (недостаток — источник очков, не расход). */
+  const flawIncome = (n: number) => XP_COSTS.meritRaise(Math.max(1, n));
 
   const addBackground = (defId: string, defName: string) => {
     if (data.advantages.some((a) => a.kind === "background" && a.name === defName)) {
@@ -672,6 +691,7 @@ export function AdvantagesSection({
       return;
     }
     mutate((d) => {
+      spendEconomy(d, XP_COSTS.background, `факт биографии «${defName}» 1 ур. (цена ${XP_COSTS.background} пт)`);
       d.advantages.push({
         id: vtmUid(`bg-${defId}`),
         name: defName,
@@ -697,6 +717,12 @@ export function AdvantagesSection({
       }
     }
     mutate((d) => {
+      if (def.kind === "flaw") {
+        // Недостаток — источник очков: Рассказчик возвращает цену в Кошелёк Крови
+        refundEconomy(d, flawIncome(1), `недостаток «${def.name}» взят (приход +${flawIncome(1)} пт)`);
+      } else {
+        spendEconomy(d, XP_COSTS.meritRaise(1), `«${def.name}» 1 ур. (цена ${XP_COSTS.meritRaise(1)})`);
+      }
       d.advantages.push({
         id: vtmUid(`adv-${defId}`),
         name: def.name,
@@ -711,6 +737,11 @@ export function AdvantagesSection({
     const trimmed = customName.trim();
     if (!trimmed) return;
     mutate((d) => {
+      if (customKind === "flaw") {
+        refundEconomy(d, flawIncome(customLvl), `свой недостаток «${trimmed}» ур. ${customLvl} (приход +${flawIncome(customLvl)} пт)`);
+      } else {
+        spendEconomy(d, XP_COSTS.meritRaise(customLvl), `своё «${trimmed}» ур. ${customLvl} (цена ${XP_COSTS.meritRaise(customLvl)})`);
+      }
       d.advantages.push({
         id: vtmUid("custom"),
         name: trimmed,
@@ -726,7 +757,18 @@ export function AdvantagesSection({
   };
 
   const removeAdv = (id: string) => {
+    const entry = data.advantages.find((a) => a.id === id);
     mutate((d) => {
+      if (entry) {
+        if (entry.kind === "flaw") {
+          // снял недостаток — вернул Рассказчику его цену
+          spendEconomy(d, flawIncome(entry.rating), `недостаток «${entry.name}» снят (расплата ${flawIncome(entry.rating)} пт)`);
+        } else if (entry.kind === "background") {
+          refundEconomy(d, XP_COSTS.background * entry.rating, `факт биографии «${entry.name}» снят`);
+        } else if (entry.rating > 0) {
+          refundEconomy(d, XP_COSTS.meritRaise(entry.rating), `«${entry.name}» снят с листа`);
+        }
+      }
       d.advantages = d.advantages.filter((a) => a.id !== id);
     });
   };
@@ -774,12 +816,13 @@ export function AdvantagesSection({
       <div className="vtm-panel p-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         <span className="vtm-stamp vtm-stamp-gold">Преимущества</span>
         <span className="vtm-label text-xs text-[#d9c7b6]">
-          Факты биографии: <b className={bgLeft === 0 ? "text-[#9fd8b3]" : bgLeft > 0 ? "text-[#d6a840]" : "text-[#e8636b]"}>{derived.backgroundPoints}/7</b>
+          Факты биографии: <b className={bgOver === 0 ? "text-[#d6a840]" : "text-[#a8863d]"}>{bgPoints}</b>
+          <i className="vtm-hint !text-[0.70rem] not-italic"> · старт 7 пт{bgOver > 0 ? ` · сверх лимита: ${bgOver} пт за опыт` : " · дальше за опыт, без лимита"}</i>
         </span>
         <span className="vtm-label text-xs text-[#c4ac9d]">Достоинства: <b className="text-[#d9c7b6]">{derived.meritPoints}</b></span>
-        <span className="vtm-label text-xs text-[#c4ac9d]">Недостатки: <b className="text-[#d9c7b6]">{derived.flawPoints}</b></span>
+        <span className="vtm-label text-xs text-[#c4ac9d]">Недостатки: <b className="text-[#e8636b]">+{derived.flawPoints}</b></span>
         <p className="vtm-hint !text-[0.75rem] flex-1 min-w-[200px]">
-          7 пунктов — бюджет фактов биографии (затем 3 опыта за точку). Достоинства и недостатки — уровни точками, цена = уровень × цену за уровень. Полный каталог 5-й редакции — по группам книги.
+          Без лимитов — есть только цена: списывается из стартового лимита, потом из опыта. Недостатки наоборот ПРИНОСЯТ очки в Кошелёк Крови. Снятие записи возвращает потраченное.
         </p>
       </div>
 
@@ -822,8 +865,17 @@ export function AdvantagesSection({
                         onChange={(n) => mutate((d) => {
                           const x = d.advantages.find((y) => y.id === a.id);
                           if (!x) return;
-                          // автозапись цены в журнал опыта (не списывает очки — сверяет Рассказчик)
-                          if (n > x.rating) pushXpLog(d, `покупка: «${a.name}» ↑ до ${n} — цена ${XP_COSTS.meritRaise(n)} опыта (сверься с Рассказчиком)`);
+                          // авто-списание/возврат через Кошелёк Крови: недостатки дают очки, остальное — тратит
+                          if (a.kind === "flaw") {
+                            if (n > x.rating) refundEconomy(d, flawIncome(n) - flawIncome(x.rating), `недостаток «${a.name}» ↑ до ${n} (приход +${flawIncome(n) - flawIncome(x.rating)} пт)`);
+                            else if (n < x.rating) spendEconomy(d, flawIncome(x.rating) - flawIncome(n), `недостаток «${a.name}» ↓ до ${n} (расплата ${flawIncome(x.rating) - flawIncome(n)} пт)`);
+                          } else if (n > x.rating) {
+                            const cost = isBg ? XP_COSTS.background * (n - x.rating) : XP_COSTS.meritRaise(n);
+                            spendEconomy(d, cost, `«${a.name}» ↑ до ${n} (цена ${cost})`);
+                          } else if (n < x.rating) {
+                            const back = isBg ? XP_COSTS.background * (x.rating - n) : XP_COSTS.meritRaise(x.rating) - XP_COSTS.meritRaise(n);
+                            refundEconomy(d, back, `«${a.name}» ↓ до ${n}`);
+                          }
                           x.rating = n;
                         })}
                         ariaLabel={`${a.name}: уровень ${a.rating}`}
@@ -956,26 +1008,28 @@ export function AdvantagesSection({
               <>
                 {ADVANTAGE_LIBRARY.filter((a) => a.kind === "background").map((def) => {
                   const owned = data.advantages.some((a) => a.kind === "background" && a.name === def.name);
-                  const full = derived.backgroundPoints >= 7;
                   return (
                     <div key={def.id} className="flex items-start gap-2 p-2 rounded-md border border-[#2b1116]" style={{ background: "rgba(0,0,0,0.2)" }}>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[0.88rem] text-[#d9c7b6]">{def.name}</p>
+                        <p className="text-[0.88rem] text-[#d9c7b6]">
+                          {def.name}
+                          <span className="vtm-label text-[0.70rem] text-[#a8863d] ml-1.5">3 пт/точка · до 5 ур.</span>
+                        </p>
                         <p className="vtm-hint !text-[0.75rem]">{def.desc}</p>
                       </div>
                       <button
                         className={`vtm-btn shrink-0 !py-1 !px-2 !text-[0.73rem] ${owned ? "" : "vtm-btn-gold"}`}
                         onClick={() => addBackground(def.id, def.name)}
-                        disabled={owned || (full && !owned)}
-                        title={owned ? "уже есть" : full ? "бюджет 7 пунктов исчерпан" : "взять 1 пункт"}
+                        disabled={owned}
+                        title={owned ? "уже есть — поднимай уровень точками в списке слева" : `взять за ${XP_COSTS.background} пт (стартовый лимит → опыт)`}
                       >
-                        {owned ? "✓" : "+1"}
+                        {owned ? "✓" : `+${XP_COSTS.background} пт`}
                       </button>
                     </div>
                   );
                 })}
                 <p className="vtm-hint text-center !text-[0.75rem] pt-1">
-                  Осталось распределить: {bgLeft >= 0 ? bgLeft : 0} пт. Снимай точки у факта, чтобы вернуть очки.
+                  Лимитов нет: первая точка — 3 пт, каждая следующая — ещё 3 (списывается из стартового лимита, затем из опыта).
                 </p>
               </>
             ) : (
@@ -1077,20 +1131,21 @@ export function HistoriesSection({
         existing.level = level;
         next = level;
       }
-      // Авто-запись в журнал опыта: цена ступеней известна из данных листога
+      // Авто-списание через Кошелёк Крови: стартовый лимит → опыт; цена известна из данных листога
       const def = LORESHEET_BY_ID.get(sheetId);
       if (!def || next === prev) return;
       if (next > prev) {
         const gained = def.levels.slice(prev, next).reduce((s, lv) => s + lv.xp, 0);
         const top = def.levels[next - 1];
-        pushXpLog(d, `листог «${def.name}» → ступень ${next} «${top.name}» — цена ${gained} опыта (сверься с Рассказчиком)`);
+        spendEconomy(d, gained, `листог «${def.name}» → ступень ${next} «${top.name}» (цена ${gained})`);
       } else {
         const released = def.levels.slice(next, prev).reduce((s, lv) => s + lv.xp, 0);
-        pushXpLog(
+        refundEconomy(
           d,
+          released,
           next === 0
-            ? `листог «${def.name}» снят (была ступень ${prev}, −${released} опыта)`
-            : `листог «${def.name}» ↓ откат к ступени ${next} (−${released} опыта)`
+            ? `листог «${def.name}» снят (была ступень ${prev})`
+            : `листог «${def.name}» ↓ откат к ступени ${next}`
         );
       }
     });
@@ -1137,7 +1192,7 @@ export function HistoriesSection({
           <span className="vtm-label text-xs text-[#c4ac9d]">Листогов взято: <b className="text-[#d9c7b6]">{data.loresheets.length}</b></span>
           <span className="vtm-label text-xs text-[#c4ac9d]">Опыта вложено: <b className="text-[#d6a840]">{totalXp}</b></span>
           <p className="vtm-hint !text-[0.77rem] flex-1 min-w-[220px]">
-            Раздел «Истории» книги (стр. 384+): связи с культами, сектами и легендами Маскарада — Бахари, Тео Белл и другие. Ступени покупаются по очереди; клик по точке — ступень, повторный — снять одну.
+            Раздел «Истории» книги (стр. 384+) и дополнений: связи с культами, сектами и легендами Маскарада — Бахари, Тео Белл, Беккет, Книга Нода и другие. Ступени покупаются по очереди; клик по точке — ступень, повторный — снять одну. Цена списывается из Кошелька Крови (стартовый лимит → опыт) — без лимитов на количество.
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 pt-1">
@@ -1150,6 +1205,9 @@ export function HistoriesSection({
             </div>
           ))}
         </div>
+        <p className="vtm-hint !text-[0.77rem] pt-1 vtm-hist-bonus-note">
+          <span className="text-[#d6a840] not-italic">★</span> — механический баф ступени: держи его на виду за столом (кости к проверкам, услуги, перебросы). Покупка ступени списывает цену из Кошелька Крови автоматически.
+        </p>
       </div>
 
       {/* Каталог слева + выбранный листог в основном блоке */}
@@ -1286,6 +1344,11 @@ export function HistoriesSection({
                             <span className="vtm-label text-[0.70rem] text-[#a8863d] ml-auto">{lv.xp} опыта</span>
                           </div>
                           <p className="vtm-hint !text-[0.81rem] mt-1 leading-relaxed">{lv.effect}</p>
+                          {lv.bonus && (
+                            <p className={`vtm-hist-bonus-chip ${owned ? "owned" : ""}`} title="Механический баф ступени — держи на виду за столом">
+                              <span aria-hidden>★</span> {lv.bonus}
+                            </p>
+                          )}
                         </div>
                       );
                     })}

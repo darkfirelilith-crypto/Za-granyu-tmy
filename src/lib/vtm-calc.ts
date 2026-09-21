@@ -21,6 +21,10 @@ export interface DerivedStats {
   flawPoints: number;   // очки недостатков
   humanityTotal: number; // Человечность с учётом пятен
   baneSeverity: number; // тяжесть изъяна (по Силе Крови)
+  creationPool: number;  // стартовый лимит создания
+  creationSpent: number; // потрачено из стартового лимита
+  creationLeft: number;  // остаток стартового лимита
+  xpFree: number;        // свободный опыт (минус = долг)
 }
 
 const clampAttr = (n: unknown) => Math.max(0, Math.min(5, Math.floor(Number(n) || 0)));
@@ -66,6 +70,9 @@ export function deriveStats(sheet: VtmSheetData): DerivedStats {
 
   const humanityTotal = Math.max(0, sheet.trackers.humanity - sheet.trackers.stains);
 
+  const creationPool = sheet.trackers.creationPool ?? 0;
+  const creationSpent = sheet.trackers.creationSpent ?? 0;
+
   return {
     healthMax,
     wpMax,
@@ -82,6 +89,10 @@ export function deriveStats(sheet: VtmSheetData): DerivedStats {
     flawPoints,
     humanityTotal,
     baneSeverity: bpRow.baneSeverity,
+    creationPool,
+    creationSpent: Math.min(creationSpent, creationPool),
+    creationLeft: Math.max(0, creationPool - creationSpent),
+    xpFree: sheet.trackers.xp,
   };
 }
 
