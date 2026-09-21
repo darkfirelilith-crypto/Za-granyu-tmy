@@ -24,6 +24,7 @@ import {
   RESONANCE_BY_ID,
   RESONANCE_INTENSITY_LABELS,
   bloodPotencyByGeneration,
+  diablerieDifficulty,
   XP_COSTS,
   pushXpLog,
   spendEconomy,
@@ -524,6 +525,20 @@ export function DossierSection({
     return r;
   };
 
+  // Утоление Голода с учётом резонанса ночи (раунд 42): кровь глубокой
+  // добычи (интенсивность 4–5) пьянит — одно утоление снимает 2 Голода.
+  const resInt = data.resonance?.intensity || 0;
+  const deepSlake = resInt >= 4 && data.trackers.hunger > 0;
+  const doSlake = () => {
+    const amt = deepSlake ? 2 : 1;
+    mutate((d) => {
+      d.trackers.hunger = Math.max(0, d.trackers.hunger - amt);
+    });
+    if (amt === 2) {
+      toast.success("Кровь глубокой добычи пьянит", { description: "Резонанс 4–5: одно утоление снимает 2 Голода." });
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* ===== Личность ===== */}
@@ -772,12 +787,17 @@ export function DossierSection({
                     ⚄ испытание Крови
                   </button>
                   <button
-                    className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.75rem]"
-                    onClick={() => mutate((d) => { d.trackers.hunger = Math.max(0, d.trackers.hunger - 1); })}
-                    aria-label="Утолить Голод на 1"
-                    title="Утолить Голод"
+                    className={`vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.75rem] vtm-slake-btn ${deepSlake ? "is-deep" : ""}`}
+                    onClick={doSlake}
+                    disabled={data.trackers.hunger === 0}
+                    aria-label={deepSlake ? "Утолить Голод на 2 — глубокий резонанс" : "Утолить Голод на 1"}
+                    title={
+                      deepSlake
+                        ? `Глубокий резонанс (${resInt}): кровь пьянит — утоление снимает 2 Голода`
+                        : "Утолить Голод на 1 (охота у воды, глоток из фляги…)"
+                    }
                   >
-                    −
+                    {deepSlake ? "✦ 2" : "−"}
                   </button>
                   <span className="vtm-label text-[0.83rem] text-[#e8636b] w-4 text-center">{data.trackers.hunger}</span>
                   <button
@@ -808,6 +828,7 @@ export function DossierSection({
                   : data.trackers.hunger >= 4
                     ? "Голод высок: последние кости пула — кости Голода."
                     : `${data.trackers.hunger} из последних костей каждого пула — кости Голода.`}
+                {deepSlake && <span className="vtm-slake-note"> Кровь глубокой добычи (резонанс {resInt}) пьянит: утоление снимает <b>2</b> Голода.</span>}
               </p>
             </div>
 
@@ -942,7 +963,7 @@ export function DossierSection({
             <div className="vtm-divider text-[0.73rem]"><span>🦇</span></div>
 
             {/* Диаблери и след в ауре */}
-            <DiablerieBlock data={data} mutate={mutate} />
+            <DiablerieBlock data={data} mutate={mutate} derived={derived} />
 
             <div className="vtm-divider text-[0.73rem]"><span>🖋</span></div>
 
@@ -1586,7 +1607,8 @@ function BloodPotencyBlock({
   const bp = derived.bp;
   const genBp = bloodPotencyByGeneration(data.info.generation || 13);
   const raised = bp > genBp;
-  const nextCost = XP_COSTS.bloodPotency(bp + 1);
+  // цена следующей ступени: каждая ступень стоит 10 × её уровень, ступень = дельта
+  const nextCost = XP_COSTS.bloodPotency(bp + 1) - XP_COSTS.bloodPotency(bp);
 
   // Клик по точке выше текущей — подъём за опыт (только сверх поколения).
   const raise = (n: number) => {
@@ -1658,7 +1680,7 @@ function BloodPotencyBlock({
       <p className="vtm-hint mt-1.5 !text-[0.75rem]">
         По поколению ({genBp}): бонус +{derived.bpRow.bonusDice} к физике и Дисциплинам · заживление: {derived.bpRow.mend} · изъян: тяжесть {derived.bpRow.baneSeverity}
         {derived.bpRow.feedingPenalty !== "—" ? ` · кормление: ${derived.bpRow.feedingPenalty}` : ""}
-        {raised ? " · подъём выше крови предков — редкая награда Диаблери или долгая ночь опыта." : " Подъём сверх поколения — 10 × новый уровень опыта либо милость Диаблери (по решению Рассказчика)."}
+        {raised ? " · подъём выше крови предков — редкая награда Диаблери или долгая ночь опыта." : " Подъём сверх поколения — каждая ступень стоит 10 × её уровень опыта либо милость Диаблери (по решению Рассказчика)."}
       </p>
     </div>
   );
@@ -1671,21 +1693,54 @@ function BloodPotencyBlock({
 function DiablerieBlock({
   data,
   mutate,
+  derived,
 }: {
   data: VtmSheetData;
   mutate: (fn: (draft: VtmSheetData) => void) => void;
+  derived: DerivedStats;
 }) {
   const [ceremony, setCeremony] = useState(false);
   const [victim, setVictim] = useState("");
   const [victimGen, setVictimGen] = useState(0);
+  // последняя проверка Воли в открытой форме: показывает вердикт и влияет на пятна
+  const [lastCheck, setLastCheck] = useState<{ successes: number; diff: number; bestial: boolean; messy: boolean; failed: boolean } | null>(null);
   const count = data.diablerie?.count || 0;
   const notes = data.diablerie?.notes || "";
   const entries = data.diablerie?.entries || [];
   const ownBp = bloodPotencyByGeneration(data.info.generation || 13);
+  // сложность проверки Воли по поколению жертвы (раунд 42)
+  const checkDiff = diablerieDifficulty(victimGen);
 
-  // Подтверждение церемонии: душа выпита. Два пятна Человечности — автоматически.
+  // Проверка Воли против Зверя: пул = текущая Воля (Самообладание + Упорство),
+  // кости Голода — по текущему Голоду. Результат уходит в панель костей листа.
+  const rollWill = () => {
+    const result = rollPool(derived.wpMax, data.trackers.hunger, `Диаблери: воля против Зверя (сложность ${checkDiff})`, checkDiff);
+    useVtmDice.getState().pushRoll(result);
+    const failed = !result.bestial && result.successes < checkDiff;
+    setLastCheck({
+      successes: result.successes,
+      diff: checkDiff,
+      bestial: result.bestial,
+      messy: result.messy,
+      failed,
+    });
+    if (result.bestial) {
+      toast.error("Бестиальный провал", { description: "Зверь пил вместе с тобой. Церемония будет стоить третье пятно." });
+    } else if (failed) {
+      toast.warning("Воля дрогнула", { description: `Успехов ${result.successes} из ${checkDiff}. Жертва билась — пятое пятно лишнее не будет. Третье пятно за провал.` });
+    } else if (result.messy) {
+      toast.warning("Беспредельный успех", { description: "Кровь бьёт в голову: церемония удалась, но безупречной её не назовут." });
+    } else {
+      toast.success("Сердце остановлено железной волей", { description: `Успехов ${result.successes} при сложности ${checkDiff}. Зверь отступил.` });
+    }
+  };
+
+  // Подтверждение церемонии: душа выпита. Два пятна Человечности — автоматически,
+  // три — если Воля дрогнула (провал или бестиальный провал проверки).
   const commit = (bpGift: boolean) => {
     const name = victim.trim() || "безымянный Сородич";
+    const chk = lastCheck;
+    const stainCount = chk?.failed || chk?.bestial ? 3 : 2;
     mutate((d) => {
       d.diablerie = d.diablerie || { count: 0, notes: "", entries: [] };
       const entry: VtmDiablerieEntry = {
@@ -1694,14 +1749,25 @@ function DiablerieBlock({
         gen: victimGen,
         ts: new Date().toISOString(),
         bpGift,
+        extraStain: stainCount > 2,
+        check: chk ? { successes: chk.successes, diff: chk.diff, bestial: chk.bestial, messy: chk.messy } : undefined,
       };
       d.diablerie.count = (d.diablerie.count || 0) + 1;
       d.diablerie.entries = [entry, ...(d.diablerie.entries || [])].slice(0, 30);
-      // Диаблери — стигма Зверя: два пятна (в упрощённой системе листа).
+      // Диаблери — стигма Зверя: два пятна (три при проваленной Воле).
       const free = Math.max(0, 10 - d.trackers.humanity - d.trackers.stains);
-      d.trackers.stains = Math.min(d.trackers.stains + 2, 10 - d.trackers.humanity);
-      if (free < 2) pushXpLog(d, `Диаблери: душа «${name}» — пятна не поместились (Человечность ${d.trackers.humanity})`);
-      else pushXpLog(d, `Диаблери: душа «${name}»${victimGen ? ` (${victimGen}-е поколение)` : ""} — 2 пятна Человечности`);
+      d.trackers.stains = Math.min(d.trackers.stains + stainCount, 10 - d.trackers.humanity);
+      const checkText = chk
+        ? chk.bestial
+          ? " бестиальный провал — Зверь пил вместе с тобой"
+          : chk.failed
+            ? ` воля дрогнула (${chk.successes}/${chk.diff}) — третье пятно`
+            : chk.messy
+              ? " беспредельный успех — кровь бьёт в голову"
+              : ` проверка Воли пройдена (${chk.successes}/${chk.diff})`
+        : "";
+      if (free < stainCount) pushXpLog(d, `Диаблери: душа «${name}» — пятна не поместились (Человечность ${d.trackers.humanity})`);
+      else pushXpLog(d, `Диаблери: душа «${name}»${victimGen ? ` (${victimGen}-е поколение)` : ""} — ${plural(stainCount, "пятно", "пятна", "пятен")} Человечности.${checkText}`);
       if (bpGift) {
         const newBp = Math.min(5, Math.max(ownBp, d.trackers.bpOverride || 0) + 1);
         d.trackers.bpOverride = newBp;
@@ -1712,7 +1778,7 @@ function DiablerieBlock({
           id: `diab-${Date.now().toString(36)}`,
           title: "Диаблери",
           date: new Date().toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }),
-          content: `Выпита душа: ${name}${victimGen ? `, ${victimGen}-е поколение` : ""}.${bpGift ? " Душа была сильнее — Сила Крови выросла на 1." : ""} В ауре — новые чёрные прожилки.`,
+          content: `Выпита душа: ${name}${victimGen ? `, ${victimGen}-е поколение` : ""}.${bpGift ? " Душа была сильнее — Сила Крови выросла на 1." : ""}${chk ? (chk.bestial ? " Проверка Воли: бестиальный провал — Зверь участвовал в пире." : chk.failed ? " Проверка Воли провалена — жертва билась, третье пятно." : chk.messy ? " Проверка Воли: беспредельный успех — кровь до сих пор стучит в висках." : " Проверка Воли пройдена: сердце остановлено железной волей.") : ""} В ауре — новые чёрные прожилки.`,
         },
         ...d.notes.entries,
       ].slice(0, 40);
@@ -1720,10 +1786,12 @@ function DiablerieBlock({
     setCeremony(false);
     setVictim("");
     setVictimGen(0);
-    toast.error("Церемония завершена", { description: `Душа «${name}» выпита. Два пятна Человечности поставлены. Ясновидение выдаст след на десятилетия.` });
+    setLastCheck(null);
+    toast.error("Церемония завершена", { description: `Душа «${name}» выпита. ${plural(stainCount, "Пятно", "Пятна", "Пятен")} Человечности поставлено. Ясновидение выдаст след на десятилетия.` });
   };
 
-  // Отмена последней церемонии (если записали зря): убираем запись и одно Диаблери.
+  // Отмена последней церемонии (если записали зря): убираем запись и одно Диаблери,
+  // плюс снятие всех пятен, что она ставила (2 или 3 при проваленной Воле).
   const undoLast = () => {
     const last = entries[0];
     mutate((d) => {
@@ -1731,8 +1799,9 @@ function DiablerieBlock({
       d.diablerie.count = Math.max(0, (d.diablerie.count || 0) - 1);
       const removed = (d.diablerie.entries || []).shift();
       d.diablerie.entries = d.diablerie.entries || [];
-      // снимаем пятна и дар, если они ещё на листе
-      d.trackers.stains = Math.max(0, d.trackers.stains - 2);
+      // снимаем пятна (2 + 1 за провал, если отмечено) и дар, если они ещё на листе
+      const stainsToRemove = 2 + (removed?.extraStain ? 1 : 0);
+      d.trackers.stains = Math.max(0, d.trackers.stains - stainsToRemove);
       if (removed?.bpGift && d.trackers.bpOverride) {
         d.trackers.bpOverride = Math.max(0, d.trackers.bpOverride - 1);
         pushXpLog(d, `отмена Диаблери («${removed.victim}»): дар Силы Крови снят`);
@@ -1790,14 +1859,56 @@ function DiablerieBlock({
                 key={g}
                 type="button"
                 className={`vtm-diab-gen ${victimGen === g ? "active" : ""}`}
-                onClick={() => setVictimGen(g)}
+                onClick={() => { setVictimGen(g); setLastCheck(null); }}
                 aria-pressed={victimGen === g}
-                title={g === 0 ? "неизвестно" : `${g}-е поколение`}
+                title={g === 0 ? "неизвестно" : `${g}-е поколение · сложность проверки ${diablerieDifficulty(g)}`}
               >
                 {g === 0 ? "?" : g}
               </button>
             ))}
           </div>
+
+          {/* Проверка Воли против Зверя (упрощённая механика, раунд 42):
+              пул = текущая Воля, сложность — по поколению жертвы.
+              Провал/бестиальный провал = третье пятно Человечности. */}
+          <div className="vtm-diab-check" role="group" aria-label="Проверка Воли">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="vtm-diab-check-title">⚄ Воля против Зверя</span>
+              <span className="vtm-diab-check-diff" title="Чем старше кровь жертвы, тем яростнее её Зверь">
+                сложность {checkDiff}{victimGen > 0 ? ` · ${victimGen}-е пок.` : " · поколение ?"}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap mt-1">
+              <button type="button" className="vtm-diab-check-roll" onClick={rollWill} aria-label="Бросить проверку Воли">
+                ⚄ {plural(derived.wpMax, "кость", "кости", "костей")} · бросить
+              </button>
+              {lastCheck && (
+                <button
+                  type="button"
+                  className="vtm-btn vtm-btn-ghost !py-0.5 !px-1.5 !text-[0.72rem]"
+                  onClick={() => setLastCheck(null)}
+                  aria-label="Сбросить результат проверки"
+                >
+                  ↺
+                </button>
+              )}
+            </div>
+            {lastCheck && (
+              <p className={`vtm-diab-check-verdict ${lastCheck.bestial ? "bestial" : lastCheck.failed ? "fail" : lastCheck.messy ? "messy" : "ok"}`} role="status">
+                {lastCheck.bestial
+                  ? "🐾 БЕСТИАЛЬНЫЙ ПРОВАЛ — Зверь пил вместе с тобой · 3 пятна"
+                  : lastCheck.failed
+                    ? `✖ ВОЛЯ ДРОГНУЛА — успехов ${lastCheck.successes} из ${lastCheck.diff} · 3 пятна`
+                    : lastCheck.messy
+                      ? `🩸 БЕСПРЕДЕЛЬНЫЙ УСПЕХ — ${lastCheck.successes} успехов, кость Голода кританула · 2 пятна, вкус крови в висках`
+                      : `✔ УСПЕХ — успехов ${lastCheck.successes} при сложности ${lastCheck.diff} · 2 пятна`}
+              </p>
+            )}
+            <p className="vtm-hint !text-[0.72rem] mt-1">
+              Пул: текущая Воля ({derived.wpMax}){data.trackers.hunger > 0 ? `, ${plural(data.trackers.hunger, "кость", "кости", "костей")} Голода` : ""}. Провал или бестиальный провал — третье пятно: жертва билась, Зверь допил последним.
+            </p>
+          </div>
+
           {victimGen > 0 && victimGen < (data.info.generation || 13) && (
             <button
               type="button"
@@ -1813,7 +1924,7 @@ function DiablerieBlock({
             className="vtm-diab-commit"
             onClick={() => commit(false)}
           >
-            ⚓ записать церемонию — 2 пятна Человечности
+            ⚓ записать церемонию — {lastCheck?.failed || lastCheck?.bestial ? 3 : 2} пятна Человечности
           </button>
         </div>
       )}
@@ -1848,6 +1959,12 @@ function DiablerieBlock({
                 {e.victim}
                 {e.gen > 0 ? <span className="vtm-diab-entry-gen"> · {e.gen}-е</span> : null}
                 {e.bpGift ? <span className="vtm-diab-entry-gift" title="за это Диаблери дарована Сила Крови">↑СК</span> : null}
+                {e.extraStain ? <span className="vtm-diab-entry-extra" title="воля дрогнула: третье пятно за проваленную проверку">+пятно</span> : null}
+                {e.check ? (
+                  <span className={`vtm-diab-entry-check ${e.check.bestial ? "bestial" : e.check.successes < e.check.diff ? "fail" : e.check.messy ? "messy" : "ok"}`} title={`Проверка Воли: ${e.check.successes} успехов при сложности ${e.check.diff}`}>
+                    {e.check.successes}/{e.check.diff}
+                  </span>
+                ) : null}
               </span>
               <span className="vtm-diab-entry-date">
                 {e.ts ? new Date(e.ts).toLocaleDateString("ru-RU", { day: "2-digit", month: "short" }) : "—"}
@@ -1867,7 +1984,7 @@ function DiablerieBlock({
         maxLength={300}
       />
       <p className="vtm-hint !text-[0.75rem] mt-1">
-        Механика: каждое Диаблери — 2 пятна Человечности, след в ауре и шанс на милость Крови (душа старшего — +1 Силы Крови по решению Рассказчика). Полные правила — «База знаний → Механики → Диаблери».
+        Механика: каждое Диаблери — 2 пятна Человечности (3 — если Воля дрогнула в проверке против Зверя), след в ауре и шанс на милость Крови (душа старшего — +1 Силы Крови по решению Рассказчика). Полные правила — «База знаний → Механики → Диаблери».
       </p>
     </div>
   );
@@ -1961,7 +2078,9 @@ function ResonanceBlock({
       </div>
       <p className="vtm-hint mt-1.5 !text-[0.75rem]">
         {def
-          ? `${def.name}: ${def.emotion}. Глубокие резонансы (4–5) утоляют Голод надёжнее и ценятся Кровавым чародейством.`
+          ? intensity >= 4
+            ? `${def.name}: ${def.emotion}. Резонанс глубокий (${intensity}) — утоление снимает 2 Голода, и такая кровь вдвойне ценна для Кровавого чародейства.`
+            : `${def.name}: ${def.emotion}. Глубокие резонансы (4–5) утоляют Голод надёжнее и ценятся Кровавым чародейством.`
           : "Привкус эмоций в крови жертвы. Отмечай, чью кровь ты пьёшь — от резонанса зависит насыщение и сила ритуалов."}
       </p>
     </div>

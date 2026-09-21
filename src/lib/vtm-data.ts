@@ -111,6 +111,13 @@ export interface VtmDiablerieEntry {
   gen: number;    // поколение жертвы (0 — неизвестно)
   ts: string;     // ISO-дата церемонии
   bpGift?: boolean; // душа была сильнее: Рассказчик даровал +1 Силы Крови за это Диаблери
+  extraStain?: boolean; // проверка Воли провалена: третье пятно Человечности
+  check?: {          // проверка Воли против Зверя (упрощённая механика листа)
+    successes: number; // успехов выпало
+    diff: number;      // сложность по поколению жертвы
+    bestial?: boolean; // бестиальный провал — Зверь пил вместе с тобой
+    messy?: boolean;   // беспредельный успех — кровь бьёт в голову
+  };
 }
 
 export interface VtmDiablerieState {
@@ -872,6 +879,19 @@ export function bloodPotencyByGeneration(generation: number): number {
   if (generation >= 10) return 2; // 10–11: анциллы
   if (generation >= 8) return 3;  // 8–9: старейшины (по согласованию с рассказчиком)
   return 4; // 5–7:methuseльцы — редкость, по согласованию
+}
+
+/**
+ * Сложность проверки Воли при Диаблери по поколению жертвы (упрощённая
+ * механика листа, раунд 42): чем старше кровь, тем яростнее Зверь жертвы
+ * сопротивляется в горле. Неизвестное поколение — средняя сложность.
+ */
+export function diablerieDifficulty(victimGen: number): number {
+  if (victimGen <= 0) return 3;              // «?» — кровь неизвестной глубины
+  if (victimGen >= 13) return 2;             // неонаты и слабокровные
+  if (victimGen >= 10) return 3;             // анциллы
+  if (victimGen >= 7) return 4;              // старейшины
+  return 5;                                  // 5–6-е — почти миф
 }
 
 export const GENERATIONS: { value: number; label: string; note?: string }[] = [
@@ -2229,13 +2249,25 @@ export function normalizeSheet(input: unknown): VtmSheetData {
         ? db.entries
             .filter((e: any) => e && typeof e === "object")
             .slice(0, 30)
-            .map((e: any, idx: number) => ({
-              id: asString(e.id) || vtmUid(`diab-${idx}`),
-              victim: asString(e.victim) || "безымянный Сородич",
-              gen: clampInt(e.gen, 0, 16),
-              ts: asString(e.ts),
-              bpGift: !!e.bpGift,
-            }))
+            .map((e: any, idx: number) => {
+              const chk = e.check && typeof e.check === "object" ? e.check as Record<string, any> : null;
+              return {
+                id: asString(e.id) || vtmUid(`diab-${idx}`),
+                victim: asString(e.victim) || "безымянный Сородич",
+                gen: clampInt(e.gen, 0, 16),
+                ts: asString(e.ts),
+                bpGift: !!e.bpGift,
+                extraStain: !!e.extraStain,
+                check: chk
+                  ? {
+                      successes: clampInt(chk.successes, 0, 60),
+                      diff: clampInt(chk.diff, 1, 5),
+                      bestial: !!chk.bestial,
+                      messy: !!chk.messy,
+                    }
+                  : undefined,
+              };
+            })
         : [],
     };
   }

@@ -7140,3 +7140,319 @@ button.vtm-die.vtm-die-selectable.selected {
 @media (prefers-reduced-motion: reduce) {
   .vtm-diab-gift:hover { transform: none; }
 }
+
+/* ============================================================
+   РАУНД 42: резонансное утоление, проверка Воли Диаблери,
+   вкладка «Хроника» (кровавая нить ночей)
+   ============================================================ */
+
+/* ---- Утоление Голода с учётом резонанса ---- */
+.vtm-slake-btn {
+  transition: border-color 0.15s ease, box-shadow 0.25s ease, transform 0.15s ease;
+}
+.vtm-slake-btn.is-deep:not(:disabled) {
+  color: #ffd98c;
+  border-color: rgba(214, 168, 64, 0.65) !important;
+  background: linear-gradient(160deg, rgba(74, 46, 10, 0.55), rgba(40, 22, 6, 0.55));
+  animation: vtm-slake-pulse 2.6s ease-in-out infinite;
+}
+.vtm-slake-btn.is-deep:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 14px rgba(214, 168, 64, 0.4);
+  border-color: var(--vtm-gold-bright) !important;
+}
+.vtm-slake-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+@keyframes vtm-slake-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(214, 168, 64, 0.25); }
+  50% { box-shadow: 0 0 12px rgba(214, 168, 64, 0.45); }
+}
+.vtm-slake-note {
+  color: #d6a840;
+}
+.vtm-slake-note b { color: #ffd98c; }
+
+/* ---- Проверка Воли в церемонии Диаблери ---- */
+.vtm-diab-check {
+  margin-top: 0.55rem;
+  padding: 0.55rem 0.6rem 0.6rem;
+  border: 1px solid rgba(138, 26, 29, 0.5);
+  border-radius: 7px;
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(138, 26, 29, 0.14), transparent 60%),
+    linear-gradient(165deg, rgba(30, 10, 10, 0.55), rgba(18, 6, 8, 0.55));
+}
+.vtm-diab-check-title {
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  color: #e8636b;
+}
+.vtm-diab-check-diff {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--vtm-bone);
+  border: 1px solid rgba(214, 168, 64, 0.4);
+  border-radius: 999px;
+  padding: 0.08rem 0.5rem;
+  background: rgba(214, 168, 64, 0.08);
+}
+.vtm-diab-check-roll {
+  padding: 0.32rem 0.7rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.05em;
+  font-family: var(--vtm-font-display), Georgia, serif;
+  color: #ffdca8;
+  background: linear-gradient(165deg, rgba(74, 26, 12, 0.75), rgba(36, 12, 8, 0.75));
+  border: 1px solid rgba(214, 168, 64, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+.vtm-diab-check-roll:hover {
+  border-color: var(--vtm-gold-bright);
+  box-shadow: 0 0 12px rgba(214, 168, 64, 0.35);
+  transform: translateY(-1px);
+}
+.vtm-diab-check-verdict {
+  margin-top: 0.45rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  border-left: 3px solid transparent;
+  animation: vtm-diab-verdict-in 0.35s ease both;
+}
+.vtm-diab-check-verdict.ok {
+  color: #d8e4c4;
+  background: rgba(92, 120, 62, 0.12);
+  border-left-color: rgba(143, 155, 122, 0.7);
+}
+.vtm-diab-check-verdict.fail {
+  color: #f0b8a8;
+  background: rgba(138, 26, 29, 0.14);
+  border-left-color: rgba(194, 43, 48, 0.75);
+}
+.vtm-diab-check-verdict.bestial {
+  color: #ff9d8f;
+  background: rgba(138, 26, 29, 0.24);
+  border-left-color: #c22b30;
+  box-shadow: inset 0 0 18px rgba(120, 10, 16, 0.35);
+}
+.vtm-diab-check-verdict.messy {
+  color: #e8c9a4;
+  background: rgba(214, 168, 64, 0.1);
+  border-left-color: rgba(214, 168, 64, 0.7);
+}
+@keyframes vtm-diab-verdict-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
+/* чипы проверки в журнале церемоний */
+.vtm-diab-entry-extra {
+  display: inline-block;
+  margin-left: 0.3rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.07em;
+  color: #f0b8a8;
+  border: 1px solid rgba(194, 43, 48, 0.55);
+  border-radius: 999px;
+  padding: 0 0.3rem;
+  vertical-align: 1px;
+}
+.vtm-diab-entry-check {
+  display: inline-block;
+  margin-left: 0.3rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  font-family: var(--vtm-font-display), Georgia, serif;
+  border-radius: 999px;
+  padding: 0 0.32rem;
+  vertical-align: 1px;
+}
+.vtm-diab-entry-check.ok { color: #d8e4c4; border: 1px solid rgba(143, 155, 122, 0.55); }
+.vtm-diab-entry-check.fail { color: #f0b8a8; border: 1px solid rgba(194, 43, 48, 0.55); }
+.vtm-diab-entry-check.bestial { color: #ffd0c4; border: 1px solid #c22b30; background: rgba(194, 43, 48, 0.16); }
+.vtm-diab-entry-check.messy { color: #e8c9a4; border: 1px solid rgba(214, 168, 64, 0.55); }
+
+/* ---- Вкладка «Хроника»: счётчики ---- */
+.vtm-chron-stat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.7rem 0.85rem 0.65rem;
+  border: 1px solid rgba(122, 90, 50, 0.35);
+  border-radius: 8px;
+  background: linear-gradient(165deg, rgba(30, 12, 10, 0.6), rgba(16, 7, 7, 0.6));
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.25s ease, transform 0.2s ease;
+}
+.vtm-chron-stat::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, rgba(214, 168, 64, 0.65), rgba(138, 26, 29, 0.5));
+}
+.vtm-chron-stat:hover {
+  border-color: rgba(214, 168, 64, 0.5);
+  box-shadow: 0 0 16px rgba(120, 40, 24, 0.35);
+  transform: translateY(-2px);
+}
+.vtm-chron-stat-icon { font-size: 0.95rem; line-height: 1; opacity: 0.9; }
+.vtm-chron-stat-value {
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-size: 1.45rem;
+  line-height: 1.1;
+  color: #ffd98c;
+  text-shadow: 0 0 14px rgba(214, 168, 64, 0.3);
+}
+.vtm-chron-stat-label {
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9c8072;
+}
+
+/* ---- Вкладка «Хроника»: кровавая нить ---- */
+.vtm-chron-wrap { scroll-behavior: smooth; }
+.vtm-chron-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.2rem 0 0.2rem 0.2rem;
+  position: relative;
+}
+/* сама нить */
+.vtm-chron-list::before {
+  content: "";
+  position: absolute;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  left: 15px;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(214, 168, 64, 0.35), rgba(138, 26, 29, 0.55) 30%, rgba(138, 26, 29, 0.55) 85%, transparent);
+  box-shadow: 0 0 8px rgba(138, 26, 29, 0.35);
+}
+.vtm-chron-item {
+  position: relative;
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  padding: 0.3rem 0;
+  animation: vtm-chron-item-in 0.4s ease both;
+}
+@keyframes vtm-chron-item-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.vtm-chron-bullet {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  border-radius: 50%;
+  border: 1px solid rgba(122, 90, 50, 0.55);
+  background: radial-gradient(circle at 35% 30%, rgba(52, 24, 18, 0.95), rgba(20, 8, 8, 0.95));
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.5), inset 0 0 6px rgba(214, 168, 64, 0.08);
+  z-index: 1;
+}
+.vtm-chron-item.hunt .vtm-chron-bullet {
+  border-color: rgba(214, 168, 64, 0.7);
+  box-shadow: 0 0 10px rgba(214, 168, 64, 0.3), inset 0 0 6px rgba(214, 168, 64, 0.12);
+}
+.vtm-chron-item.diab .vtm-chron-bullet {
+  border-color: rgba(194, 43, 48, 0.75);
+  box-shadow: 0 0 10px rgba(194, 43, 48, 0.35), inset 0 0 6px rgba(194, 43, 48, 0.15);
+}
+.vtm-chron-item.xp .vtm-chron-bullet {
+  border-color: rgba(168, 119, 192, 0.55);
+  box-shadow: 0 0 8px rgba(168, 119, 192, 0.2), inset 0 0 6px rgba(168, 119, 192, 0.1);
+}
+.vtm-chron-card {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 1px solid rgba(122, 90, 50, 0.28);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem 0.6rem;
+  background: linear-gradient(170deg, rgba(28, 12, 10, 0.5), rgba(14, 6, 7, 0.5));
+  transition: border-color 0.18s ease, box-shadow 0.22s ease, transform 0.18s ease;
+}
+.vtm-chron-card:hover {
+  border-color: rgba(214, 168, 64, 0.45);
+  box-shadow: 0 0 14px rgba(90, 30, 20, 0.3);
+  transform: translateX(2px);
+}
+.vtm-chron-item.hunt .vtm-chron-card {
+  border-left: 3px solid rgba(214, 168, 64, 0.65);
+  background: linear-gradient(170deg, rgba(46, 30, 10, 0.45), rgba(20, 10, 7, 0.55));
+}
+.vtm-chron-item.diab .vtm-chron-card {
+  border-left: 3px solid rgba(194, 43, 48, 0.7);
+  background: linear-gradient(170deg, rgba(46, 12, 12, 0.5), rgba(20, 6, 7, 0.55));
+}
+.vtm-chron-item.note .vtm-chron-card {
+  border-left: 3px solid rgba(122, 90, 50, 0.55);
+}
+.vtm-chron-item.xp .vtm-chron-card {
+  border-left: 3px solid rgba(168, 119, 192, 0.55);
+  opacity: 0.92;
+}
+.vtm-chron-title {
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-size: 0.88rem;
+  color: #d9c7b6;
+  letter-spacing: 0.03em;
+}
+.vtm-chron-item.hunt .vtm-chron-title { color: #ffe9b8; }
+.vtm-chron-item.diab .vtm-chron-title { color: #f0b8a8; }
+.vtm-chron-tag {
+  display: inline-block;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  border-radius: 999px;
+  padding: 0.04rem 0.42rem;
+  vertical-align: 1px;
+}
+.vtm-chron-tag.gift { color: #d9b8ea; border: 1px solid rgba(168, 119, 192, 0.55); }
+.vtm-chron-tag.stain { color: #f0b8a8; border: 1px solid rgba(194, 43, 48, 0.6); }
+.vtm-chron-tag.check { color: #d8e4c4; border: 1px solid rgba(143, 155, 122, 0.6); }
+.vtm-chron-tag.hunt { color: #ffd98c; border: 1px solid rgba(214, 168, 64, 0.5); }
+.vtm-chron-date {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-family: var(--vtm-font-display), Georgia, serif;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  color: #9c8072;
+}
+.vtm-chron-text {
+  margin-top: 0.25rem;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: #c4ac9d;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .vtm-chron-bullet { flex-basis: 24px; width: 24px; height: 24px; font-size: 0.7rem; }
+  .vtm-chron-list::before { left: 12px; }
+  .vtm-chron-stat-value { font-size: 1.2rem; }
+  .vtm-chron-date { flex-basis: 100%; margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vtm-slake-btn.is-deep:not(:disabled) { animation: none; }
+  .vtm-diab-check-verdict { animation: none; }
+  .vtm-chron-item { animation: none; }
+  .vtm-chron-stat,
+  .vtm-chron-card,
+  .vtm-diab-check-roll,
+  .vtm-slake-btn.is-deep:not(:disabled):hover { transform: none; transition: none; }
+}
