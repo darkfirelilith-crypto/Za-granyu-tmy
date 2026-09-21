@@ -19,9 +19,11 @@ import {
   CLANS,
   SECTS,
   ADVANTAGE_LIBRARY,
+  plural,
 } from "@/lib/vtm-data";
 import { DerivedStats } from "@/lib/vtm-calc";
 import { vtmUid } from "@/lib/vtm-id";
+import { rollPool, useVtmDice } from "@/components/vtm/vtm-dice";
 import { CONDITIONS, CONDITION_BY_ID, CONDITION_CATEGORIES } from "@/lib/vtm-cheatsheet";
 
 // ---------- Небольшие помощники интерфейса ----------
@@ -167,6 +169,212 @@ function BondCard({
   );
 }
 
+// ============================================================
+// 1.5 ВАУЛДЕРИ — «СОИТИЕ» (раунд 44)
+// Кровавое братство Саббата: смешанная кровь стаи в чаше, один
+// общий Винкулум на всех причастных. Companion (Sabbat) p.20–21.
+// Бросок: кости по числу участников (ты + выбранные Сородичи),
+// успехи = сила Винкулума (1–10). Бестиальный провал — Зверь
+// испортил чашу, связь едва тёплая (1).
+// ============================================================
+
+interface VauldRite {
+  pool: number;
+  successes: number;
+  rating: number;
+  bestial: boolean;
+  messy: boolean;
+  participants: string[];
+}
+
+function VaulderieTool({
+  data,
+  mutate,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (d: VtmSheetData) => void) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [sel, setSel] = useState<string[]>([]);
+  const [rite, setRite] = useState<VauldRite | null>(null);
+  // снимок узов перед скреплением — для честной отмены соития
+  const [snapshot, setSnapshot] = useState<{ id: string; stage: number; vinculum?: number }[]>([]);
+  const [journalId, setJournalId] = useState<string | null>(null);
+
+  const bonds = data.bonds ?? [];
+  // в чаше — только Сородичи с именами: гули и смертные пьют, но не смешивают
+  const named = bonds.filter((b) => b.name.trim() && b.kind === "vampire");
+  const chosen = named.filter((b) => sel.includes(b.id));
+  const participantsCount = sel.length + 1;
+
+  const toggle = (id: string) =>
+    setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
+  const closeAll = () => {
+    setOpen(false);
+    setSel([]);
+    setRite(null);
+  };
+
+  // Бросок чаши: пул = число участников, кости Голода — по текущему Голоду.
+  const doRoll = () => {
+    if (sel.length === 0) return;
+    const result = rollPool(
+      participantsCount,
+      data.trackers.hunger,
+      `Ваулдери: чаша стаи (${participantsCount} участн.)`,
+    );
+    useVtmDice.getState().pushRoll(result);
+    const rating = result.bestial ? 1 : Math.max(1, Math.min(10, result.totalSuccesses));
+    setRite({
+      pool: result.pool,
+      successes: result.totalSuccesses,
+      rating,
+      bestial: result.bestial,
+      messy: result.messy,
+      participants: chosen.map((b) => b.name.trim()),
+    });
+    if (result.bestial) {
+      toast.error("Зверь испортил чашу", { description: "Кровь свернулась чёрной желчью — от соития остаётся едва тёплый след (Винкулум 1)." });
+    } else if (result.messy) {
+      toast.warning("Чаша вскипела", { description: `Кровь бьёт через край: Винкулум ${rating}/10 — крепкий и дурной.` });
+    } else {
+      toast.success(`Винкулум ${rating}/10`, { description: `Стая смешала кровь — узы на вечность, пока чаша не разольётся заново.` });
+    }
+  };
+
+  // Скрепление: всем выбранным ставится Винкулум, запись падает в журнал ночей.
+  const commit = () => {
+    if (!rite) return;
+    const snap = chosen.map((b) => ({ id: b.id, stage: b.stage, vinculum: b.vinculum }));
+    const nid = `vauld-${Date.now().toString(36)}`;
+    const names = rite.participants.join(", ");
+    mutate((d) => {
+      for (const b of d.bonds ?? []) {
+        if (!sel.includes(b.id)) continue;
+        b.stage = 99;
+        b.vinculum = rite.rating;
+        if (b.direction === "regard") b.direction = "regarded";
+      }
+      d.notes.entries = [
+        {
+          id: nid,
+          title: "Соитие",
+          date: new Date().toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }),
+          content: `Ваулдери: чаша смешала витэ ${rite.participants.length + 1} Сородичей (${names}). Винкулум ${rite.rating}/10 для всех причастных.${rite.bestial ? " Зверь испортил чашу — связь едва тёплая." : rite.messy ? " Чаша вскипела чёрным — связь крепка и дурна." : ""} Прежние узы к не-стае разрушены.`,
+        },
+        ...d.notes.entries,
+      ].slice(0, 40);
+    });
+    setSnapshot(snap);
+    setJournalId(nid);
+    setRite(null);
+    setSel([]);
+    toast.success("Узы скреплены", { description: `Винкулум ${rite.rating}/10 поставлен ${plural(rite.participants.length, "сородичу", "сородичам", "сородичам")}. «↺» отменяет последнее соитие.` });
+  };
+
+  // Отмена: вернуть узы из снимка и стереть запись журнала.
+  const undo = () => {
+    const snap = snapshot;
+    mutate((d) => {
+      for (const s of snap) {
+        const b = (d.bonds ?? []).find((x) => x.id === s.id);
+        if (b) {
+          b.stage = s.stage;
+          b.vinculum = s.vinculum;
+        }
+      }
+      if (journalId) d.notes.entries = (d.notes.entries ?? []).filter((e) => e.id !== journalId);
+    });
+    setSnapshot([]);
+    setJournalId(null);
+    toast.info("Соитие отменено", { description: "Узы возвращены к прежним стадиям, запись журнала стёрта." });
+  };
+
+  return (
+    <div className="vtm-vauld">
+      <div className="vtm-vauld-row-head">
+        <button
+          className={`vtm-btn vtm-vauld-toggle ${open ? "is-open" : ""}`}
+          onClick={() => (open ? closeAll() : setOpen(true))}
+          aria-expanded={open}
+          aria-controls="vauld-form"
+        >
+          ⚭ Соитие (Ваулдери)
+        </button>
+        <span className="vtm-hint !text-[0.7rem] hidden sm:inline">кровавое братство: один винкулум на всех</span>
+      </div>
+      {open && (
+        <div className="vtm-vauld-form" id="vauld-form" role="group" aria-label="Церемония Ваулдери">
+          <span className="vtm-vauld-title">⚭ Чаша стаи</span>
+          <p className="vtm-vauld-desc">
+            Смешай витэ стаи в чаше и раздай глотки. Кости — по числу участников (ты + выбранные), успехи = общий <b>Винкулум 1–10</b> для всех. Бестиальный провал — Зверь испортил чашу: связь едва тёплая (1). Прежние узы выбранных к не-стае разрушаются — таков закон Саббата.
+          </p>
+          {named.length === 0 ? (
+            <p className="vtm-vauld-empty">В узах нет ни одного Сородича с именем — сначала собери стаю.</p>
+          ) : (
+            <div className="vtm-vauld-list" role="group" aria-label="Участники соития">
+              {named.map((b) => (
+                <label key={b.id} className={`vtm-vauld-item ${sel.includes(b.id) ? "is-on" : ""}`}>
+                  <input
+                    type="checkbox"
+                    className="vtm-vauld-check"
+                    checked={sel.includes(b.id)}
+                    onChange={() => toggle(b.id)}
+                  />
+                  <span className="vtm-vauld-name">{b.name.trim()}</span>
+                  <span className="vtm-vauld-state">
+                    {b.stage === 99 ? `винкулум ${b.vinculum ?? "—"}/10` : `узы · ${stageLabels[b.stage] ?? "—"}`}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+          <div className="vtm-vauld-actions">
+            <button
+              className="vtm-vauld-roll"
+              onClick={doRoll}
+              disabled={sel.length === 0}
+              title="Бросок чаши: пул = число участников, кости Голода учитываются"
+            >
+              ⚄ Провести соитие · {participantsCount} участн.
+            </button>
+          </div>
+          {rite && (
+            <div className="vtm-vauld-result" role="status">
+              <div className="vtm-vauld-rating-wrap">
+                <span className={`vtm-vauld-rating ${rite.bestial ? "is-sour" : ""}`}>{rite.rating}</span>
+                <span className="vtm-vauld-rating-label">
+                  Винкулум стаи
+                  <em>
+                    {rite.bestial
+                      ? "чаша испорчена — едва тёплая связь"
+                      : `успехи ${rite.successes} из пула ${rite.pool}${rite.messy ? " · чаша вскипела" : ""}`}
+                  </em>
+                </span>
+              </div>
+              <div className="vtm-vauld-chips">
+                <span className="vtm-vauld-chip is-you">ты</span>
+                {rite.participants.map((p) => (
+                  <span key={p} className="vtm-vauld-chip">{p}</span>
+                ))}
+              </div>
+              <button className="vtm-vauld-commit" onClick={commit}>
+                ⚑ Скрепить узы ({rite.rating}/10)
+              </button>
+            </div>
+          )}
+          {snapshot.length > 0 && (
+            <button className="vtm-vauld-undo" onClick={undo} title="Вернуть узы к стадиям до последнего соития">
+              ↺ Отменить последнее соитие
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BondsBlock({
   data,
   mutate,
@@ -198,6 +406,7 @@ function BondsBlock({
         <p className="vtm-hint !text-[0.75rem]">
           Три глотка витэ за три разные ночи — и Сородич связан. Stage 1 влюблённость, Stage 2 преданность (тратит Волю против), Stage 3 рабство (Доминирование без взгляда, иммунитет к чужим узам). Узы слабеют на стадию в месяц без новой порции. Винкулум — асимметричный рейтинг Саббата 1–10, не тает со временем.
         </p>
+        <VaulderieTool data={data} mutate={mutate} />
         {bonds.length === 0 ? (
           <p className="vtm-hint text-center py-4">
             Никто не пил твоей крови — и ты не пил чужой. Пока что.

@@ -824,6 +824,7 @@ export function DossierSection({
                 ))}
               </div>
               <CompulsionWarning data={data} />
+              <BeastForeboding data={data} />
               <p className="vtm-hint mt-1.5 !text-[0.75rem]">
                 {data.trackers.hunger >= 5
                   ? "Голод 5: все кости пула красны. Зверь у руля — Compulsion в каждой сцене."
@@ -1526,6 +1527,30 @@ function CompulsionWarning({ data }: { data: VtmSheetData }) {
       <p className="vtm-compulsion-note">
         Критический провал с костью Голода — Зверь диктует поведение (Книга правил, стр. 258).
       </p>
+    </div>
+  );
+}
+
+// ============================================================
+// «ПРЕДВЕСТИЕ ЗВЕРЯ» (раунд 44): при Голоде 4 Зверь уже точит когти —
+// янтарная карточка-предостережение за ступень до «Зверя у поводья».
+// ============================================================
+
+function BeastForeboding({ data }: { data: VtmSheetData }) {
+  if (data.trackers.hunger !== 4) return null;
+  const comp = clanCompulsionFor(data.info.clan);
+  return (
+    <div className="vtm-forewarn-card" role="status">
+      <span className="vtm-forewarn-title" aria-hidden>⚡ Предвестие Зверя</span>
+      <span className="vtm-forewarn-sub">Голод на исходной черте — осталась одна ступень до повода</span>
+      <p className="vtm-forewarn-effect">
+        Последние <b>4 кости</b> каждого пула — кости Голода: любой провал при них грозит стать <b>Бестиальным</b>. Ещё один голодный удар — и Принуждение «<b>{comp.name}</b>» станет приговором на целую сцену.
+      </p>
+      <div className="vtm-forewarn-meta">
+        <span className="vtm-forewarn-next">↓ ещё +1 Голод → ☠ Зверь у поводья</span>
+        <span className="vtm-forewarn-tip">утоли Голод, пока кровь ещё держит</span>
+      </div>
+      <p className="vtm-forewarn-note">Ярость голода на грани: при Голоде 5 её сложность — 4 (Книга правил, стр. 218).</p>
     </div>
   );
 }

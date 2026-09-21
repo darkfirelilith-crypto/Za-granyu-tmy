@@ -25,7 +25,7 @@ import { LORESHEETS, LORESHEET_RULES, DIABLERIE_BLOCKS } from "@/lib/vtm-histori
 import { POWER_SYSTEMS, DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
 import { V20_BLOCKS } from "@/lib/vtm-v20";
 import { BLOOD_SORCERY_RITUALS, OBLIVION_CEREMONIES, RITUAL_RULES, RitualDef } from "@/lib/vtm-rituals";
-import { CHRONICLE_TENETS, CONVICTION_EXAMPLES, FRENZY_TYPES, COMPULSIONS, FRENZY_RULES } from "@/lib/vtm-chronicle";
+import { CHRONICLE_TENETS, CONVICTION_EXAMPLES, FRENZY_TYPES, COMPULSIONS, FRENZY_RULES, clanCompulsionFor } from "@/lib/vtm-chronicle";
 import { DYSCRASIAS, RESONANCE_RULES, DyscrasiaDef } from "@/lib/vtm-dyscrasias";
 import { ALL_CHEAT_BLOCKS, CONDITIONS, CONDITION_CATEGORIES, CheatBlock } from "@/lib/vtm-cheatsheet";
 import { CLAN_BANES, BANE_BY_CLAN, BANE_RULES, BaneSeverityDef } from "@/lib/vtm-clanbanes";
@@ -131,6 +131,9 @@ function ClansCodex({ q }: { q: string }) {
       {clans.map((clan) => {
         const open = openId === clan.id;
         const discs = clan.disciplines.map((id) => DISCIPLINE_BY_ID.get(id)?.name || id).join(", ");
+        // Именованное Принуждение из COMPULSIONS (раунд 44) — для кланов
+        // без записи clanCompulsionFor отдаёт «Зов крови» (проза клана).
+        const comp = clanCompulsionFor(clan.id);
         return (
           <article key={clan.id} className="vtm-panel">
             <button
@@ -146,8 +149,14 @@ function ClansCodex({ q }: { q: string }) {
             <div id={`clan-${clan.id}`} className="p-4 space-y-2.5">
               <p className="text-[0.9rem] leading-relaxed text-[#c4ac9d]">{clan.description}</p>
               <p className="text-[0.83rem] italic leading-relaxed text-[#9c8072] border-l-2 border-[#3d1a20] pl-3">{clan.quote}</p>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <span className="vtm-stamp !text-[0.67rem]">Дисциплины: {discs}</span>
+                <span
+                  className={`vtm-clan-comp-badge ${comp.name === "Зов крови" ? "is-fallback" : ""}`}
+                  title={comp.name === "Зов крови" ? comp.effect : `Принуждение клана: ${comp.effect}`}
+                >
+                  ⚡ {comp.name}
+                </span>
               </div>
               {open && (
                 <>
@@ -475,7 +484,7 @@ function ChronicleCodex({ q }: { q: string }) {
           <span className="vtm-label text-[0.81rem] text-[#a877c0]">⚡ Принуждения клана (Compulsions)</span>
           <span className="vtm-hint !text-[0.68rem] uppercase ml-auto">при критическом провале с костями Голода</span>
         </div>
-        <div className="p-3 md:p-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div className="vtm-codex-comp p-3 md:p-4 grid grid-cols-1 md:grid-cols-2 gap-2">
           {compulsions.map((c) => (
             <article key={c.id} className="vtm-compulsion-card">
               <div className="flex items-baseline gap-2 flex-wrap">

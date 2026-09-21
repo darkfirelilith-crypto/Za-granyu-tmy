@@ -7651,3 +7651,457 @@ button.vtm-die.vtm-die-selectable.selected {
   .vtm-chron-hunger5 { animation: none; }
   .vtm-compulsion-card { opacity: 1; transform: none; }
 }
+
+/* ============================================================
+   РАУНД 44 — «Предвестие Зверя» · бейджи Принуждений в кодексе ·
+   Соитие (Ваулдери)
+   ============================================================ */
+
+/* ---------- «⚡ Предвестие Зверя»: янтарная карточка при Голоде 4 ---------- */
+
+.vtm-forewarn-card {
+  position: relative;
+  overflow: hidden;
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.85rem 0.55rem 0.95rem;
+  border: 1px solid rgba(214, 168, 64, 0.32);
+  border-left: 3px solid #d6a840;
+  border-radius: 0.35rem;
+  background:
+    linear-gradient(135deg, rgba(214, 168, 64, 0.12) 0%, rgba(120, 74, 20, 0.1) 55%, rgba(30, 16, 8, 0.35) 100%),
+    rgba(24, 15, 7, 0.55);
+  box-shadow: 0 0 14px rgba(214, 168, 64, 0.14), inset 0 0 22px rgba(214, 168, 64, 0.06);
+  animation: vtm-forewarn-in 0.45s ease-out;
+  display: grid;
+  gap: 0.28rem;
+}
+
+.vtm-forewarn-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 88% -20%, rgba(214, 168, 64, 0.18), transparent 55%);
+}
+
+.vtm-forewarn-title {
+  font-family: var(--font-vtm-display, inherit);
+  font-size: 0.86rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #e8c877;
+  text-shadow: 0 0 12px rgba(214, 168, 64, 0.45);
+}
+
+.vtm-forewarn-sub {
+  font-size: 0.7rem;
+  font-style: italic;
+  letter-spacing: 0.05em;
+  color: #b39763;
+}
+
+.vtm-forewarn-effect {
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: #cbb08a;
+  position: relative;
+}
+
+.vtm-forewarn-effect b { color: #eed9a4; font-weight: 600; }
+
+.vtm-forewarn-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  position: relative;
+}
+
+.vtm-forewarn-next {
+  display: inline-block;
+  padding: 0.16rem 0.55rem;
+  border: 1px solid rgba(214, 168, 64, 0.4);
+  border-radius: 999px;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  color: #e8c877;
+  background: rgba(214, 168, 64, 0.1);
+  animation: vtm-forewarn-pulse 3.4s ease-in-out infinite;
+}
+
+.vtm-forewarn-tip {
+  font-size: 0.66rem;
+  font-style: italic;
+  color: #9c8072;
+}
+
+.vtm-forewarn-note {
+  font-size: 0.66rem;
+  color: #86705f;
+  position: relative;
+}
+
+@keyframes vtm-forewarn-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes vtm-forewarn-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(214, 168, 64, 0.2); }
+  50% { box-shadow: 0 0 12px rgba(214, 168, 64, 0.45); }
+}
+
+/* ---------- Бейдж Принуждения в карточке клана (кодекс) ---------- */
+
+.vtm-clan-comp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.6rem;
+  border: 1px solid rgba(168, 119, 192, 0.45);
+  border-radius: 999px;
+  background: rgba(168, 119, 192, 0.1);
+  font-size: 0.64rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #cbaede;
+  cursor: help;
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+}
+
+.vtm-clan-comp-badge:hover {
+  border-color: rgba(168, 119, 192, 0.8);
+  background: rgba(168, 119, 192, 0.18);
+  box-shadow: 0 0 10px rgba(168, 119, 192, 0.25);
+}
+
+.vtm-clan-comp-badge.is-fallback {
+  border-color: rgba(154, 130, 114, 0.4);
+  background: rgba(154, 130, 114, 0.08);
+  color: #b09586;
+}
+
+.vtm-clan-comp-badge.is-fallback:hover {
+  border-color: rgba(154, 130, 114, 0.7);
+  box-shadow: 0 0 8px rgba(154, 130, 114, 0.2);
+}
+
+/* ---------- Принуждения в кодексе: спокойный лавровый вид ---------- */
+/* Раунд 43 перекрасил .vtm-compulsion-card в тревожный алый (панель Крови);
+   в кодексе карточки остались справочными — возвращаем им фиолетовую
+   тихую натуру, без пульсаций и свечения тревоги. */
+
+.vtm-codex-comp .vtm-compulsion-card {
+  border-left: 3px solid #a877c0;
+  background: linear-gradient(135deg, rgba(84, 44, 104, 0.16) 0%, rgba(30, 18, 40, 0.5) 100%), rgba(24, 14, 28, 0.55);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35), inset 0 0 18px rgba(168, 119, 192, 0.05);
+  animation: none;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.vtm-codex-comp .vtm-compulsion-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 0 12px rgba(168, 119, 192, 0.15);
+}
+
+.vtm-codex-comp .vtm-compulsion-card::before { display: none; }
+
+.vtm-codex-comp .vtm-compulsion-title { animation: none; }
+
+/* ---------- ⚭ Соитие (Ваулдери): церемония кровавого братства ---------- */
+
+.vtm-vauld { display: grid; gap: 0.5rem; }
+
+.vtm-vauld-row-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.vtm-vauld-toggle {
+  border: 1px solid rgba(168, 119, 192, 0.4);
+  background: linear-gradient(135deg, rgba(84, 44, 104, 0.25), rgba(46, 22, 54, 0.55));
+  color: #d4bce4;
+  letter-spacing: 0.06em;
+  transition: border-color 0.25s, box-shadow 0.25s, color 0.25s;
+}
+
+.vtm-vauld-toggle:hover:not(:disabled) {
+  border-color: rgba(168, 119, 192, 0.8);
+  box-shadow: 0 0 14px rgba(168, 119, 192, 0.22);
+  color: #e7d6f2;
+}
+
+.vtm-vauld-toggle.is-open {
+  border-color: rgba(168, 119, 192, 0.75);
+  background: linear-gradient(135deg, rgba(104, 58, 126, 0.4), rgba(56, 28, 66, 0.65));
+  box-shadow: inset 0 0 16px rgba(168, 119, 192, 0.16), 0 0 10px rgba(168, 119, 192, 0.14);
+}
+
+.vtm-vauld-form {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(168, 119, 192, 0.3);
+  border-radius: 0.4rem;
+  background:
+    radial-gradient(ellipse at 10% -10%, rgba(168, 119, 192, 0.12), transparent 55%),
+    linear-gradient(160deg, rgba(40, 20, 48, 0.6) 0%, rgba(22, 12, 26, 0.72) 100%);
+  box-shadow: inset 0 0 30px rgba(168, 119, 192, 0.06);
+  animation: vtm-vauld-in 0.4s ease-out;
+}
+
+.vtm-vauld-title {
+  font-family: var(--font-vtm-display, inherit);
+  font-size: 0.88rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #cbaede;
+  text-shadow: 0 0 12px rgba(168, 119, 192, 0.4);
+}
+
+.vtm-vauld-desc {
+  font-size: 0.76rem;
+  line-height: 1.6;
+  color: #b6a3ad;
+}
+
+.vtm-vauld-desc b { color: #e0cdea; font-weight: 600; }
+
+.vtm-vauld-empty {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: #8d7a86;
+  text-align: center;
+  padding: 0.5rem 0 0.25rem;
+}
+
+.vtm-vauld-list {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 11rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.vtm-vauld-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.42rem 0.6rem;
+  border: 1px solid rgba(168, 119, 192, 0.18);
+  border-radius: 0.35rem;
+  background: rgba(28, 16, 34, 0.5);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s;
+}
+
+.vtm-vauld-item:hover { border-color: rgba(168, 119, 192, 0.45); }
+
+.vtm-vauld-item.is-on {
+  border-color: rgba(212, 122, 138, 0.55);
+  background: linear-gradient(120deg, rgba(96, 34, 52, 0.4), rgba(48, 20, 44, 0.6));
+  box-shadow: inset 0 0 14px rgba(212, 122, 138, 0.12);
+}
+
+.vtm-vauld-check {
+  appearance: none;
+  width: 0.95rem;
+  height: 0.95rem;
+  flex: 0 0 auto;
+  border: 1px solid rgba(168, 119, 192, 0.55);
+  border-radius: 0.2rem;
+  background: rgba(16, 8, 20, 0.7);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.vtm-vauld-check:checked {
+  background: #b04a5a;
+  border-color: #d47a8a;
+}
+
+.vtm-vauld-check:checked::after {
+  content: "✕";
+  font-size: 0.6rem;
+  color: #f5e0e4;
+}
+
+.vtm-vauld-name {
+  font-size: 0.8rem;
+  color: #d9c7d4;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vtm-vauld-state {
+  font-size: 0.63rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #97788f;
+  flex: 0 0 auto;
+}
+
+.vtm-vauld-actions { display: flex; }
+
+.vtm-vauld-roll {
+  width: 100%;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid rgba(168, 119, 192, 0.5);
+  border-radius: 0.35rem;
+  background: linear-gradient(135deg, rgba(104, 58, 126, 0.45), rgba(56, 28, 66, 0.7));
+  color: #e7d6f2;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: box-shadow 0.25s, border-color 0.25s, filter 0.25s;
+}
+
+.vtm-vauld-roll:hover:not(:disabled) {
+  border-color: rgba(168, 119, 192, 0.9);
+  box-shadow: 0 0 16px rgba(168, 119, 192, 0.3);
+  filter: brightness(1.12);
+}
+
+.vtm-vauld-roll:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.vtm-vauld-result {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid rgba(212, 122, 138, 0.35);
+  border-radius: 0.35rem;
+  background: linear-gradient(140deg, rgba(88, 30, 46, 0.35) 0%, rgba(40, 16, 34, 0.6) 100%);
+  animation: vtm-vauld-in 0.35s ease-out;
+}
+
+.vtm-vauld-rating-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.vtm-vauld-rating {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  flex: 0 0 auto;
+  border: 1px solid rgba(212, 175, 95, 0.6);
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, rgba(150, 62, 78, 0.85), rgba(40, 12, 20, 0.95));
+  box-shadow: 0 0 16px rgba(212, 122, 138, 0.35), inset 0 0 10px rgba(0, 0, 0, 0.5);
+  font-family: var(--font-vtm-display, inherit);
+  font-size: 1.06rem;
+  color: #f0d3a0;
+  text-shadow: 0 0 8px rgba(240, 211, 160, 0.5);
+}
+
+.vtm-vauld-rating.is-sour {
+  border-color: rgba(120, 108, 90, 0.6);
+  background: radial-gradient(circle at 35% 30%, rgba(66, 58, 44, 0.9), rgba(18, 14, 10, 0.95));
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6);
+  color: #a3906f;
+  text-shadow: none;
+}
+
+.vtm-vauld-rating-label {
+  display: grid;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #d4b0ba;
+}
+
+.vtm-vauld-rating-label em {
+  font-style: normal;
+  font-size: 0.66rem;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  color: #97788f;
+}
+
+.vtm-vauld-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.vtm-vauld-chip {
+  padding: 0.14rem 0.5rem;
+  border: 1px solid rgba(168, 119, 192, 0.35);
+  border-radius: 999px;
+  font-size: 0.63rem;
+  letter-spacing: 0.05em;
+  color: #cbb3d6;
+  background: rgba(46, 24, 54, 0.5);
+}
+
+.vtm-vauld-chip.is-you {
+  border-color: rgba(212, 175, 95, 0.55);
+  color: #e8c877;
+  background: rgba(214, 168, 64, 0.1);
+}
+
+.vtm-vauld-commit {
+  padding: 0.5rem 0.8rem;
+  border: 1px solid rgba(212, 175, 95, 0.55);
+  border-radius: 0.35rem;
+  background: linear-gradient(135deg, rgba(150, 62, 78, 0.5), rgba(66, 24, 38, 0.75));
+  color: #f0d3a0;
+  font-size: 0.78rem;
+  letter-spacing: 0.09em;
+  cursor: pointer;
+  transition: box-shadow 0.25s, border-color 0.25s, filter 0.25s;
+}
+
+.vtm-vauld-commit:hover {
+  border-color: rgba(212, 175, 95, 0.9);
+  box-shadow: 0 0 18px rgba(212, 122, 138, 0.35);
+  filter: brightness(1.1);
+}
+
+.vtm-vauld-undo {
+  padding: 0.42rem 0.7rem;
+  border: 1px dashed rgba(154, 130, 114, 0.5);
+  border-radius: 0.35rem;
+  background: rgba(30, 22, 16, 0.4);
+  color: #a8917e;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: border-color 0.25s, color 0.25s;
+}
+
+.vtm-vauld-undo:hover { border-color: rgba(154, 130, 114, 0.85); color: #c4ac9d; }
+
+@keyframes vtm-vauld-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Мобильная сводка раунда 44 ---------- */
+@media (max-width: 640px) {
+  .vtm-forewarn-card { padding: 0.55rem 0.6rem 0.5rem 0.8rem; }
+  .vtm-forewarn-title { font-size: 0.78rem; }
+  .vtm-vauld-form { padding: 0.7rem 0.7rem; }
+  .vtm-vauld-item { padding: 0.38rem 0.5rem; }
+  .vtm-vauld-roll { font-size: 0.74rem; }
+}
+
+/* ---------- Доступность: меньше движения ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .vtm-forewarn-card,
+  .vtm-forewarn-next,
+  .vtm-vauld-form,
+  .vtm-vauld-result { animation: none; }
+  .vtm-codex-comp .vtm-compulsion-card { transform: none; }
+}
