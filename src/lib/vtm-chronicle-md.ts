@@ -3,6 +3,9 @@
 // одной рукописью для Obsidian-хроник, печати и архивов стола.
 // Отличается от «Ⓜ МД»-сводки: здесь вся история целиком
 // (сводка берёт только последние 5 записей), плюс приложения.
+// Раунд 46: сбор ленты вынесен в collectThreadItems (общий для
+// MD и печатной темы), у длинных нитей — «Содержание»,
+// добавлена печатная тема buildBloodThreadPrintHtml (PDF).
 // Изолированный модуль VtM-вселенной.
 // ============================================================
 
@@ -144,13 +147,8 @@ function parseRuDateMsLocal(s: string): number {
   return 0;
 }
 
-/** Единая «Кровавая нить» Markdown: журнал ночи + Диаблери + опыт, свежие сверху. */
-export function buildBloodThreadMarkdown(data: VtmSheetData): string {
-  const info = data.info;
-  const clan = info.clan === "thinblood" ? "Слабокровная" : CLAN_BY_ID.get(info.clan)?.name;
-  const sect = SECT_BY_ID.get(info.sect)?.name;
-  const name = info.name || "Безымянный Сородич";
-
+/** Сбор ленты «Кровавой нити» изо всех источников листа (раунд 46: общий для MD и PDF). */
+function collectThreadItems(data: VtmSheetData): ThreadItem[] {
   const items: ThreadItem[] = [];
 
   // 1) Журнал ночи: охоты и записи
@@ -208,9 +206,39 @@ export function buildBloodThreadMarkdown(data: VtmSheetData): string {
     if (b.tsMs) return 1;
     return 0;
   });
+  return items;
+}
 
-  // Контекст листа — как в шапке вкладки (СК с учётом подъёма сверх поколения)
+/** Контекст листа — СК с учётом подъёма сверх поколения + identity-строка. */
+function threadContext(data: VtmSheetData) {
+  const info = data.info;
+  const clan = info.clan === "thinblood" ? "Слабокровная" : CLAN_BY_ID.get(info.clan)?.name;
+  const sect = SECT_BY_ID.get(info.sect)?.name;
+  const name = info.name || "Безымянный Сородич";
   const bp = Math.max(bloodPotencyByGeneration(info.generation || 13), data.trackers.bpOverride || 0);
+  return {
+    name,
+    clan,
+    sect,
+    bp,
+    identity: [
+      clan ? `Клан: **${clan}**` : null,
+      sect ? `Секта: **${sect}**` : null,
+      info.generation ? `Поколение: **${info.generation}-е**` : null,
+      info.chronicle ? `Хроника: *${esc(info.chronicle)}*` : null,
+    ].filter(Boolean) as string[],
+    stats: `СК ${bp} · Голод ${data.trackers.hunger} · Человечность ${data.trackers.humanity}/10 · пятен ${data.trackers.stains} · ночей ${data.trackers.huntCount || 0}`,
+  };
+}
+
+/** Единая «Кровавая нить» Markdown: журнал ночи + Диаблери + опыт, свежие сверху. */
+export function buildBloodThreadMarkdown(data: VtmSheetData): string {
+  const ctx = threadContext(data);
+  const name = ctx.name;
+
+  const items = collectThreadItems(data);
+
+  // Контекст листа — как в шапке вкладки
   const huntCount = data.trackers.huntCount || 0;
   const noteCount = data.notes.entries.filter((n) => n.title !== "Новая охота").length;
   const diabCount = data.diablerie?.entries?.length || 0;
@@ -221,20 +249,23 @@ export function buildBloodThreadMarkdown(data: VtmSheetData): string {
 
   // ── Титул ──
   out.push(`# 🩸 Кровавая нить — ${name}`);
-  const identity = [
-    clan ? `Клан: **${clan}**` : null,
-    sect ? `Секта: **${sect}**` : null,
-    info.generation ? `Поколение: **${info.generation}-е**` : null,
-    info.chronicle ? `Хроника: *${esc(info.chronicle)}*` : null,
-  ].filter(Boolean);
-  if (identity.length) out.push(`> ${identity.join(" · ")}`);
+  if (ctx.identity.length) out.push(`> ${ctx.identity.join(" · ")}`);
   out.push(
     "",
-    `*СК ${bp} · Голод ${data.trackers.hunger} · Человечность ${data.trackers.humanity}/10 · пятен ${data.trackers.stains} · ночей ${huntCount}*`,
+    `*СК ${ctx.bp} · Голод ${data.trackers.hunger} · Человечность ${data.trackers.humanity}/10 · пятен ${data.trackers.stains} · ночей ${huntCount}*`,
     "",
     `*ночей: ${huntCount} · записей: ${noteCount} · церемоний: ${diabCount} · строк опыта: ${xpCount}*`,
     "",
   );
+
+  // ── Оглавление для длинных нитей (раунд 46) ──
+  if (items.length >= 8) {
+    out.push("## Содержание", "");
+    items.forEach((it, i) => {
+      out.push(`${i + 1}. ${THREAD_KIND_MD[it.kind].icon} ${it.title} — *${it.dateLabel}*`);
+    });
+    out.push("");
+  }
 
   // ── Нить: свежие сверху ──
   out.push("---", "");
@@ -271,4 +302,206 @@ export function bloodThreadFileName(name: string): string {
   const d = new Date();
   const stamp = `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
   return `Кровавая-нить-${safe || "Сородич"}-${stamp}.md`;
+}
+
+// ============================================================
+// «КРОВАВАЯ НИТЬ» — ПЕЧАТНАЯ ТЕМА (раунд 46)
+// Та же лента, но самодостаточный HTML-документ для диалога
+// печати браузера: «Сохранить как PDF» — и нить становится книгой.
+// Палитра печати: пергамент + кровавые акценты, серифные шрифты,
+// @page A4 — без зависимостей от темы сайта.
+// ============================================================
+
+/** Экранирование HTML-текста. */
+const escHtml = (s: string): string =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/** Абзацы записи: пустая строка = разрыв абзаца. */
+const htmlParagraphs = (text: string): string =>
+  text
+    .split(/\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => `<p>${escHtml(p)}</p>`)
+    .join("\n");
+
+/** Самодостаточный HTML-документ «Кровавой нити» для window.print() → PDF. */
+export function buildBloodThreadPrintHtml(data: VtmSheetData): string {
+  const ctx = threadContext(data);
+  const items = collectThreadItems(data);
+
+  const huntCount = data.trackers.huntCount || 0;
+  const noteCount = data.notes.entries.filter((n) => n.title !== "Новая охота").length;
+  const diabCount = data.diablerie?.entries?.length || 0;
+  const xpCount = (data.xpLog || []).length;
+
+  const now = new Date().toLocaleString("ru-RU", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+  const counters = [
+    { icon: "🌙", label: "ночей", value: huntCount },
+    { icon: "🖋", label: "записей", value: noteCount },
+    { icon: "⚷", label: "церемоний", value: diabCount },
+    { icon: "✦", label: "строк опыта", value: xpCount },
+  ]
+    .map((c) => `<span class="th-count"><i>${c.icon}</i> ${c.value} ${c.label}</span>`)
+    .join("");
+
+  const thread = items.length
+    ? items
+        .map((it) => {
+          const meta = THREAD_KIND_MD[it.kind];
+          const tags = it.tags.length
+            ? `<div class="th-tags">${it.tags.map((t) => `<span>${escHtml(t)}</span>`).join("")}</div>`
+            : "";
+          return [
+            `<article class="th-item th-${it.kind}">`,
+            `<h2><span class="th-ico" aria-hidden="true">${meta.icon}</span>${escHtml(it.title)}</h2>`,
+            `<p class="th-meta">${escHtml(it.dateLabel)} · ${meta.label}</p>`,
+            tags,
+            htmlParagraphs(it.text || "—"),
+            `</article>`,
+          ]
+            .filter(Boolean)
+            .join("\n");
+        })
+        .join('\n<div class="th-rule" aria-hidden="true"></div>\n')
+    : `<p class="th-empty">Нить пуста. Ночь первая — всё ещё впереди.</p>`;
+
+  const draft = data.notes.draft.trim();
+  const draftBlock = draft
+    ? [
+        `<div class="th-rule" aria-hidden="true"></div>`,
+        `<section class="th-draft">`,
+        `<h2><span class="th-ico" aria-hidden="true">🖇</span>Приложение: черновик пера</h2>`,
+        `<p class="th-meta">наброски, не разнесённые по ночам</p>`,
+        htmlParagraphs(draft),
+        `</section>`,
+      ].join("\n")
+    : "";
+
+  const identityHtml = ctx.identity.length
+    ? `<p class="th-identity">${ctx.identity
+        .map((s) =>
+          escHtml(s)
+            .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+            .replace(/\*(.+?)\*/g, "<i>$1</i>"),
+        )
+        .join(' <span class="th-sep" aria-hidden="true">·</span> ')}</p>`
+    : "";
+
+  const toc =
+    items.length >= 8
+      ? [
+          `<section class="th-toc">`,
+          `<h2><span class="th-ico" aria-hidden="true">☰</span>Содержание</h2>`,
+          `<ol>`,
+          ...items.map((it) => `<li>${escHtml(it.title)} <span class="th-toc-date">— ${escHtml(it.dateLabel)}</span></li>`),
+          `</ol>`,
+          `</section>`,
+        ].join("\n")
+      : "";
+
+  return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Кровавая нить — ${escHtml(ctx.name)}</title>
+<style>
+  @page { size: A4; margin: 17mm 15mm 19mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: "EB Garamond", "Georgia", "Times New Roman", serif;
+    background: #f6efe1;
+    color: #2c2117;
+    font-size: 11.5pt;
+    line-height: 1.55;
+    padding: 14mm 12mm;
+    max-width: 210mm;
+    margin: 0 auto;
+  }
+  .th-head { text-align: center; margin-bottom: 7mm; }
+  .th-crest { font-size: 20pt; letter-spacing: 0.35em; color: #7a1f2b; margin-bottom: 2mm; }
+  h1 {
+    font-size: 21pt; font-weight: 600; color: #6d1622;
+    letter-spacing: 0.02em; line-height: 1.2;
+  }
+  .th-identity { margin-top: 2.5mm; font-size: 10.5pt; color: #5a4633; }
+  .th-identity b { color: #6d1622; }
+  .th-sep { color: #a0522d; padding: 0 1mm; }
+  .th-context {
+    margin: 3.5mm auto 0; display: inline-block;
+    border-top: 1px solid #b08d5f; border-bottom: 1px solid #b08d5f;
+    padding: 1.2mm 4mm; font-size: 9.5pt; letter-spacing: 0.06em;
+    color: #4a3826; font-variant: small-caps;
+  }
+  .th-counters {
+    margin-top: 3.5mm; display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 1.5mm 5mm; font-size: 9pt; color: #5a4633;
+  }
+  .th-count i { font-style: normal; color: #7a1f2b; }
+  .th-stamp { margin-top: 2.5mm; font-size: 8.5pt; color: #8a7355; font-style: italic; }
+  .th-rule {
+    height: 0; border-top: 1px solid #c9b28f; position: relative;
+    margin: 5mm 0;
+  }
+  .th-rule::after {
+    content: "❦"; position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -54%); background: #f6efe1;
+    color: #a0522d; font-size: 9pt; padding: 0 2.5mm;
+  }
+  .th-toc { margin: 0 0 5mm; break-inside: avoid; }
+  .th-toc h2, .th-draft h2 { font-size: 13pt; color: #6d1622; margin-bottom: 1.5mm; }
+  .th-toc ol { list-style: decimal-leading-zero; margin-left: 7mm; font-size: 10pt; color: #4a3826; columns: 2; column-gap: 8mm; }
+  .th-toc li { padding: 0.4mm 0; break-inside: avoid; }
+  .th-toc-date { color: #8a7355; font-style: italic; font-size: 9pt; }
+  .th-item { break-inside: avoid; }
+  .th-item h2 {
+    font-size: 13.5pt; color: #3a2b1d; line-height: 1.25;
+    margin-bottom: 1mm;
+  }
+  .th-ico { margin-right: 2mm; }
+  .th-meta {
+    font-size: 9pt; letter-spacing: 0.05em; color: #8a7355;
+    font-variant: small-caps; margin-bottom: 1.6mm;
+  }
+  .th-tags { margin: 0 0 1.6mm; display: flex; flex-wrap: wrap; gap: 1.2mm; }
+  .th-tags span {
+    border: 1px solid #7a1f2b; color: #7a1f2b;
+    font-size: 8pt; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.3mm 1.8mm; border-radius: 1mm;
+  }
+  .th-item p { margin: 0 0 2mm; text-align: justify; hyphens: auto; }
+  .th-empty {
+    text-align: center; font-style: italic; color: #5a4633;
+    padding: 8mm 0; font-size: 11pt;
+  }
+  .th-draft { break-inside: avoid; }
+  .th-draft p { font-style: italic; color: #4a3826; }
+  .th-foot {
+    margin-top: 7mm; text-align: center; font-size: 8.5pt;
+    letter-spacing: 0.14em; text-transform: uppercase; color: #7a1f2b;
+  }
+  .th-foot::before { content: ""; display: block; width: 30mm; margin: 0 auto 2.5mm; border-top: 1px solid #7a1f2b; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+<header class="th-head">
+  <div class="th-crest" aria-hidden="true">🩸</div>
+  <h1>Кровавая нить — ${escHtml(ctx.name)}</h1>
+  ${identityHtml}
+  <div class="th-context">${escHtml(ctx.stats)}</div>
+  <div class="th-counters">${counters}</div>
+  <p class="th-stamp">сверстано ${escHtml(now)} · «Вампиры: Маскарад» · 5-я редакция</p>
+</header>
+<div class="th-rule" aria-hidden="true"></div>
+${toc}
+${thread}
+${draftBlock}
+<div class="th-rule" aria-hidden="true"></div>
+<p class="th-foot">Кровь запомнила каждую ночь</p>
+</body>
+</html>`;
 }

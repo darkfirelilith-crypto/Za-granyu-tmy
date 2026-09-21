@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { VtmSheetData } from "@/lib/vtm-data";
 import { DerivedStats } from "@/lib/vtm-calc";
 import { clanCompulsionFor } from "@/lib/vtm-chronicle";
-import { buildBloodThreadMarkdown, bloodThreadFileName } from "@/lib/vtm-chronicle-md";
+import { buildBloodThreadMarkdown, bloodThreadFileName, buildBloodThreadPrintHtml } from "@/lib/vtm-chronicle-md";
 
 type Kind = "hunt" | "note" | "diab" | "xp";
 
@@ -170,11 +170,15 @@ export function ChronicleSection({
 
   // Экспорт всей «Кровавой нити» одним Markdown-файлом (раунд 43)
   const [threadBusy, setThreadBusy] = useState(false);
-  const exportThread = () => {
+  const ensureThread = (): boolean => {
     if (timeline.length === 0) {
       toast.error("Нить пуста", { description: "Сначала проживи ночь: охота, запись или церемония — Кровь не печатает белые страницы." });
-      return;
+      return false;
     }
+    return true;
+  };
+  const exportThread = () => {
+    if (!ensureThread()) return;
     setThreadBusy(true);
     try {
       const md = buildBloodThreadMarkdown(data);
@@ -192,6 +196,60 @@ export function ChronicleSection({
       toast.error("Перо дрогнуло", { description: "Не удалось собрать файл Кровавой нити." });
     } finally {
       setThreadBusy(false);
+    }
+  };
+
+  // Печать «Кровавой нити» в PDF (раунд 46): самодостаточный печатный
+  // документ в скрытом iframe — диалог печати браузера («Сохранить как PDF»).
+  const [printBusy, setPrintBusy] = useState(false);
+  const printThread = () => {
+    if (!ensureThread()) return;
+    setPrintBusy(true);
+    try {
+      const html = buildBloodThreadPrintHtml(data);
+      const iframe = document.createElement("iframe");
+      iframe.setAttribute("aria-hidden", "true");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      iframe.style.opacity = "0";
+      document.body.appendChild(iframe);
+      const doc = iframe.contentWindow?.document;
+      if (!doc) {
+        iframe.remove();
+        toast.error("Перо дрогнуло", { description: "Браузер не пустил печатный стан — попробуй ещё раз." });
+        setPrintBusy(false);
+        return;
+      }
+      doc.open();
+      doc.write(html);
+      doc.close();
+      const win = iframe.contentWindow!;
+      win.addEventListener(
+        "afterprint",
+        () => window.setTimeout(() => iframe.remove(), 500),
+        { once: true },
+      );
+      window.setTimeout(() => {
+        try {
+          win.focus();
+          win.print();
+        } catch {
+          iframe.remove();
+          toast.error("Перо дрогнуло", { description: "Печатный стан заклинило — попробуй ещё раз." });
+        } finally {
+          // страховка: даже без afterprint iframe не переживёт минуту
+          window.setTimeout(() => iframe.remove(), 60000);
+          setPrintBusy(false);
+        }
+      }, 250);
+      toast.info("Нить на печатном стане", { description: "В диалоге печати выбери «Сохранить как PDF» — нить станет книгой." });
+    } catch {
+      setPrintBusy(false);
+      toast.error("Перо дрогнуло", { description: "Не удалось сверстать печатную нить." });
     }
   };
 
@@ -249,6 +307,16 @@ export function ChronicleSection({
             aria-label="Скачать Кровавую нить в файл"
           >
             ⇩ нить в файл
+          </button>
+          {/* Печать нити в PDF (раунд 46): печатная тема, «Сохранить как PDF» */}
+          <button
+            className="vtm-btn-chrono vtm-chron-export vtm-chron-print"
+            onClick={printThread}
+            disabled={printBusy}
+            title="Открыть диалог печати с печатной темой нити: пергамент, кровавые акценты, «Сохранить как PDF»"
+            aria-label="Печать Кровавой нити в PDF"
+          >
+            ⎙ нить в PDF
           </button>
         </div>
       </div>
@@ -310,7 +378,7 @@ export function ChronicleSection({
       </section>
 
       <p className="vtm-hint !text-[0.75rem]">
-        Хроника собирает всё, что лист помнит: охоты и записи из «Заметок», церемонии Диаблери и строки журнала опыта из Кошелька Крови. Кнопка «⇩ нить в файл» выгружает всю нить одним Markdown-документом; один лишь журнал ночей по-прежнему выгружается на вкладке «Заметки».
+        Хроника собирает всё, что лист помнит: охоты и записи из «Заметок», церемонии Диаблери и строки журнала опыта из Кошелька Крови. Кнопка «⇩ нить в файл» выгружает всю нить одним Markdown-документом; «⎙ нить в PDF» сворачивает её в печатную книгу через диалог печати; один лишь журнал ночей по-прежнему выгружается на вкладке «Заметки».
       </p>
     </div>
   );

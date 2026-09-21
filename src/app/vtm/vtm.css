@@ -8291,3 +8291,217 @@ button.vtm-die.vtm-die-selectable.selected {
   .vtm-forewarn-hunt.is-confirm { animation: none; }
   .vtm-forewarn-hunt:hover { transform: none; }
 }
+
+/* ============================================================
+   РАУНД 46 — печатная тема «Кровавой нити» (⎙ PDF) · руки
+   «Зверя у поводья» (⚄ Ярость + ✎ журнал) · чаша вне выгоды
+   ============================================================ */
+
+/* ---------- Кнопка «⎙ нить в PDF»: золотой печатный стан ---------- */
+
+.vtm-chron-print {
+  margin-left: 0.35rem;
+  border-color: rgba(214, 168, 64, 0.55);
+  color: #e9cf96;
+  background: linear-gradient(135deg, rgba(96, 68, 14, 0.5), rgba(58, 40, 10, 0.65));
+  box-shadow: 0 0 10px rgba(214, 168, 64, 0.14), inset 0 0 12px rgba(214, 168, 64, 0.07);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease, color 0.2s ease;
+}
+.vtm-chron-print:hover:not(:disabled) {
+  border-color: rgba(214, 168, 64, 0.85);
+  color: #f4e2b3;
+  box-shadow: 0 0 16px rgba(214, 168, 64, 0.3), inset 0 0 14px rgba(214, 168, 64, 0.12);
+  transform: translateY(-1px);
+}
+.vtm-chron-print:active:not(:disabled) { transform: translateY(0); }
+.vtm-chron-print:disabled { opacity: 0.55; cursor: wait; }
+.vtm-chron-print:focus-visible {
+  outline: 2px solid rgba(214, 168, 64, 0.7);
+  outline-offset: 2px;
+}
+
+/* ---------- Руки «Зверя у поводья»: действия в карточке ---------- */
+
+.vtm-compulsion-act {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.55rem 0 0.15rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed rgba(232, 99, 107, 0.35);
+}
+
+.vtm-compulsion-roll {
+  appearance: none;
+  border: 1px solid rgba(232, 99, 107, 0.65);
+  border-radius: 4px;
+  padding: 0.3rem 0.65rem;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #ffd9d3;
+  background: linear-gradient(135deg, rgba(150, 30, 40, 0.75), rgba(90, 14, 22, 0.85));
+  box-shadow: 0 0 10px rgba(194, 43, 48, 0.25), inset 0 0 10px rgba(232, 99, 107, 0.12);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+.vtm-compulsion-roll:hover {
+  border-color: rgba(255, 160, 150, 0.85);
+  box-shadow: 0 0 18px rgba(232, 99, 107, 0.45), inset 0 0 14px rgba(232, 99, 107, 0.2);
+  transform: translateY(-1px);
+}
+.vtm-compulsion-roll:active { transform: translateY(0); }
+.vtm-compulsion-roll:focus-visible {
+  outline: 2px solid rgba(232, 99, 107, 0.8);
+  outline-offset: 2px;
+}
+
+.vtm-compulsion-jot {
+  appearance: none;
+  border: 1px solid rgba(232, 99, 107, 0.4);
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-family: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: #e8a89e;
+  background: rgba(60, 12, 18, 0.4);
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+.vtm-compulsion-jot:hover:not(:disabled) {
+  border-color: rgba(232, 99, 107, 0.7);
+  color: #ffd9d3;
+  background: rgba(94, 18, 26, 0.5);
+}
+.vtm-compulsion-jot:focus-visible {
+  outline: 2px solid rgba(232, 99, 107, 0.7);
+  outline-offset: 2px;
+}
+.vtm-compulsion-jot.is-done {
+  border-color: rgba(143, 155, 122, 0.5);
+  color: #b9c4a4;
+  background: rgba(40, 46, 34, 0.45);
+  cursor: default;
+  opacity: 0.85;
+}
+
+.vtm-compulsion-poolhint {
+  font-size: 0.67rem;
+  letter-spacing: 0.03em;
+  color: #cf9a92;
+  font-style: italic;
+}
+.vtm-compulsion-poolhint b { color: #f0b9af; font-style: normal; }
+
+/* ---------- Чаша вне выгоды: строка ⚗ + переключатель ---------- */
+
+.vtm-vauld-sorc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 0.7rem;
+  cursor: default;
+  transition: border-color 0.25s ease, background 0.25s ease, opacity 0.25s ease;
+}
+.vtm-vauld-sorc.is-waived {
+  border-style: dashed;
+  background: rgba(52, 42, 28, 0.3);
+  border-left-color: rgba(214, 168, 64, 0.5);
+}
+.vtm-vauld-sorc.is-waived .vtm-vauld-sorc-line { color: #a89577; }
+.vtm-vauld-sorc.is-waived s { color: #8d7c63; text-decoration-thickness: 1px; }
+
+.vtm-vauld-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.vtm-vauld-opt-check {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vtm-vauld-opt-box {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex: none;
+  border: 1px solid rgba(214, 168, 64, 0.55);
+  border-radius: 3px;
+  background: rgba(30, 22, 12, 0.6);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
+  position: relative;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.vtm-vauld-opt-box::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  line-height: 1;
+  color: #e9cf96;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.vtm-vauld-opt-check:checked + .vtm-vauld-opt-box {
+  border-color: rgba(214, 168, 64, 0.95);
+  background: rgba(96, 68, 14, 0.55);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.55), 0 0 8px rgba(214, 168, 64, 0.35);
+}
+.vtm-vauld-opt-check:checked + .vtm-vauld-opt-box::after {
+  opacity: 1;
+  transform: scale(1);
+}
+.vtm-vauld-opt-check:focus-visible + .vtm-vauld-opt-box {
+  outline: 2px solid rgba(214, 168, 64, 0.7);
+  outline-offset: 2px;
+}
+
+.vtm-vauld-opt-label {
+  font-size: 0.67rem;
+  letter-spacing: 0.05em;
+  color: #cbb27f;
+  font-variant: small-caps;
+}
+.vtm-vauld-opt:hover .vtm-vauld-opt-label { color: #e9cf96; }
+
+/* чип «⚖ вне выгоды» в результате соития */
+.vtm-vauld-chip.is-waiver {
+  border-color: rgba(214, 168, 64, 0.6);
+  color: #dcc187;
+  background: rgba(96, 68, 14, 0.25);
+  box-shadow: 0 0 8px rgba(214, 168, 64, 0.16);
+}
+
+/* ---------- Мобильная сводка раунда 46 ---------- */
+@media (max-width: 640px) {
+  .vtm-compulsion-act { gap: 0.4rem; }
+  .vtm-compulsion-roll { flex: 1 1 100%; text-align: center; }
+  .vtm-compulsion-jot { flex: 1 1 auto; text-align: center; }
+  .vtm-compulsion-poolhint { flex-basis: 100%; }
+  .vtm-chron-print { flex: 1 1 auto; text-align: center; margin-left: 0; }
+  .vtm-vauld-opt-label { font-size: 0.64rem; }
+}
+
+/* ---------- Доступность: меньше движения ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .vtm-chron-print,
+  .vtm-compulsion-roll,
+  .vtm-compulsion-jot { transition: none; }
+  .vtm-chron-print:hover:not(:disabled),
+  .vtm-compulsion-roll:hover { transform: none; }
+}

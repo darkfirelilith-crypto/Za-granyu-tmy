@@ -190,6 +190,7 @@ interface VauldRite {
   participants: string[];
   priest: string;
   sorcBonus: number;
+  sorcWaived: boolean;
 }
 
 function VaulderieTool({
@@ -204,6 +205,9 @@ function VaulderieTool({
   const [rite, setRite] = useState<VauldRite | null>(null);
   // Жрец стаи (церемониймейстер): чаша его рук — имя уходит в чипы и журнал ночей
   const [priest, setPriest] = useState("");
+  // «Чаша вне выгоды» (раунд 46): Рассказчик вправе не считать чародейство
+  // честной ставкой — переключатель убирает кости ⚗ из пула
+  const [sorcWaived, setSorcWaived] = useState(false);
   // снимок узов перед скреплением — для честной отмены соития
   const [snapshot, setSnapshot] = useState<{ id: string; stage: number; vinculum?: number }[]>([]);
   const [journalId, setJournalId] = useState<string | null>(null);
@@ -223,10 +227,10 @@ function VaulderieTool({
     setRite(null);
   };
 
-  // Бросок чаши: пул = число участников + кости Кровавого чародейства (раунд 45),
-  // кости Голода — по текущему Голоду.
+  // Бросок чаши: пул = число участников + кости Кровавого чародейства (раунд 45;
+  // раунд 46 — кости можно убрать «чашей вне выгоды»), кости Голода — по текущему Голоду.
   const sorcLvl = data.disciplines.find((d) => d.key === "blood_sorcery")?.value ?? 0;
-  const sorcBonus = sorcLvl > 0 ? sorcLvl : 0;
+  const sorcBonus = !sorcWaived && sorcLvl > 0 ? sorcLvl : 0;
   const priestName = priest.trim() || "ты";
   const poolSize = participantsCount + sorcBonus;
 
@@ -248,6 +252,7 @@ function VaulderieTool({
       participants: chosen.map((b) => b.name.trim()),
       priest: priestName,
       sorcBonus,
+      sorcWaived: sorcLvl > 0 && sorcWaived,
     });
     if (result.bestial) {
       toast.error("Зверь испортил чашу", { description: "Кровь свернулась чёрной желчью — от соития остаётся едва тёплый след (Винкулум 1)." });
@@ -276,7 +281,7 @@ function VaulderieTool({
           id: nid,
           title: "Соитие",
           date: new Date().toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }),
-          content: `Ваулдери: чаша смешала витэ ${rite.participants.length + 1} Сородичей (${names}). Винкулум ${rite.rating}/10 для всех причастных. Чашу вёл жрец стаи — ${rite.priest}.${rite.sorcBonus ? ` Кости Кровавого чародейства (${rite.sorcBonus}) легли в чашу.` : ""}${rite.bestial ? " Зверь испортил чашу — связь едва тёплая." : rite.messy ? " Чаша вскипела чёрным — связь крепка и дурна." : ""} Прежние узы к не-стае разрушены.`,
+          content: `Ваулдери: чаша смешала витэ ${rite.participants.length + 1} Сородичей (${names}). Винкулум ${rite.rating}/10 для всех причастных. Чашу вёл жрец стаи — ${rite.priest}.${rite.sorcBonus ? ` Кости Кровавого чародейства (${rite.sorcBonus}) легли в чашу.` : ""}${rite.sorcWaived ? " Чаша вне выгоды — кости чародейства исключены Рассказчиком." : ""}${rite.bestial ? " Зверь испортил чашу — связь едва тёплая." : rite.messy ? " Чаша вскипела чёрным — связь крепка и дурна." : ""} Прежние узы к не-стае разрушены.`,
         },
         ...d.notes.entries,
       ].slice(0, 40);
@@ -359,10 +364,28 @@ function VaulderieTool({
             </div>
             </>
           )}
-          {sorcBonus > 0 && (
-            <p className="vtm-vauld-sorc" title="Чародей крови ведёт обряд увереннее: знание Кровавого чародейства добавляет его кости в чашу">
-              ⚗ Кровавое чародейство {sorcLvl}: <b>+{sorcBonus}</b> {sorcBonus === 1 ? "кость" : "кости"} к чаше
-            </p>
+          {sorcLvl > 0 && (
+            <div className={`vtm-vauld-sorc ${sorcWaived ? "is-waived" : ""}`}>
+              <span className="vtm-vauld-sorc-line" title="Чародей крови ведёт обряд увереннее: знание Кровавого чародейства добавляет его кости в чашу">
+                ⚗ Кровавое чародейство {sorcLvl}:{" "}
+                {sorcWaived ? (
+                  <><s>+{sorcLvl}</s> — исключено</>
+                ) : (
+                  <><b>+{sorcBonus}</b> {sorcBonus === 1 ? "кость" : "кости"} к чаше</>
+                )}
+              </span>
+              <label className="vtm-vauld-opt" title="Рассказчик не считает чародейство честной ставкой: чаша только из участников">
+                <input
+                  type="checkbox"
+                  className="vtm-vauld-opt-check"
+                  checked={sorcWaived}
+                  onChange={(e) => setSorcWaived(e.target.checked)}
+                  aria-label="Чаша вне выгоды: не добавлять кости Кровавого чародейства"
+                />
+                <span className="vtm-vauld-opt-box" aria-hidden />
+                <span className="vtm-vauld-opt-label">чаша вне выгоды</span>
+              </label>
+            </div>
           )}
           <div className="vtm-vauld-actions">
             <button
@@ -397,6 +420,9 @@ function VaulderieTool({
                 )}
                 {rite.sorcBonus > 0 && (
                   <span className="vtm-vauld-chip is-sorc" title="Кости Кровавого чародейства легли в чашу">⚗ +{rite.sorcBonus}</span>
+                )}
+                {rite.sorcWaived && (
+                  <span className="vtm-vauld-chip is-waiver" title="Чаша вне выгоды: кости чародейства исключены Рассказчиком">⚖ вне выгоды</span>
                 )}
               </div>
               <button className="vtm-vauld-commit" onClick={commit}>

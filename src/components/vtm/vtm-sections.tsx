@@ -392,6 +392,44 @@ const FRENZY_KINDS = [
   { id: "hunger", label: "Ярость голода", hint: "Голод 5, провал при Голоде 4+, вид крови — самая опасная", diff: 4 },
 ] as const;
 
+/** Общая проверка Ярости (раунд 46): один механизм для блока «Ярость»
+ *  и для кнопки в карточке «Зверь у поводья». Пул = Самообладание +
+ *  Упорство; бестиальный провал сам ставит пятно Человечности. */
+function performFrenzyTest(
+  data: VtmSheetData,
+  mutate: (fn: (draft: VtmSheetData) => void) => void,
+  kind: { label: string; diff: number },
+  difficulty: number,
+): void {
+  const pool = data.attributes.com + data.attributes.res;
+  const r = rollPool(pool, data.trackers.hunger, `Ярость: ${kind.label}`, difficulty);
+  useVtmDice.getState().pushRoll(r);
+  if (r.bestial) {
+    mutate((d) => {
+      d.trackers.stains = Math.min(10 - d.trackers.humanity, d.trackers.stains + 1);
+    });
+    toast.error(`Бестиальный провал — Зверь берёт горло: ${kind.label}! Пятно Человечности поставлено.`, {
+      description: `Успехов: 0 · сложность ${difficulty}. Френзия: Зверь решает за тебя, пока кто-то не оттащит или не пройдёт время.`,
+    });
+  } else if (r.messy) {
+    toast.warning(`Десятка на кости Голода — успех с осложнениями (${r.totalSuccesses} усп. против ${difficulty})`, {
+      description: "Ты сдержался, но Зверь успел наследить: Рассказчик вправе добавить пятно, шум или Голод +1.",
+    });
+  } else if (r.totalSuccesses >= difficulty) {
+    toast.success(`Зверь отступает: ${r.totalSuccesses} успехов против сложности ${difficulty}`, {
+      description: `${kind.label} отбита. Воля держит нить.`,
+    });
+  } else if (r.totalSuccesses > 0) {
+    toast.error(`Провал — Зверь рулит: ${r.totalSuccesses} усп. против сложности ${difficulty}`, {
+      description: `${kind.label} захватывает тебя. Френзия длится, пока Рассказчик не скажет «достаточно».`,
+    });
+  } else {
+    toast.error(`Провал без надежды: 0 успехов, но кости Голода не выпали`, {
+      description: `${kind.label} захватывает тебя — обычная Френзия, без бестиальных последствий.`,
+    });
+  }
+}
+
 function FrenzyBlock({
   data,
   mutate,
@@ -401,36 +439,9 @@ function FrenzyBlock({
 }) {
   const [difficulty, setDifficulty] = useState(3);
   const pool = data.attributes.com + data.attributes.res;
-  const hunger = data.trackers.hunger;
 
-  const doFrenzy = (kind: (typeof FRENZY_KINDS)[number]) => {
-    const r = rollPool(pool, hunger, `Ярость: ${kind.label}`, difficulty);
-    useVtmDice.getState().pushRoll(r);
-    if (r.bestial) {
-      mutate((d) => {
-        d.trackers.stains = Math.min(10 - d.trackers.humanity, d.trackers.stains + 1);
-      });
-      toast.error(`Бестиальный провал — Зверь берёт горло: ${kind.label}! Пятно Человечности поставлено.`, {
-        description: `Успехов: 0 · сложность ${difficulty}. Френзия: Зверь решает за тебя, пока кто-то не оттащит или не пройдёт время.`,
-      });
-    } else if (r.messy) {
-      toast.warning(`Десятка на кости Голода — успех с осложнениями (${r.totalSuccesses} усп. против ${difficulty})`, {
-        description: "Ты сдержался, но Зверь успел наследить: Рассказчик вправе добавить пятно, шум или Голод +1.",
-      });
-    } else if (r.totalSuccesses >= difficulty) {
-      toast.success(`Зверь отступает: ${r.totalSuccesses} успехов против сложности ${difficulty}`, {
-        description: `${kind.label} отбита. Воля держит нить.`,
-      });
-    } else if (r.totalSuccesses > 0) {
-      toast.error(`Провал — Зверь рулит: ${r.totalSuccesses} усп. против сложности ${difficulty}`, {
-        description: `${kind.label} захватывает тебя. Френзия длится, пока Рассказчик не скажет «достаточно».`,
-      });
-    } else {
-      toast.error(`Провал без надежды: 0 успехов, но кости Голода не выпали`, {
-        description: `${kind.label} захватывает тебя — обычная Френзия, без бестиальных последствий.`,
-      });
-    }
-  };
+  const doFrenzy = (kind: (typeof FRENZY_KINDS)[number]) =>
+    performFrenzyTest(data, mutate, kind, difficulty);
 
   return (
     <div className="vtm-frenzy">
@@ -823,7 +834,7 @@ export function DossierSection({
                   </button>
                 ))}
               </div>
-              <CompulsionWarning data={data} />
+              <CompulsionWarning data={data} mutate={mutate} />
               <BeastForeboding data={data} mutate={mutate} />
               <p className="vtm-hint mt-1.5 !text-[0.75rem]">
                 {data.trackers.hunger >= 5
@@ -1508,11 +1519,43 @@ function CustomSkills({
 // «ЗВЕРЬ У ПОВОДЬЯ» (раунд 43): при Голоде 5 Зверь неотступен —
 // панель-тревога с Принуждением клана (Книга правил, стр. 258).
 // Принуждение берётся из clanCompulsionFor() в lib/vtm-chronicle.
+// Раунд 46: карточка получила руки — ⚄ проверка Ярости голода
+// (общий performFrenzyTest, сложность 4) и ✎ запись Принуждения
+// в журнал ночей, чтобы след Зверя остался в Кровавой нити.
 // ============================================================
 
-function CompulsionWarning({ data }: { data: VtmSheetData }) {
+function CompulsionWarning({
+  data,
+  mutate,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (draft: VtmSheetData) => void) => void;
+}) {
+  const [jotted, setJotted] = useState(false);
   if (data.trackers.hunger !== 5) return null;
   const comp = clanCompulsionFor(data.info.clan);
+  const pool = data.attributes.com + data.attributes.res;
+  const hungerKind = FRENZY_KINDS.find((k) => k.id === "hunger")!;
+
+  const doFrenzy = () => performFrenzyTest(data, mutate, hungerKind, 4);
+
+  const jot = () => {
+    const nid = `comp-${Date.now().toString(36)}`;
+    mutate((d) => {
+      d.notes.entries = [
+        {
+          id: nid,
+          title: "Принуждение",
+          date: new Date().toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }),
+          content: `Зверь у поводья (Голод 5): Принуждение клана «${comp.name}» — ${comp.effect} Длительность: ${comp.duration}.`,
+        },
+        ...d.notes.entries,
+      ].slice(0, 40);
+    });
+    setJotted(true);
+    toast.success("Принуждение в журнале", { description: `«${comp.name}» вписано в Кровавую нить — Рассказчик увидит след Зверя.` });
+  };
+
   return (
     <div className="vtm-compulsion-card" role="alert">
       <span className="vtm-compulsion-title" aria-hidden>☠ Зверь у поводья</span>
@@ -1523,6 +1566,28 @@ function CompulsionWarning({ data }: { data: VtmSheetData }) {
       <div className="vtm-compulsion-meta">
         <span className="vtm-compulsion-dur">⏳ {comp.duration}</span>
         <span className="vtm-compulsion-src">{comp.source}</span>
+      </div>
+      <div className="vtm-compulsion-act">
+        <button
+          className="vtm-compulsion-roll"
+          onClick={doFrenzy}
+          title={`Проверка Ярости голода: пул Воли ${pool} (Самообладание + Упорство), сложность 4. Провал — Френзия, бестиальный провал — пятно Человечности.`}
+          aria-label="Бросить проверку Ярости голода"
+        >
+          ⚄ проверка Ярости голода · сл. 4
+        </button>
+        <button
+          className={`vtm-compulsion-jot ${jotted ? "is-done" : ""}`}
+          onClick={jot}
+          disabled={jotted}
+          title="Вписать Принуждение в журнал ночей — след Зверя останется в Кровавой нити"
+          aria-label="Записать Принуждение в журнал ночей"
+        >
+          {jotted ? "✓ в журнале" : "✎ в журнал ночей"}
+        </button>
+        <span className="vtm-compulsion-poolhint">
+          пул: Самообладание {data.attributes.com} + Упорство {data.attributes.res} = <b>{pool}</b>
+        </span>
       </div>
       <p className="vtm-compulsion-note">
         Критический провал с костью Голода — Зверь диктует поведение (Книга правил, стр. 258).
