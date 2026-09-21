@@ -24,6 +24,7 @@ import {
   spendEconomy,
   refundEconomy,
   creationLeft,
+  plural,
 } from "@/lib/vtm-data";
 import { LORESHEETS, LORESHEET_BY_ID, LORESHEET_RULES } from "@/lib/vtm-histories";
 import { DISCIPLINE_RULES } from "@/lib/vtm-discipline-systems";
@@ -760,7 +761,10 @@ export function AdvantagesSection({
     const entry = data.advantages.find((a) => a.id === id);
     mutate((d) => {
       if (entry) {
-        if (entry.kind === "flaw") {
+        if (entry.free) {
+          // дар хищника / подарок: ничего не стоил — и возврата нет
+        }
+        else if (entry.kind === "flaw") {
           // снял недостаток — вернул Рассказчику его цену
           spendEconomy(d, flawIncome(entry.rating), `недостаток «${entry.name}» снят (расплата ${flawIncome(entry.rating)} пт)`);
         } else if (entry.kind === "background") {
@@ -855,6 +859,7 @@ export function AdvantagesSection({
                 <div key={a.id} className="vtm-frame rounded-md p-2.5 space-y-1.5" style={a.kind === "flaw" ? { borderColor: "rgba(138,26,29,0.4)" } : undefined}>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`vtm-stamp !text-[0.66rem] ${a.kind === "flaw" ? "" : "vtm-stamp-gold"}`}>{kindLabel}</span>
+                    {a.free && <span className="vtm-adv-free-badge" title="Дар стиля охоты — бесплатно (Книга правил, стр. 183–186)">дар хищника</span>}
                     {def?.group && <span className="vtm-hint !text-[0.67rem] not-italic">{def.group}</span>}
                     <span className="text-sm text-[#d9c7b6] flex-1 min-w-[120px]">{a.name}</span>
                     <div className="flex items-center gap-1.5">
@@ -866,13 +871,15 @@ export function AdvantagesSection({
                           const x = d.advantages.find((y) => y.id === a.id);
                           if (!x) return;
                           // авто-списание/возврат через Кошелёк Крови: недостатки дают очки, остальное — тратит
+                          // дар хищника: базовые уровни бесплатны — платим только за подъём сверх дара, возврата нет
                           if (a.kind === "flaw") {
-                            if (n > x.rating) refundEconomy(d, flawIncome(n) - flawIncome(x.rating), `недостаток «${a.name}» ↑ до ${n} (приход +${flawIncome(n) - flawIncome(x.rating)} пт)`);
+                            if (x.free) { /* дар не приносит очков */ }
+                            else if (n > x.rating) refundEconomy(d, flawIncome(n) - flawIncome(x.rating), `недостаток «${a.name}» ↑ до ${n} (приход +${flawIncome(n) - flawIncome(x.rating)} пт)`);
                             else if (n < x.rating) spendEconomy(d, flawIncome(x.rating) - flawIncome(n), `недостаток «${a.name}» ↓ до ${n} (расплата ${flawIncome(x.rating) - flawIncome(n)} пт)`);
                           } else if (n > x.rating) {
-                            const cost = isBg ? XP_COSTS.background * (n - x.rating) : XP_COSTS.meritRaise(n);
+                            const cost = isBg ? XP_COSTS.background * (n - x.rating) : XP_COSTS.meritRaise(n) - XP_COSTS.meritRaise(x.rating);
                             spendEconomy(d, cost, `«${a.name}» ↑ до ${n} (цена ${cost})`);
-                          } else if (n < x.rating) {
+                          } else if (n < x.rating && !x.free) {
                             const back = isBg ? XP_COSTS.background * (x.rating - n) : XP_COSTS.meritRaise(x.rating) - XP_COSTS.meritRaise(n);
                             refundEconomy(d, back, `«${a.name}» ↓ до ${n}`);
                           }
@@ -880,7 +887,9 @@ export function AdvantagesSection({
                         })}
                         ariaLabel={`${a.name}: уровень ${a.rating}`}
                       />
-                      {pts !== null && (
+                      {a.free ? (
+                        <span className="vtm-label text-[0.77rem] text-[#d6a840] whitespace-nowrap" title="Дар хищника — бесплатно">0 пт</span>
+                      ) : pts !== null && (
                         <span className="vtm-label text-[0.77rem] text-[#a8863d] whitespace-nowrap">{pts} пт</span>
                       )}
                       <button className="vtm-btn vtm-btn-ghost !p-1 !text-[0.73rem]" onClick={() => removeAdv(a.id)} aria-label={`Убрать ${a.name}`}>✕</button>
@@ -1258,7 +1267,7 @@ export function HistoriesSection({
         <section className="vtm-panel vtm-bonus-panel" aria-label="Активные бафы листогов">
           <div className="vtm-panel-head">
             <span className="vtm-label text-[0.81rem] text-[#d6a840]">★ Активные бафы</span>
-            <span className="vtm-hint !text-[0.72rem] ml-2">{bonusCount} бафов с {ownedBonuses.length} листогов</span>
+            <span className="vtm-hint !text-[0.72rem] ml-2">{plural(bonusCount, "баф", "бафа", "бафов")} с {plural(ownedBonuses.length, "листога", "листогов", "листогов")}</span>
             <button
               type="button"
               className={`vtm-btn ${bonusCopied ? "vtm-btn-gold" : "vtm-btn-ghost"} !py-1 !px-2 !text-[0.72rem] ml-auto`}

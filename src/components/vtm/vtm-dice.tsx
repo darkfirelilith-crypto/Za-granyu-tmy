@@ -369,8 +369,11 @@ export function setVtmSheetHooks(h: SheetHooks | null) {
 }
 
 function describe(r: VtmRollResult): string {
-  const diff = r.difficulty ? ` · порог ≤ ${r.difficulty}` : "";
+  const d = r.difficulty ?? 0;
+  const diff = r.difficulty ? ` · сложность ${r.difficulty}` : "";
   if (r.totalSuccesses > 0 && r.messy) return `БЕСПРЕДЕЛЬНЫЙ УСПЕХ · ${r.totalSuccesses} успехов${diff} — Зверь распорядился по-своему`;
+  if (d > 0 && r.totalSuccesses > 0 && r.totalSuccesses < d) return `НЕДОСТАТОЧНО · ${r.totalSuccesses} < ${d}${diff} — цель не взята`;
+  if (d > 0 && r.totalSuccesses >= d) return `ЦЕЛЬ ДОСТИГНУТА · ${r.totalSuccesses} ≥ ${d}${r.critPairs ? " (критический!)" : ""}`;
   if (r.totalSuccesses > 0) return `УСПЕХ · ${r.totalSuccesses} ${r.critPairs ? "(критический!)" : ""}${diff}`;
   if (r.bestial) return `ЗВЕРСКИЙ ПРОВАЛ${diff} — Зверь взял своё`;
   return `ПРОВАЛ · 0 успехов${diff}`;
@@ -378,8 +381,10 @@ function describe(r: VtmRollResult): string {
 
 /** Короткий вердикт для «Хроники бросков» — значок + слово. */
 function verdictShort(r: VtmRollResult): { word: string; tone: "crit" | "win" | "messy" | "fail" | "beast" } {
+  const d = r.difficulty ?? 0;
   if (r.totalSuccesses > 0 && r.critPairs && !r.messy) return { word: `КРИТ · ${r.totalSuccesses}`, tone: "crit" };
   if (r.totalSuccesses > 0 && r.messy) return { word: `БЕСПРЕД. · ${r.totalSuccesses}`, tone: "messy" };
+  if (d > 0 && r.totalSuccesses > 0 && r.totalSuccesses < d) return { word: `МАЛО · ${r.totalSuccesses}/${d}`, tone: "fail" };
   if (r.totalSuccesses > 0) return { word: `УСПЕХ · ${r.totalSuccesses}`, tone: "win" };
   if (r.bestial) return { word: "ЗВЕРСКИЙ", tone: "beast" };
   return { word: "ПРОВАЛ", tone: "fail" };

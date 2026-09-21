@@ -70,6 +70,7 @@ export interface VtmAdvantageEntry {
   rating: number; // 1–5 (факты биографии 0–5)
   note: string;
   cost?: number;  // своя цена за уровень (для своих записей; 0 = договорная)
+  free?: boolean; // дар хищника / подарок Рассказчика: ничего не стоил — и возврата при снятии нет
 }
 
 export interface VtmGearItem {
@@ -757,6 +758,94 @@ export const PREDATOR_TYPES: PredatorDef[] = [
 ];
 
 export const PREDATOR_BY_ID = new Map(PREDATOR_TYPES.map((p) => [p.id, p]));
+
+// ---------- Дары хищника: разбор строки merit в осязаемые подарки ----------
+// По Книге правил (стр. 183–186) каждый стиль охоты даёт на создании персонажа
+// бесплатно: +1 уровень клановой Дисциплины и Достоинство (или Недостаток).
+// Строки merit выглядят как «Достоинство «стадо» (●●), Недостаток «враг» (●●)».
+
+/** Словарь: имя в кавычках → id из ADVANTAGE_LIBRARY (не найдено — запись будет «своя»). */
+export const PREDATOR_GRANT_MAP: Record<string, string> = {
+  "стадо": "herd",
+  "контакт": "contacts",
+  "контакты": "contacts",
+  "убежище": "haven",
+  "красота": "beauty",
+  "статус": "status",
+  "кровное чутьё": "ties_sense",
+  "союзники": "allies",
+  "враг": "enemy",
+  "тёмная тайна": "other_dark_secret",
+  "мобильное убежище": "haven_mobile",
+  "спустя рукава": "methodical",
+  "предпочтение добычи": "prey_exclusion",
+  "отказ от добычи": "prey_exclusion",
+};
+
+export interface PredatorGrant {
+  id: string | null;        // id библиотечного преимущества или null (своя запись)
+  name: string;             // имя без кавычек
+  kind: "merit" | "flaw";
+  rating: number;           // ●● → 2; без точек → 1
+  raw: string;              // исходный контекст (для заметки)
+}
+
+/** Разбор строки сопутствующих преимуществ стиля охоты на конкретные дары. */
+export function parsePredatorMerit(merit: string): PredatorGrant[] {
+  if (!merit) return [];
+  // Клаузы: делим по запятой перед словом «Достоинство/Недостаток»,
+  // чтобы «или»-цепочки и уточнения остались в одной клаузе.
+  const clauses = merit
+    .split(/,\s*(?=(?:Достоинство|Недостаток|достоинство|недостаток)\b)/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const out: PredatorGrant[] = [];
+  for (const clause of clauses) {
+    const quotes = [...clause.matchAll(/[«]([^»]+)[»]/g)];
+    if (!quotes.length) continue;
+    const clauseMaxDots = (clause.match(/●/g) || []).length;
+    let lastKind: "merit" | "flaw" = "merit";
+    for (let i = 0; i < quotes.length; i++) {
+      const name = quotes[i][1].trim();
+      const start = (quotes[i].index ?? 0) + quotes[i][0].length;
+      const end = i + 1 < quotes.length ? quotes[i + 1].index ?? clause.length : clause.length;
+      const after = clause.slice(start, end);
+      const dots = (after.match(/●/g) || []).length;
+      // вид: ближайшее слово «недостаток» левее имени; в «или»-цепочке наследуем вид соседа
+      const before = clause.slice(Math.max(0, (quotes[i].index ?? 0) - 24), quotes[i].index ?? 0);
+      let kind: "merit" | "flaw";
+      if (/едостаток/.test(before)) kind = "flaw";
+      else if (/остоинство/.test(before)) kind = "merit";
+      else if (/или/.test(before)) kind = lastKind;
+      else kind = lastKind;
+      lastKind = kind;
+      const rating = Math.max(1, dots || clauseMaxDots || 1);
+      const mapped = PREDATOR_GRANT_MAP[name.toLowerCase()];
+      const title = mapped ? (ADVANTAGE_BY_ID.get(mapped)?.name || name) : name.charAt(0).toUpperCase() + name.slice(1);
+      out.push({
+        id: mapped || null,
+        name: title,
+        kind,
+        rating: Math.min(5, rating),
+        raw: clause.replace(/\s*—\s*.*$/, "").trim(),
+      });
+    }
+  }
+  // дедупликация по имени
+  const seen = new Set<string>();
+  return out.filter((g) => (seen.has(g.name) ? false : (seen.add(g.name), true)));
+}
+
+// ---------- Русская плюрализация (для подписей «N бафов» и т.п.) ----------
+/** plural(3, "баф", "бафа", "бафов") → «3 бафа». */
+export function plural(n: number, one: string, few: string, many: string): string {
+  const a = Math.abs(n) % 100;
+  const b = a % 10;
+  if (a > 10 && a < 20) return `${n} ${many}`;
+  if (b > 1 && b < 5) return `${n} ${few}`;
+  if (b === 1) return `${n} ${one}`;
+  return `${n} ${many}`;
+}
 
 // ---------- Поколения и Сила Крови ----------
 

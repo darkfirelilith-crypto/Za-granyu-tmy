@@ -18,6 +18,7 @@ import {
   SECT_BY_ID,
   PREDATOR_TYPES,
   PREDATOR_BY_ID,
+  PREDATOR_GRANT_MAP,
   GENERATIONS,
   RESONANCES,
   RESONANCE_BY_ID,
@@ -27,9 +28,14 @@ import {
   spendEconomy,
   refundEconomy,
   DEFAULT_CREATION_POOL,
+  parsePredatorMerit,
+  type PredatorGrant,
+  plural,
 } from "@/lib/vtm-data";
+import { DISCIPLINE_BY_ID } from "@/lib/vtm-data";
 import { DerivedStats, bpHint } from "@/lib/vtm-calc";
-import { rollRouse, useVtmDice } from "@/components/vtm/vtm-dice";
+import { rollPool, rollRouse, useVtmDice } from "@/components/vtm/vtm-dice";
+import { vtmUid } from "@/lib/vtm-id";
 import { VtmPortraitStudio } from "@/components/vtm/vtm-portrait-studio";
 import { CharCount } from "@/components/vtm/vtm-sections3";
 
@@ -243,6 +249,220 @@ function Dots({
         />
       ))}
     </span>
+  );
+}
+
+// ============================================================
+// ДАРЫ ХИЩНИКА: стиль охоты → механика
+// Книга правил, стр. 183–186: каждый стиль охоты даёт на создании
+// бесплатно +1 уровень Дисциплины и Достоинство (или Недостаток).
+// ============================================================
+
+const PREDATOR_GIFT_MARKER = "дар хищника";
+
+function PredatorGiftsCard({
+  data,
+  mutate,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (draft: VtmSheetData) => void) => void;
+}) {
+  const predator = PREDATOR_BY_ID.get(data.info.predator);
+  if (!predator) return null;
+
+  const grants: PredatorGrant[] = parsePredatorMerit(predator.merit || "");
+  const discDef = predator.discipline ? DISCIPLINE_BY_ID.get(predator.discipline) : undefined;
+  const discOwned = discDef ? data.disciplines.find((x) => x.key === discDef.id) : undefined;
+  const discGranted = discOwned && discOwned.value >= 1;
+
+  const isGranted = (g: PredatorGrant) =>
+    data.advantages.some((a) => a.name === g.name && (a.note || "").includes(PREDATOR_GIFT_MARKER));
+
+  const applyDiscipline = () => {
+    if (!discDef) return;
+    mutate((d) => {
+      const ex = d.disciplines.find((x) => x.key === discDef.id);
+      if (ex) ex.value = Math.max(1, ex.value);
+      else d.disciplines.push({ key: discDef.id, name: discDef.name, value: 1, powers: {}, xp: 0 });
+      pushXpLog(d, `${PREDATOR_GIFT_MARKER} «${predator.name}»: Дисциплина «${discDef.name}» 1 ур. — бесплатно (Книга правил, стр. 183–186)`);
+    });
+    toast(`Дар Крови принят: «${discDef.name}» 1 ур. — бесплатно`);
+  };
+
+  const applyGrant = (g: PredatorGrant) => {
+    mutate((d) => {
+      d.advantages.push({
+        id: vtmUid(g.id ? `pred-${g.id}` : "pred-custom"),
+        name: g.name,
+        kind: g.kind,
+        rating: g.rating,
+        note: `${PREDATOR_GIFT_MARKER} «${predator.name}»${g.id ? "" : ` — ${g.raw}`}`,
+        free: true,
+      });
+      pushXpLog(d, `${PREDATOR_GIFT_MARKER} «${predator.name}»: ${g.kind === "flaw" ? "недостаток" : "достоинство"} «${g.name}» ${g.rating} ур. — бесплатно`);
+    });
+    toast(`${g.kind === "flaw" ? "Расплата" : "Заслуга"} принята: «${g.name}» ${g.rating} ур. — бесплатно`);
+  };
+
+  return (
+    <div className="vtm-predator-card" role="group" aria-label={`Стиль охоты: ${predator.name}`}>
+      <div className="vtm-predator-head">
+        <span className="vtm-predator-drop" aria-hidden>🩸</span>
+        <span className="vtm-stamp vtm-stamp-gold">Стиль охоты: {predator.name}</span>
+        <span className="vtm-predator-raw" title="Дары по Книге правил, стр. 183–186">дары — бесплатно</span>
+      </div>
+      <p className="text-xs leading-relaxed text-[#c4ac9d]">{predator.description}</p>
+
+      {/* Дар Крови: +1 уровень Дисциплины */}
+      {discDef && (
+        <div className="vtm-predator-grant">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="vtm-predator-grant-tag">Дар Крови</span>
+            <span className="vtm-label text-[0.78rem] text-[#d9c7b6]">Дисциплина «{discDef.name}» +1 уровень</span>
+            {discGranted ? (
+              <span className="vtm-predator-grant-done" title="Дар уже в крови">✓ в крови ({discOwned!.value} ур.)</span>
+            ) : (
+              <button
+                className="vtm-btn vtm-btn-ghost vtm-predator-btn !py-1 !px-2.5 !text-[0.72rem]"
+                onClick={applyDiscipline}
+                title="Внести Дисциплину 1 ур. бесплатно (Книга правил, стр. 183–186)"
+              >
+                ✚ принять дар
+              </button>
+            )}
+          </div>
+          {discOwned && discOwned.powers && Object.keys(discOwned.powers).length === 0 && (
+            <p className="vtm-hint !text-[0.71rem] mt-1">Не забудь выбрать силу 1-го уровня на вкладке «Дисциплины».</p>
+          )}
+        </div>
+      )}
+
+      {/* Заслуги и Расплаты: сопутствующие преимущества */}
+      {grants.length > 0 && (
+        <div className="vtm-predator-grant">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="vtm-predator-grant-tag">{grants.length > 1 ? "Сопутствующее" : grants[0].kind === "flaw" ? "Расплата" : "Заслуга"}</span>
+            {grants.map((g) =>
+              isGranted(g) ? (
+                <span key={g.name} className="vtm-predator-grant-done" title="Уже на листе (Преимущества)">
+                  ✓ {g.name} {g.rating}
+                </span>
+              ) : (
+                <button
+                  key={g.name}
+                  className="vtm-btn vtm-btn-ghost vtm-predator-btn !py-1 !px-2.5 !text-[0.72rem]"
+                  onClick={() => applyGrant(g)}
+                  title={`Внести «${g.name}» ${g.rating} ур. бесплатно (${g.kind === "flaw" ? "недостаток" : "достоинство"})`}
+                >
+                  ✚ {g.name} {"●".repeat(g.rating)}
+                </button>
+              )
+            )}
+          </div>
+          <p className="vtm-hint !text-[0.71rem] mt-1">
+            {grants.length > 1 ? "Варианты из книги: бери то, что согласовано с Рассказчиком. " : ""}
+            Записи попадают на вкладку «Преимущества» с пометкой «дар хищника» — бесплатно, без возврата очков при снятии.
+          </p>
+        </div>
+      )}
+
+      {/* Бонусные навыки — просто справка */}
+      <p className="vtm-predator-skills">
+        Бонусные навыки: {predator.skills.map((k) => SKILL_LIBRARY.find((sk) => sk.id === k)?.name || k).join(" · ")}
+      </p>
+      {predator.extra && <p className="vtm-hint !text-[0.72rem]">{predator.extra}</p>}
+    </div>
+  );
+}
+
+// ============================================================
+// ЯРОСТЬ (FRENZY): быстрые проверки Воли против Зверя
+// Книга правил, стр. 218–221: пул = Самообладание + Упорство,
+// сложность задаёт Рассказчик (обычно 3–4). Провал = Зверь рулит;
+// бестиальный провал = Френзия + пятно Человечности.
+// ============================================================
+
+const FRENZY_KINDS = [
+  { id: "anger", label: "Ярость гнева", hint: "оскорбление, унижение, провокация — сложность обычно 3–4", diff: 3 },
+  { id: "roetschreck", label: "Рётшрек", hint: "страх: огонь, солнце, Купание в Крови — сложность обычно 3–4", diff: 3 },
+  { id: "hunger", label: "Ярость голода", hint: "Голод 5, провал при Голоде 4+, вид крови — самая опасная", diff: 4 },
+] as const;
+
+function FrenzyBlock({
+  data,
+  mutate,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (draft: VtmSheetData) => void) => void;
+}) {
+  const [difficulty, setDifficulty] = useState(3);
+  const pool = data.attributes.com + data.attributes.res;
+  const hunger = data.trackers.hunger;
+
+  const doFrenzy = (kind: (typeof FRENZY_KINDS)[number]) => {
+    const r = rollPool(pool, hunger, `Ярость: ${kind.label}`, difficulty);
+    useVtmDice.getState().pushRoll(r);
+    if (r.bestial) {
+      mutate((d) => {
+        d.trackers.stains = Math.min(10 - d.trackers.humanity, d.trackers.stains + 1);
+      });
+      toast.error(`Бестиальный провал — Зверь берёт горло: ${kind.label}! Пятно Человечности поставлено.`, {
+        description: `Успехов: 0 · сложность ${difficulty}. Френзия: Зверь решает за тебя, пока кто-то не оттащит или не пройдёт время.`,
+      });
+    } else if (r.messy) {
+      toast.warning(`Десятка на кости Голода — успех с осложнениями (${r.totalSuccesses} усп. против ${difficulty})`, {
+        description: "Ты сдержался, но Зверь успел наследить: Рассказчик вправе добавить пятно, шум или Голод +1.",
+      });
+    } else if (r.totalSuccesses >= difficulty) {
+      toast.success(`Зверь отступает: ${r.totalSuccesses} успехов против сложности ${difficulty}`, {
+        description: `${kind.label} отбита. Воля держит нить.`,
+      });
+    } else if (r.totalSuccesses > 0) {
+      toast.error(`Провал — Зверь рулит: ${r.totalSuccesses} усп. против сложности ${difficulty}`, {
+        description: `${kind.label} захватывает тебя. Френзия длится, пока Рассказчик не скажет «достаточно».`,
+      });
+    } else {
+      toast.error(`Провал без надежды: 0 успехов, но кости Голода не выпали`, {
+        description: `${kind.label} захватывает тебя — обычная Френзия, без бестиальных последствий.`,
+      });
+    }
+  };
+
+  return (
+    <div className="vtm-frenzy">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="vtm-frenzy-title">⚔ Ярость</span>
+        <span className="vtm-hint !text-[0.72rem]">пул Воли: Самообладание {data.attributes.com} + Упорство {data.attributes.res} = <b className="not-italic text-[#d9c7b6]">{pool}</b></span>
+        <span className="vtm-frenzy-diff" role="group" aria-label="Сложность проверки Ярости">
+          сложность:
+          {[2, 3, 4, 5].map((d) => (
+            <button
+              key={d}
+              className={`vtm-frenzy-diff-btn ${difficulty === d ? "on" : ""}`}
+              onClick={() => setDifficulty(d)}
+              aria-pressed={difficulty === d}
+            >
+              {d}
+            </button>
+          ))}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {FRENZY_KINDS.map((k) => (
+          <button
+            key={k.id}
+            className="vtm-btn vtm-btn-test !py-1 !px-2.5 !text-[0.72rem]"
+            onClick={() => doFrenzy(k)}
+            title={`${k.hint}. Провал — Френзия; бестиальный провал — пятно Человечности.`}
+          >
+            ⚄ {k.label}
+          </button>
+        ))}
+      </div>
+      <p className="vtm-hint !text-[0.72rem]">
+        Провал — Френзия (Зверь рулит). Бестиальный провал — пятно Человечности автоматически. Во Френзии нельзя тратить Волю на переброс.
+      </p>
+    </div>
   );
 }
 
@@ -474,14 +694,7 @@ export function DossierSection({
           )}
 
           {predator && (
-            <div className="vtm-frame rounded-md p-3 space-y-1.5" style={{ background: "rgba(168,134,61,0.04)" }}>
-              <span className="vtm-stamp vtm-stamp-gold">Стиль охоты: {predator.name}</span>
-              <p className="text-xs leading-relaxed text-[#c4ac9d]">{predator.description}</p>
-              <p className="vtm-hint !text-[0.77rem]">
-                Бонусные навыки: {predator.skills.map((k) => SKILL_LIBRARY.find((sk) => sk.id === k)?.name || k).join(", ")}
-                {predator.discipline ? ` · Дисциплина: +1` : ""}
-              </p>
-            </div>
+            <PredatorGiftsCard data={data} mutate={mutate} />
           )}
 
           {/* Дух хроники: Цель и Желание */}
@@ -554,7 +767,7 @@ export function DossierSection({
                     onClick={() => doRouse("испытание Крови")}
                     title="Испытание Крови: 1 кость, успех на 6+ — иначе Голод +1"
                   >
-                    🩸 испытание
+                    ⚄ испытание Крови
                   </button>
                   <button
                     className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.75rem]"
@@ -670,6 +883,9 @@ export function DossierSection({
                 Осталось воли: {Math.max(0, derived.wpMax - usedWp)}/{derived.wpMax}. Заполненная шкала — изнурение (−2d10 к соц/мент пулам).
               </p>
             </div>
+
+            {/* Ярость: проверки Воли против Зверя */}
+            <FrenzyBlock data={data} mutate={mutate} />
 
             {/* Человечность */}
             <div>
