@@ -22,6 +22,8 @@ import { VtmPrintSheet, VtmPrintDossier } from "@/components/vtm/vtm-print-sheet
 import { VtmPrintSummary } from "@/components/vtm/vtm-print-summary";
 import { buildSummaryText } from "@/lib/vtm-summary-text";
 import { buildSummaryMarkdown } from "@/lib/vtm-summary-md";
+import { buildDossierPrintHtml } from "@/lib/vtm-dossier-print";
+import { printHtmlViaIframe } from "@/lib/vtm-print-station";
 import { vtmFetch } from "@/lib/vtm-api";
 import { vtmUid } from "@/lib/vtm-id";
 
@@ -71,6 +73,9 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
     // даём React кадр на замену печатного документа до открытия диалога печати
     setTimeout(() => window.print(), 60);
   }, []);
+  // «Досье для стола» (раунд 47): общий печатный стан iframe — тот же механизм,
+  // что у печатной темы «Кровавой нити», единый пергаментный стиль.
+  // (хук объявлен ниже, после derived — см. printDossierStation)
   // Подсказка прокрутки вкладок на узких экранах
   const tabsBarRef = useRef<HTMLDivElement>(null);
   const [tabFadeLeft, setTabFadeLeft] = useState(false);
@@ -273,6 +278,16 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
     if (!data) return null;
     return deriveStats(data);
   }, [data]);
+
+  // «Досье для стола» (раунд 47): общий печатный стан iframe — тот же механизм,
+  // что у печатной темы «Кровавой нити», единый пергаментный стиль.
+  const printDossierStation = useCallback(() => {
+    if (!data || !derived) return;
+    printHtmlViaIframe(buildDossierPrintHtml(data, derived), {
+      subject: "досье",
+      hint: "В диалоге печати выбери «Сохранить как PDF» — карточка ляжет на стол Рассказчика.",
+    });
+  }, [data, derived]);
 
   // ===== Экспорт / Импорт листа =====
   const exportSheet = () => {
@@ -598,7 +613,7 @@ export function VtmEditor({ sheetId, onBack }: { sheetId: string; onBack: () => 
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
         >
-          {tab === "dossier" && <DossierSection data={data} mutate={mutate} derived={derived} onPrintDossier={() => printDoc("dossier")} />}
+          {tab === "dossier" && <DossierSection data={data} mutate={mutate} derived={derived} onPrintDossier={printDossierStation} />}
           {tab === "attributes" && <AttributesSection data={data} mutate={mutate} derived={derived} onRoll={rollCheck} />}
           {tab === "skills" && <SkillsSection data={data} mutate={mutate} derived={derived} onRoll={rollCheck} />}
           {tab === "disciplines" && <DisciplinesSection data={data} mutate={mutate} derived={derived} />}

@@ -38,7 +38,7 @@ import {
 import { DISCIPLINE_BY_ID } from "@/lib/vtm-data";
 import { clanCompulsionFor } from "@/lib/vtm-chronicle";
 import { DerivedStats, bpHint } from "@/lib/vtm-calc";
-import { rollPool, rollRouse, useVtmDice } from "@/components/vtm/vtm-dice";
+import { rollPool, rollRouse, useVtmDice, VtmRollResult } from "@/components/vtm/vtm-dice";
 import { vtmUid } from "@/lib/vtm-id";
 import { VtmPortraitStudio } from "@/components/vtm/vtm-portrait-studio";
 import { CharCount } from "@/components/vtm/vtm-sections3";
@@ -394,13 +394,15 @@ const FRENZY_KINDS = [
 
 /** Общая проверка Ярости (раунд 46): один механизм для блока «Ярость»
  *  и для кнопки в карточке «Зверь у поводья». Пул = Самообладание +
- *  Упорство; бестиальный провал сам ставит пятно Человечности. */
+ *  Упорство; бестиальный провал сам ставит пятно Человечности.
+ *  Раунд 47: возвращает результат броска — карточка «Зверь у поводья»
+ *  вписывает Принуждение в журнал сама, когда Зверь победил. */
 function performFrenzyTest(
   data: VtmSheetData,
   mutate: (fn: (draft: VtmSheetData) => void) => void,
   kind: { label: string; diff: number },
   difficulty: number,
-): void {
+): VtmRollResult {
   const pool = data.attributes.com + data.attributes.res;
   const r = rollPool(pool, data.trackers.hunger, `Ярость: ${kind.label}`, difficulty);
   useVtmDice.getState().pushRoll(r);
@@ -428,6 +430,18 @@ function performFrenzyTest(
       description: `${kind.label} захватывает тебя — обычная Френзия, без бестиальных последствий.`,
     });
   }
+  return r;
+}
+
+/** Вердикт Ярости одной строкой — для журнала ночей (раунд 47). */
+function frenzyVerdictLine(r: VtmRollResult, difficulty: number): string {
+  if (r.bestial)
+    return `бестиальный провал (0 усп. против ${difficulty}) — Френзия и пятно Человечности`;
+  if (r.messy)
+    return `успех с осложнениями (${r.totalSuccesses} усп. против ${difficulty})`;
+  if (r.totalSuccesses >= difficulty)
+    return `успех (${r.totalSuccesses} против ${difficulty}) — Зверь отступил`;
+  return `провал (${r.totalSuccesses} усп. против ${difficulty}) — Френзия`;
 }
 
 function FrenzyBlock({
@@ -561,7 +575,7 @@ export function DossierSection({
             <button
               onClick={onPrintDossier}
               className="vtm-btn vtm-btn-ghost vtm-dossier-print !py-1 !px-2 !text-[0.7rem] ml-auto"
-              title="Печать досье на одну страницу — карточку для стола Рассказчика (Ctrl+P)"
+              title="Досье для стола — пергаментная печатная карточка Рассказчика через общий печатный стан (выбери «Сохранить как PDF»)"
               aria-label="Печать досье для стола"
             >
               🖨<span className="hidden min-[480px]:inline"> Досье для стола</span>
@@ -1532,14 +1546,15 @@ function CompulsionWarning({
   mutate: (fn: (draft: VtmSheetData) => void) => void;
 }) {
   const [jotted, setJotted] = useState(false);
+  // Раунд 47: авто-запись — когда Зверь победил (провал/бестиальный),
+  // Принуждение вписывается в журнал само, без второго клика.
+  const [autoNote, setAutoNote] = useState(false);
   if (data.trackers.hunger !== 5) return null;
   const comp = clanCompulsionFor(data.info.clan);
   const pool = data.attributes.com + data.attributes.res;
   const hungerKind = FRENZY_KINDS.find((k) => k.id === "hunger")!;
 
-  const doFrenzy = () => performFrenzyTest(data, mutate, hungerKind, 4);
-
-  const jot = () => {
+  const writeEntry = (verdict?: string) => {
     const nid = `comp-${Date.now().toString(36)}`;
     mutate((d) => {
       d.notes.entries = [
@@ -1547,12 +1562,28 @@ function CompulsionWarning({
           id: nid,
           title: "Принуждение",
           date: new Date().toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }),
-          content: `Зверь у поводья (Голод 5): Принуждение клана «${comp.name}» — ${comp.effect} Длительность: ${comp.duration}.`,
+          content: `Зверь у поводья (Голод 5): Принуждение клана «${comp.name}» — ${comp.effect} Длительность: ${comp.duration}.${verdict ? ` ⚄ Ярость голода: ${verdict}.` : ""}`,
         },
         ...d.notes.entries,
       ].slice(0, 40);
     });
     setJotted(true);
+  };
+
+  const doFrenzy = () => {
+    const r = performFrenzyTest(data, mutate, hungerKind, 4);
+    const failed = !r.messy && r.totalSuccesses < 4; // провал и бестиальный провал
+    if (failed && !jotted) {
+      writeEntry(frenzyVerdictLine(r, 4));
+      setAutoNote(true);
+      toast.info("Принуждение вписано само", {
+        description: `Провал — след Зверя ушёл в Кровавую нить: «${comp.name}» на сцену.`,
+      });
+    }
+  };
+
+  const jot = () => {
+    writeEntry();
     toast.success("Принуждение в журнале", { description: `«${comp.name}» вписано в Кровавую нить — Рассказчик увидит след Зверя.` });
   };
 
@@ -1577,18 +1608,23 @@ function CompulsionWarning({
           ⚄ проверка Ярости голода · сл. 4
         </button>
         <button
-          className={`vtm-compulsion-jot ${jotted ? "is-done" : ""}`}
+          className={`vtm-compulsion-jot ${jotted ? (autoNote ? "is-done is-auto" : "is-done") : ""}`}
           onClick={jot}
           disabled={jotted}
-          title="Вписать Принуждение в журнал ночей — след Зверя останется в Кровавой нити"
+          title={autoNote ? "Провал записан в журнал автоматически — Зверь оставил след сам" : "Вписать Принуждение в журнал ночей — след Зверя останется в Кровавой нити"}
           aria-label="Записать Принуждение в журнал ночей"
         >
-          {jotted ? "✓ в журнале" : "✎ в журнал ночей"}
+          {jotted ? (autoNote ? "✓ вписано само" : "✓ в журнале") : "✎ в журнал ночей"}
         </button>
         <span className="vtm-compulsion-poolhint">
           пул: Самообладание {data.attributes.com} + Упорство {data.attributes.res} = <b>{pool}</b>
         </span>
       </div>
+      {autoNote && (
+        <p className="vtm-compulsion-autonote" role="status">
+          провал — Зверь сам оставил след в Кровавой нити; последующие провалы этой сцены просто рулят
+        </p>
+      )}
       <p className="vtm-compulsion-note">
         Критический провал с костью Голода — Зверь диктует поведение (Книга правил, стр. 258).
       </p>

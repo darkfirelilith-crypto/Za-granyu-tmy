@@ -346,15 +346,17 @@ export function buildBloodThreadPrintHtml(data: VtmSheetData): string {
     .map((c) => `<span class="th-count"><i>${c.icon}</i> ${c.value} ${c.label}</span>`)
     .join("");
 
+  // Раунд 47: у каждой статьи есть якорь (#th-a1, #th-a2, …) — оглавление
+  // ссылается на них, и в PDF-читалках строка содержания открывает нужную ночь.
   const thread = items.length
     ? items
-        .map((it) => {
+        .map((it, idx) => {
           const meta = THREAD_KIND_MD[it.kind];
           const tags = it.tags.length
             ? `<div class="th-tags">${it.tags.map((t) => `<span>${escHtml(t)}</span>`).join("")}</div>`
             : "";
           return [
-            `<article class="th-item th-${it.kind}">`,
+            `<article class="th-item th-${it.kind}" id="th-a${idx + 1}">`,
             `<h2><span class="th-ico" aria-hidden="true">${meta.icon}</span>${escHtml(it.title)}</h2>`,
             `<p class="th-meta">${escHtml(it.dateLabel)} · ${meta.label}</p>`,
             tags,
@@ -395,7 +397,10 @@ export function buildBloodThreadPrintHtml(data: VtmSheetData): string {
           `<section class="th-toc">`,
           `<h2><span class="th-ico" aria-hidden="true">☰</span>Содержание</h2>`,
           `<ol>`,
-          ...items.map((it) => `<li>${escHtml(it.title)} <span class="th-toc-date">— ${escHtml(it.dateLabel)}</span></li>`),
+          ...items.map(
+            (it, idx) =>
+              `<li><a href="#th-a${idx + 1}">${escHtml(it.title)}</a> <span class="th-toc-date">— ${escHtml(it.dateLabel)}</span></li>`,
+          ),
           `</ol>`,
           `</section>`,
         ].join("\n")
@@ -455,8 +460,11 @@ export function buildBloodThreadPrintHtml(data: VtmSheetData): string {
   .th-toc h2, .th-draft h2 { font-size: 13pt; color: #6d1622; margin-bottom: 1.5mm; }
   .th-toc ol { list-style: decimal-leading-zero; margin-left: 7mm; font-size: 10pt; color: #4a3826; columns: 2; column-gap: 8mm; }
   .th-toc li { padding: 0.4mm 0; break-inside: avoid; }
+  /* Раунд 47: якорные ссылки содержания — живут и в сохранённом PDF */
+  .th-toc a { color: #4a3826; text-decoration: none; border-bottom: 1px dotted #a0522d; }
+  .th-toc a:hover { color: #6d1622; border-bottom-color: #6d1622; }
   .th-toc-date { color: #8a7355; font-style: italic; font-size: 9pt; }
-  .th-item { break-inside: avoid; }
+  .th-item { break-inside: avoid; scroll-margin: 8mm 0; }
   .th-item h2 {
     font-size: 13.5pt; color: #3a2b1d; line-height: 1.25;
     margin-bottom: 1mm;

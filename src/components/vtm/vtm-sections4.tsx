@@ -191,6 +191,9 @@ interface VauldRite {
   priest: string;
   sorcBonus: number;
   sorcWaived: boolean;
+  // Раунд 47: жрец вне чаши — церемониймейстер не смешивает своё витэ и не пьёт
+  priestOutside: boolean;
+  youInChalice: boolean;
 }
 
 function VaulderieTool({
@@ -208,6 +211,9 @@ function VaulderieTool({
   // «Чаша вне выгоды» (раунд 46): Рассказчик вправе не считать чародейство
   // честной ставкой — переключатель убирает кости ⚗ из пула
   const [sorcWaived, setSorcWaived] = useState(false);
+  // «Жрец вне чаши» (раунд 47): церемониймейстер ведёт обряд, но не льёт своё
+  // витэ в чашу и не пьёт — чистый служитель, без Винкулума для себя.
+  const [priestOutside, setPriestOutside] = useState(false);
   // снимок узов перед скреплением — для честной отмены соития
   const [snapshot, setSnapshot] = useState<{ id: string; stage: number; vinculum?: number }[]>([]);
   const [journalId, setJournalId] = useState<string | null>(null);
@@ -216,7 +222,18 @@ function VaulderieTool({
   // в чаше — только Сородичи с именами: гули и смертные пьют, но не смешивают
   const named = bonds.filter((b) => b.name.trim() && b.kind === "vampire");
   const chosen = named.filter((b) => sel.includes(b.id));
-  const participantsCount = sel.length + 1;
+
+  // Раунд 47: кто именно пьёт из чаши. Жрец (ты или уз по имени) может стоять
+  // вне круга: его имя исключается из пьющих, Винкулум на него не ложится.
+  const priestName = priest.trim() || "ты";
+  const priestIsYou = priestName === "ты";
+  const priestBond = priestIsYou ? undefined : named.find((b) => b.name.trim() === priestName);
+  const youInChalice = !(priestOutside && priestIsYou);
+  const drinkers =
+    priestOutside && priestBond && sel.includes(priestBond.id)
+      ? chosen.filter((b) => b.id !== priestBond.id)
+      : chosen;
+  const participantsCount = drinkers.length + (youInChalice ? 1 : 0);
 
   const toggle = (id: string) =>
     setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -227,15 +244,15 @@ function VaulderieTool({
     setRite(null);
   };
 
-  // Бросок чаши: пул = число участников + кости Кровавого чародейства (раунд 45;
-  // раунд 46 — кости можно убрать «чашей вне выгоды»), кости Голода — по текущему Голоду.
+  // Бросок чаши: пул = число пьющих + кости Кровавого чародейства (раунд 45;
+  // раунд 46 — кости можно убрать «чашей вне выгоды»; раунд 47 — жрец может
+  // стоять вне чаши), кости Голода — по текущему Голоду.
   const sorcLvl = data.disciplines.find((d) => d.key === "blood_sorcery")?.value ?? 0;
   const sorcBonus = !sorcWaived && sorcLvl > 0 ? sorcLvl : 0;
-  const priestName = priest.trim() || "ты";
   const poolSize = participantsCount + sorcBonus;
 
   const doRoll = () => {
-    if (sel.length === 0) return;
+    if (sel.length === 0 || participantsCount === 0) return;
     const result = rollPool(
       poolSize,
       data.trackers.hunger,
@@ -249,10 +266,12 @@ function VaulderieTool({
       rating,
       bestial: result.bestial,
       messy: result.messy,
-      participants: chosen.map((b) => b.name.trim()),
+      participants: drinkers.map((b) => b.name.trim()),
       priest: priestName,
       sorcBonus,
       sorcWaived: sorcLvl > 0 && sorcWaived,
+      priestOutside,
+      youInChalice,
     });
     if (result.bestial) {
       toast.error("Зверь испортил чашу", { description: "Кровь свернулась чёрной желчью — от соития остаётся едва тёплый след (Винкулум 1)." });
@@ -263,15 +282,17 @@ function VaulderieTool({
     }
   };
 
-  // Скрепление: всем выбранным ставится Винкулум, запись падает в журнал ночей.
+  // Скрепление: всем ПЬЮЩИМ ставится Винкулум (жрец вне чаши — р.47 — не скрепляется),
+  // запись падает в журнал ночей.
   const commit = () => {
     if (!rite) return;
-    const snap = chosen.map((b) => ({ id: b.id, stage: b.stage, vinculum: b.vinculum }));
+    const drinkerIds = drinkers.map((b) => b.id);
+    const snap = drinkers.map((b) => ({ id: b.id, stage: b.stage, vinculum: b.vinculum }));
     const nid = `vauld-${Date.now().toString(36)}`;
     const names = rite.participants.join(", ");
     mutate((d) => {
       for (const b of d.bonds ?? []) {
-        if (!sel.includes(b.id)) continue;
+        if (!drinkerIds.includes(b.id)) continue;
         b.stage = 99;
         b.vinculum = rite.rating;
         if (b.direction === "regard") b.direction = "regarded";
@@ -281,7 +302,7 @@ function VaulderieTool({
           id: nid,
           title: "Соитие",
           date: new Date().toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }),
-          content: `Ваулдери: чаша смешала витэ ${rite.participants.length + 1} Сородичей (${names}). Винкулум ${rite.rating}/10 для всех причастных. Чашу вёл жрец стаи — ${rite.priest}.${rite.sorcBonus ? ` Кости Кровавого чародейства (${rite.sorcBonus}) легли в чашу.` : ""}${rite.sorcWaived ? " Чаша вне выгоды — кости чародейства исключены Рассказчиком." : ""}${rite.bestial ? " Зверь испортил чашу — связь едва тёплая." : rite.messy ? " Чаша вскипела чёрным — связь крепка и дурна." : ""} Прежние узы к не-стае разрушены.`,
+          content: `Ваулдери: чаша смешала витэ ${rite.participants.length + (rite.youInChalice ? 1 : 0)} Сородичей (${names}). Винкулум ${rite.rating}/10 для всех причастных. Чашу вёл жрец стаи — ${rite.priest}.${rite.priestOutside ? " Жрец вне чаши — служитель у круга, своё витэ не смешивал и не пил." : ""}${rite.sorcBonus ? ` Кости Кровавого чародейства (${rite.sorcBonus}) легли в чашу.` : ""}${rite.sorcWaived ? " Чаша вне выгоды — кости чародейства исключены Рассказчиком." : ""}${rite.bestial ? " Зверь испортил чашу — связь едва тёплая." : rite.messy ? " Чаша вскипела чёрным — связь крепка и дурна." : ""} Прежние узы к не-стае разрушены.`,
         },
         ...d.notes.entries,
       ].slice(0, 40);
@@ -328,7 +349,7 @@ function VaulderieTool({
         <div className="vtm-vauld-form" id="vauld-form" role="group" aria-label="Церемония Ваулдери">
           <span className="vtm-vauld-title">⚭ Чаша стаи</span>
           <p className="vtm-vauld-desc">
-            Смешай витэ стаи в чаше и раздай глотки. Кости — по числу участников (ты + выбранные), успехи = общий <b>Винкулум 1–10</b> для всех. Бестиальный провал — Зверь испортил чашу: связь едва тёплая (1). Прежние узы выбранных к не-стае разрушаются — таков закон Саббата.
+            Смешай витэ стаи в чаше и раздай глотки. Кости — по числу пьющих (ты + выбранные; жрец может вести обряд вне чаши), успехи = общий <b>Винкулум 1–10</b> для всех пивших. Бестиальный провал — Зверь испортил чашу: связь едва тёплая (1). Прежние узы выбранных к не-стае разрушаются — таков закон Саббата.
           </p>
           {named.length === 0 ? (
             <p className="vtm-vauld-empty">В узах нет ни одного Сородича с именем — сначала собери стаю.</p>
@@ -345,6 +366,17 @@ function VaulderieTool({
                 maxLength={40}
                 aria-label="Имя жреца стаи, что ведёт чашу"
               />
+              <label className="vtm-vauld-opt vtm-vauld-priest-out" title="Жрец ведёт обряд у круга, но своё витэ в чашу не льёт и глотка не берёт — Винкулум на него не ложится">
+                <input
+                  type="checkbox"
+                  className="vtm-vauld-opt-check"
+                  checked={priestOutside}
+                  onChange={(e) => setPriestOutside(e.target.checked)}
+                  aria-label="Жрец вне чаши: не смешивать витэ жреца и не давать ему Винкулум"
+                />
+                <span className="vtm-vauld-opt-box" aria-hidden />
+                <span className="vtm-vauld-opt-label">жрец вне чаши</span>
+              </label>
             </div>
             <div className="vtm-vauld-list" role="group" aria-label="Участники соития">
               {named.map((b) => (
@@ -391,11 +423,14 @@ function VaulderieTool({
             <button
               className="vtm-vauld-roll"
               onClick={doRoll}
-              disabled={sel.length === 0}
-              title="Бросок чаши: пул = число участников + кости Кровавого чародейства, кости Голода учитываются"
+              disabled={sel.length === 0 || participantsCount === 0}
+              title="Бросок чаши: пул = число пьющих + кости Кровавого чародейства, кости Голода учитываются"
             >
               ⚄ Провести соитие · {participantsCount} участн.{sorcBonus ? ` +⚗${sorcBonus}` : ""}
             </button>
+            {participantsCount === 0 && (
+              <p className="vtm-vauld-nodrinkers">чаша пуста: жрец вне круга, пьющих не осталось</p>
+            )}
           </div>
           {rite && (
             <div className="vtm-vauld-result" role="status">
@@ -411,12 +446,21 @@ function VaulderieTool({
                 </span>
               </div>
               <div className="vtm-vauld-chips">
-                <span className="vtm-vauld-chip is-you">ты</span>
+                {rite.youInChalice && <span className="vtm-vauld-chip is-you">ты</span>}
                 {rite.participants.map((p) => (
                   <span key={p} className="vtm-vauld-chip">{p}</span>
                 ))}
                 {rite.priest !== "ты" && (
-                  <span key="priest" className="vtm-vauld-chip is-priest" title="Чашу вёл жрец стаи">⚱ {rite.priest}</span>
+                  <span
+                    key="priest"
+                    className={`vtm-vauld-chip is-priest ${rite.priestOutside ? "is-outside" : ""}`}
+                    title={rite.priestOutside ? "Жрец вёл обряд вне чаши — своё витэ не смешивал и не пил" : "Чашу вёл жрец стаи"}
+                  >
+                    ⚱ {rite.priest}{rite.priestOutside ? " · вне чаши" : ""}
+                  </span>
+                )}
+                {rite.priestOutside && rite.priest === "ты" && (
+                  <span className="vtm-vauld-chip is-outside" title="Жрец вёл обряд вне чаши — своё витэ не смешивал и не пил">⚱ жрец · вне чаши</span>
                 )}
                 {rite.sorcBonus > 0 && (
                   <span className="vtm-vauld-chip is-sorc" title="Кости Кровавого чародейства легли в чашу">⚗ +{rite.sorcBonus}</span>

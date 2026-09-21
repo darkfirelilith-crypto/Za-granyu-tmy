@@ -13,6 +13,7 @@ import { VtmSheetData } from "@/lib/vtm-data";
 import { DerivedStats } from "@/lib/vtm-calc";
 import { clanCompulsionFor } from "@/lib/vtm-chronicle";
 import { buildBloodThreadMarkdown, bloodThreadFileName, buildBloodThreadPrintHtml } from "@/lib/vtm-chronicle-md";
+import { printHtmlViaIframe } from "@/lib/vtm-print-station";
 
 type Kind = "hunt" | "note" | "diab" | "xp";
 
@@ -199,58 +200,22 @@ export function ChronicleSection({
     }
   };
 
-  // Печать «Кровавой нити» в PDF (раунд 46): самодостаточный печатный
-  // документ в скрытом iframe — диалог печати браузера («Сохранить как PDF»).
+  // Печать «Кровавой нити» в PDF (раунд 46; р. 47 — общий печатный стан):
+  // самодостаточный печатный документ в скрытом iframe — диалог печати браузера.
   const [printBusy, setPrintBusy] = useState(false);
   const printThread = () => {
     if (!ensureThread()) return;
     setPrintBusy(true);
-    try {
-      const html = buildBloodThreadPrintHtml(data);
-      const iframe = document.createElement("iframe");
-      iframe.setAttribute("aria-hidden", "true");
-      iframe.style.position = "fixed";
-      iframe.style.right = "0";
-      iframe.style.bottom = "0";
-      iframe.style.width = "0";
-      iframe.style.height = "0";
-      iframe.style.border = "0";
-      iframe.style.opacity = "0";
-      document.body.appendChild(iframe);
-      const doc = iframe.contentWindow?.document;
-      if (!doc) {
-        iframe.remove();
-        toast.error("Перо дрогнуло", { description: "Браузер не пустил печатный стан — попробуй ещё раз." });
-        setPrintBusy(false);
-        return;
-      }
-      doc.open();
-      doc.write(html);
-      doc.close();
-      const win = iframe.contentWindow!;
-      win.addEventListener(
-        "afterprint",
-        () => window.setTimeout(() => iframe.remove(), 500),
-        { once: true },
-      );
-      window.setTimeout(() => {
-        try {
-          win.focus();
-          win.print();
-        } catch {
-          iframe.remove();
-          toast.error("Перо дрогнуло", { description: "Печатный стан заклинило — попробуй ещё раз." });
-        } finally {
-          // страховка: даже без afterprint iframe не переживёт минуту
-          window.setTimeout(() => iframe.remove(), 60000);
-          setPrintBusy(false);
-        }
-      }, 250);
-      toast.info("Нить на печатном стане", { description: "В диалоге печати выбери «Сохранить как PDF» — нить станет книгой." });
-    } catch {
+    const ok = printHtmlViaIframe(buildBloodThreadPrintHtml(data), {
+      subject: "нить",
+      hint: "В диалоге печати выбери «Сохранить как PDF» — нить станет книгой.",
+    });
+    if (!ok) {
       setPrintBusy(false);
-      toast.error("Перо дрогнуло", { description: "Не удалось сверстать печатную нить." });
+      return;
     }
+    // страховка: кнопка разблокируется, когда диалог уже открыт
+    window.setTimeout(() => setPrintBusy(false), 1200);
   };
 
   return (
