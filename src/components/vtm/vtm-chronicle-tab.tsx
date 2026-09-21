@@ -3,12 +3,16 @@
 // ============================================================
 // ВКЛАДКА «ХРОНИКА» (раунд 42): единая кровавая нить ночей.
 // Журнал ночи + церемонии Диаблери + журнал опыта — одной
-// лентой, с фильтрами, поиском и счётчиками ночи.
+// лентой, с фильтрами, поиском, счётчиками ночи и экспортом
+// «нити» в Markdown (раунд 43).
 // ============================================================
 
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { VtmSheetData } from "@/lib/vtm-data";
 import { DerivedStats } from "@/lib/vtm-calc";
+import { clanCompulsionFor } from "@/lib/vtm-chronicle";
+import { buildBloodThreadMarkdown, bloodThreadFileName } from "@/lib/vtm-chronicle-md";
 
 type Kind = "hunt" | "note" | "diab" | "xp";
 
@@ -160,6 +164,37 @@ export function ChronicleSection({
     { icon: "✦", label: "строк опыта", value: (data.xpLog || []).length, title: "Записи журнала опыта (последние 40)" },
   ];
 
+  // «Зверь у поводья» (раунд 43): при Голоде 5 — тревожная полоса над нитью и чип в шапке
+  const beastHunger = data.trackers.hunger === 5;
+  const comp = beastHunger ? clanCompulsionFor(data.info.clan) : null;
+
+  // Экспорт всей «Кровавой нити» одним Markdown-файлом (раунд 43)
+  const [threadBusy, setThreadBusy] = useState(false);
+  const exportThread = () => {
+    if (timeline.length === 0) {
+      toast.error("Нить пуста", { description: "Сначала проживи ночь: охота, запись или церемония — Кровь не печатает белые страницы." });
+      return;
+    }
+    setThreadBusy(true);
+    try {
+      const md = buildBloodThreadMarkdown(data);
+      const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = bloodThreadFileName(data.info.name);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 4000);
+      toast.success("Нить ушла в файл", { description: `${timeline.length} событий нити · ${a.download}` });
+    } catch {
+      toast.error("Перо дрогнуло", { description: "Не удалось собрать файл Кровавой нити." });
+    } finally {
+      setThreadBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Счётчики ночи */}
@@ -205,6 +240,16 @@ export function ChronicleSection({
               {KIND_META[k].icon} {KIND_META[k].label}
             </button>
           ))}
+          {/* Экспорт всей нити одним Markdown-файлом (раунд 43) */}
+          <button
+            className="vtm-btn-chrono vtm-chron-export ml-auto"
+            onClick={exportThread}
+            disabled={threadBusy}
+            title="Скачать всю Кровавую нить одним Markdown-файлом: охоты, записи, церемонии, опыт"
+            aria-label="Скачать Кровавую нить в файл"
+          >
+            ⇩ нить в файл
+          </button>
         </div>
       </div>
 
@@ -212,13 +257,26 @@ export function ChronicleSection({
       <section className="vtm-panel" aria-label="Кровавая нить хроники">
         <div className="vtm-panel-head">
           <span className="vtm-label text-[0.81rem] text-[#d6a840]">Кровавая нить</span>
-          <span className="vtm-hint !text-[0.73rem] ml-auto">
+          <span className="vtm-hint !text-[0.73rem] ml-auto flex items-center gap-1.5 flex-wrap">
             {(query.trim() || filter !== "all")
               ? `${filtered.length} из ${timeline.length}`
               : timeline.length}
             {" "}· СК {derived.bp} · Голод {data.trackers.hunger} · Чел. {data.trackers.humanity}/10
+            {beastHunger && (
+              <span className="vtm-chron-hunger5" title="Зверь у поводья: Принуждение клана в каждой сцене">
+                ☠ Голод 5
+              </span>
+            )}
           </span>
         </div>
+        {beastHunger && comp && (
+          <div className="vtm-chron-warning" role="alert">
+            <span className="vtm-chron-warning-dot" aria-hidden />
+            <span className="vtm-chron-warning-text">
+              Зверь у поводья: Голод 5 — проверка Ярости голода при первом же провале. Принуждение клана: <b>{comp.name}</b>.
+            </span>
+          </div>
+        )}
         <div className="p-3 md:p-4 max-h-[640px] overflow-y-auto vtm-scroll vtm-chron-wrap">
           {filtered.length === 0 ? (
             <p className="vtm-hint text-center py-8">
@@ -252,7 +310,7 @@ export function ChronicleSection({
       </section>
 
       <p className="vtm-hint !text-[0.75rem]">
-        Хроника собирает всё, что лист помнит: охоты и записи из «Заметок», церемонии Диаблери и строки журнала опыта из Кошелька Крови. Выгрузка журнала ночей в файл — на вкладке «Заметки».
+        Хроника собирает всё, что лист помнит: охоты и записи из «Заметок», церемонии Диаблери и строки журнала опыта из Кошелька Крови. Кнопка «⇩ нить в файл» выгружает всю нить одним Markdown-документом; один лишь журнал ночей по-прежнему выгружается на вкладке «Заметки».
       </p>
     </div>
   );

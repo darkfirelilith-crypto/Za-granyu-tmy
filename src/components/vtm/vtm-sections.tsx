@@ -36,6 +36,7 @@ import {
   plural,
 } from "@/lib/vtm-data";
 import { DISCIPLINE_BY_ID } from "@/lib/vtm-data";
+import { clanCompulsionFor } from "@/lib/vtm-chronicle";
 import { DerivedStats, bpHint } from "@/lib/vtm-calc";
 import { rollPool, rollRouse, useVtmDice } from "@/components/vtm/vtm-dice";
 import { vtmUid } from "@/lib/vtm-id";
@@ -822,6 +823,7 @@ export function DossierSection({
                   </button>
                 ))}
               </div>
+              <CompulsionWarning data={data} />
               <p className="vtm-hint mt-1.5 !text-[0.75rem]">
                 {data.trackers.hunger >= 5
                   ? "Голод 5: все кости пула красны. Зверь у руля — Compulsion в каждой сцене."
@@ -1502,6 +1504,33 @@ function CustomSkills({
 }
 
 // ============================================================
+// «ЗВЕРЬ У ПОВОДЬЯ» (раунд 43): при Голоде 5 Зверь неотступен —
+// панель-тревога с Принуждением клана (Книга правил, стр. 258).
+// Принуждение берётся из clanCompulsionFor() в lib/vtm-chronicle.
+// ============================================================
+
+function CompulsionWarning({ data }: { data: VtmSheetData }) {
+  if (data.trackers.hunger !== 5) return null;
+  const comp = clanCompulsionFor(data.info.clan);
+  return (
+    <div className="vtm-compulsion-card" role="alert">
+      <span className="vtm-compulsion-title" aria-hidden>☠ Зверь у поводья</span>
+      <span className="vtm-compulsion-sub">Ярость голода неизбежна — Голод достиг предела</span>
+      <p className="vtm-compulsion-effect">
+        <b>{comp.name}.</b> {comp.effect}
+      </p>
+      <div className="vtm-compulsion-meta">
+        <span className="vtm-compulsion-dur">⏳ {comp.duration}</span>
+        <span className="vtm-compulsion-src">{comp.source}</span>
+      </div>
+      <p className="vtm-compulsion-note">
+        Критический провал с костью Голода — Зверь диктует поведение (Книга правил, стр. 258).
+      </p>
+    </div>
+  );
+}
+
+// ============================================================
 // НОВАЯ ОХОТА: сброс трекеров перед новой ночью + запись в журнал
 // ============================================================
 
@@ -1524,7 +1553,8 @@ function NewHuntButton({
   const [confirming, setConfirming] = useState(false);
   useEffect(() => {
     if (!confirming) return;
-    const t = setTimeout(() => setConfirming(false), 6000);
+    // 8 c: подсказка подтверждения живёт дольше, чтобы её успели прочитать и с телефона
+    const t = setTimeout(() => setConfirming(false), 8000);
     return () => clearTimeout(t);
   }, [confirming]);
 
@@ -1538,6 +1568,9 @@ function NewHuntButton({
     const res = RESONANCES[Math.floor(Math.random() * RESONANCES.length)];
     const roll = Math.random();
     const intensity = roll < 0.42 ? 1 : roll < 0.74 ? 2 : roll < 0.92 ? 3 : roll < 0.98 ? 4 : 5;
+    // «Глубокая кровь» (раунд 43): интенсивность 5 — редкий исход (2%). Механика ×2
+    // уже живёт в утолении (resInt >= 4); здесь — только отличительные приметы ночи.
+    const deepBlood = intensity === 5;
     mutate((d) => {
       d.trackers.hunger = 0;
       d.trackers.healthSup = 0;
@@ -1553,21 +1586,30 @@ function NewHuntButton({
           id: `hunt-${now.getTime().toString(36)}`,
           title: "Новая охота",
           date,
-          content: `Солнце село — Сородич проснулся. ${summary}. Резонанс добычи: ${resText}. Тяжёлые раны и пятна Человечности не тронуты: ночь не стирает всё.`,
+          content: `${deepBlood ? "Эта ночь — из редких: кровь добычи животно чиста. ": ""}Солнце село — Сородич проснулся. ${summary}. Резонанс добычи: ${resText}. Тяжёлые раны и пятна Человечности не тронуты: ночь не стирает всё.`,
         },
         ...d.notes.entries,
       ].slice(0, 40);
     });
     setConfirming(false);
-    toast.success("Новая охота началась", {
-      description: `Голод утолён, поверхностное зажило. Кровь этой ночи — ${res.name.toLowerCase()} (${intensity}). Запись в журнале ночи.`,
-    });
+    if (deepBlood) {
+      toast.success("Животная, чистая кровь", {
+        description: "Редкая ночь: резонанс 5 — одно утоление снимает 2 Голода, и кровь вдвойне ценна для Кровавого чародейства.",
+        duration: 9000,
+      });
+    } else {
+      toast.success("Новая охота началась", {
+        description: `Голод утолён, поверхностное зажило. Кровь этой ночи — ${res.name.toLowerCase()} (${intensity}). Запись в журнале ночи.`,
+      });
+    }
   };
 
   return (
     <span className="ml-auto flex items-center gap-1.5">
       {confirming ? (
         <>
+          {/* Подтверждение: короткая подсказка видна и на телефоне, полная — на широких экранах */}
+          <span className="vtm-hint !text-[0.72rem] sm:hidden text-[#d9c7b6]">Голод обнулится</span>
           <span className="vtm-hint !text-[0.72rem] hidden sm:inline text-[#d9c7b6]">Голод и поверхностное обнулятся, тяжёлое останется</span>
           <button className="vtm-btn vtm-btn-dawn is-confirm" onClick={doReset} aria-label="Подтвердить новую охоту">
             ✦ начала этой ночи
@@ -2007,8 +2049,16 @@ function ResonanceBlock({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="vtm-label text-[0.77rem] text-[#d9c7b6]">Резонанс крови</span>
+      <div className="flex items-center justify-between mb-1.5 gap-2">
+        <span className="vtm-label text-[0.77rem] text-[#d9c7b6]">
+          Резонанс крови
+          {/* «Глубокая кровь» (раунд 43): интенсивность 5 — редкая ночь, кровь вдвойне ценна */}
+          {def && intensity === 5 && (
+            <span className="vtm-res-deep-badge" title="Редкая ночь: утоление снимает 2 Голода">
+              ✦ глубокая кровь
+            </span>
+          )}
+        </span>
         <span className="vtm-hint !text-[0.73rem]">{def ? RESONANCE_INTENSITY_LABELS[intensity] || "—" : "не отслеживается"}</span>
       </div>
 

@@ -7,6 +7,8 @@
 // Используется ТОЛЬКО VtM-разделом сайта (Codex + лист).
 // ============================================================
 
+import { CLAN_BY_ID } from "./vtm-data";
+
 // ---------- Запреты хроники (Chronicle Tenets) ----------
 
 export interface TenetDef {
@@ -284,6 +286,23 @@ export const COMPULSIONS: CompulsionDef[] = [
     source: "Книга правил · стр. 219",
   },
 ];
+
+/** Принуждение для панели «Зверь у поводья»: запись из COMPULSIONS по клану;
+ *  для кланов без собственной записи (салюбри, тзимице, каитиф, слабокровные) —
+ *  проза клана из CLANS под именем «Зов крови»; последний рубеж — общее «any». */
+export function clanCompulsionFor(clanId: string): { name: string; effect: string; duration: string; source: string } {
+  const comp = COMPULSIONS.find((c) => c.clan === clanId);
+  if (comp) return { name: comp.name, effect: comp.effect, duration: comp.duration, source: comp.source };
+  const prose = CLAN_BY_ID.get(clanId)?.compulsion;
+  if (prose) return { name: "Зов крови", effect: prose, duration: "одна сцена", source: "Клан" };
+  const anyComp = COMPULSIONS.find((c) => c.clan === "any");
+  return {
+    name: anyComp?.name || "Голодное безумие",
+    effect: anyComp?.effect || "Зверь диктует поведение — Рассказчик выбирает проявление.",
+    duration: anyComp?.duration || "одна сцена",
+    source: anyComp?.source || "Книга правил",
+  };
+}
 
 // ---------- Сводные правила Френзии ----------
 
