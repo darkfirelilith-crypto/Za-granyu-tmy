@@ -176,6 +176,9 @@ function BondCard({
 // Бросок: кости по числу участников (ты + выбранные Сородичи),
 // успехи = сила Винкулума (1–10). Бестиальный провал — Зверь
 // испортил чашу, связь едва тёплая (1).
+// Раунд 45: чашу ведёт Жрец стаи (церемониймейстер) — имя попадает
+// в чипы и журнал; знание Кровавого чародейства добавляет его кости
+// в чашу (⚗ +N) — обряд чуток вернее в руках чародея крови.
 // ============================================================
 
 interface VauldRite {
@@ -185,6 +188,8 @@ interface VauldRite {
   bestial: boolean;
   messy: boolean;
   participants: string[];
+  priest: string;
+  sorcBonus: number;
 }
 
 function VaulderieTool({
@@ -197,6 +202,8 @@ function VaulderieTool({
   const [open, setOpen] = useState(false);
   const [sel, setSel] = useState<string[]>([]);
   const [rite, setRite] = useState<VauldRite | null>(null);
+  // Жрец стаи (церемониймейстер): чаша его рук — имя уходит в чипы и журнал ночей
+  const [priest, setPriest] = useState("");
   // снимок узов перед скреплением — для честной отмены соития
   const [snapshot, setSnapshot] = useState<{ id: string; stage: number; vinculum?: number }[]>([]);
   const [journalId, setJournalId] = useState<string | null>(null);
@@ -216,13 +223,19 @@ function VaulderieTool({
     setRite(null);
   };
 
-  // Бросок чаши: пул = число участников, кости Голода — по текущему Голоду.
+  // Бросок чаши: пул = число участников + кости Кровавого чародейства (раунд 45),
+  // кости Голода — по текущему Голоду.
+  const sorcLvl = data.disciplines.find((d) => d.key === "blood_sorcery")?.value ?? 0;
+  const sorcBonus = sorcLvl > 0 ? sorcLvl : 0;
+  const priestName = priest.trim() || "ты";
+  const poolSize = participantsCount + sorcBonus;
+
   const doRoll = () => {
     if (sel.length === 0) return;
     const result = rollPool(
-      participantsCount,
+      poolSize,
       data.trackers.hunger,
-      `Ваулдери: чаша стаи (${participantsCount} участн.)`,
+      `Ваулдери: чаша стаи (${participantsCount} участн.${sorcBonus ? ` +⚗${sorcBonus}` : ""})`,
     );
     useVtmDice.getState().pushRoll(result);
     const rating = result.bestial ? 1 : Math.max(1, Math.min(10, result.totalSuccesses));
@@ -233,6 +246,8 @@ function VaulderieTool({
       bestial: result.bestial,
       messy: result.messy,
       participants: chosen.map((b) => b.name.trim()),
+      priest: priestName,
+      sorcBonus,
     });
     if (result.bestial) {
       toast.error("Зверь испортил чашу", { description: "Кровь свернулась чёрной желчью — от соития остаётся едва тёплый след (Винкулум 1)." });
@@ -261,7 +276,7 @@ function VaulderieTool({
           id: nid,
           title: "Соитие",
           date: new Date().toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }),
-          content: `Ваулдери: чаша смешала витэ ${rite.participants.length + 1} Сородичей (${names}). Винкулум ${rite.rating}/10 для всех причастных.${rite.bestial ? " Зверь испортил чашу — связь едва тёплая." : rite.messy ? " Чаша вскипела чёрным — связь крепка и дурна." : ""} Прежние узы к не-стае разрушены.`,
+          content: `Ваулдери: чаша смешала витэ ${rite.participants.length + 1} Сородичей (${names}). Винкулум ${rite.rating}/10 для всех причастных. Чашу вёл жрец стаи — ${rite.priest}.${rite.sorcBonus ? ` Кости Кровавого чародейства (${rite.sorcBonus}) легли в чашу.` : ""}${rite.bestial ? " Зверь испортил чашу — связь едва тёплая." : rite.messy ? " Чаша вскипела чёрным — связь крепка и дурна." : ""} Прежние узы к не-стае разрушены.`,
         },
         ...d.notes.entries,
       ].slice(0, 40);
@@ -313,6 +328,19 @@ function VaulderieTool({
           {named.length === 0 ? (
             <p className="vtm-vauld-empty">В узах нет ни одного Сородича с именем — сначала собери стаю.</p>
           ) : (
+            <>
+            <div className="vtm-vauld-priest-row">
+              <label className="vtm-vauld-priest-label" htmlFor="vauld-priest">⚱ жрец стаи</label>
+              <input
+                id="vauld-priest"
+                className="vtm-vauld-priest"
+                value={priest}
+                onChange={(e) => setPriest(e.target.value)}
+                placeholder="ты — или имя церемониймейстера"
+                maxLength={40}
+                aria-label="Имя жреца стаи, что ведёт чашу"
+              />
+            </div>
             <div className="vtm-vauld-list" role="group" aria-label="Участники соития">
               {named.map((b) => (
                 <label key={b.id} className={`vtm-vauld-item ${sel.includes(b.id) ? "is-on" : ""}`}>
@@ -329,15 +357,21 @@ function VaulderieTool({
                 </label>
               ))}
             </div>
+            </>
+          )}
+          {sorcBonus > 0 && (
+            <p className="vtm-vauld-sorc" title="Чародей крови ведёт обряд увереннее: знание Кровавого чародейства добавляет его кости в чашу">
+              ⚗ Кровавое чародейство {sorcLvl}: <b>+{sorcBonus}</b> {sorcBonus === 1 ? "кость" : "кости"} к чаше
+            </p>
           )}
           <div className="vtm-vauld-actions">
             <button
               className="vtm-vauld-roll"
               onClick={doRoll}
               disabled={sel.length === 0}
-              title="Бросок чаши: пул = число участников, кости Голода учитываются"
+              title="Бросок чаши: пул = число участников + кости Кровавого чародейства, кости Голода учитываются"
             >
-              ⚄ Провести соитие · {participantsCount} участн.
+              ⚄ Провести соитие · {participantsCount} участн.{sorcBonus ? ` +⚗${sorcBonus}` : ""}
             </button>
           </div>
           {rite && (
@@ -358,6 +392,12 @@ function VaulderieTool({
                 {rite.participants.map((p) => (
                   <span key={p} className="vtm-vauld-chip">{p}</span>
                 ))}
+                {rite.priest !== "ты" && (
+                  <span key="priest" className="vtm-vauld-chip is-priest" title="Чашу вёл жрец стаи">⚱ {rite.priest}</span>
+                )}
+                {rite.sorcBonus > 0 && (
+                  <span className="vtm-vauld-chip is-sorc" title="Кости Кровавого чародейства легли в чашу">⚗ +{rite.sorcBonus}</span>
+                )}
               </div>
               <button className="vtm-vauld-commit" onClick={commit}>
                 ⚑ Скрепить узы ({rite.rating}/10)

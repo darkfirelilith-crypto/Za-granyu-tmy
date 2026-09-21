@@ -9,6 +9,7 @@
 import { VtmSheetData, bloodPotencyByGeneration } from "@/lib/vtm-data";
 import { LORESHEET_BY_ID } from "@/lib/vtm-histories";
 import { DerivedStats } from "@/lib/vtm-calc";
+import { clanCompulsionFor } from "@/lib/vtm-chronicle";
 import {
   SKILL_LIBRARY,
   CLAN_BY_ID,
@@ -48,6 +49,11 @@ export function VtmPrintSummary({ data, derived }: { data: VtmSheetData; derived
   const skillLine = [...usedSkills, ...customSkills];
 
   const disciplines = data.disciplines.filter((d) => d.value > 0);
+  // Раунд 45: изъян клана и Принуждение — на стол рассказчика одной полосой
+  const comp = clanCompulsionFor(info.clan);
+  const clanBane = info.clan === "thinblood"
+    ? "Слабая Кровь: Сила Крови 0, полноценные Дисциплины недоступны — взамен Алхимия слабокровных."
+    : clan?.bane;
 
   return (
     <div className="vtm-print-doc vtm-print-sum">
@@ -166,6 +172,27 @@ export function VtmPrintSummary({ data, derived }: { data: VtmSheetData; derived
           )}
         </div>
       </div>
+
+      {/* Кровь: изъян клана и Принуждение при Голоде 5 (раунд 45) */}
+      {(clanBane || comp) && (
+        <div className="vtm-sum-blood">
+          <div>
+            {clanBane && (
+              <p className="vtm-sum-blood-row">
+                <i>Изъян:</i> {clanBane}
+              </p>
+            )}
+          </div>
+          <div>
+            {comp && (
+              <p className="vtm-sum-blood-row">
+                <i>Принуждение:</i> <b>{comp.name}.</b> {comp.effect}
+                <em> ({comp.duration} · {comp.source})</em>
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Столкновения и опоры */}
       {(info.ambition || info.desire) && (

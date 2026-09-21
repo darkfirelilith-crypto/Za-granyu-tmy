@@ -824,7 +824,7 @@ export function DossierSection({
                 ))}
               </div>
               <CompulsionWarning data={data} />
-              <BeastForeboding data={data} />
+              <BeastForeboding data={data} mutate={mutate} />
               <p className="vtm-hint mt-1.5 !text-[0.75rem]">
                 {data.trackers.hunger >= 5
                   ? "Голод 5: все кости пула красны. Зверь у руля — Compulsion в каждой сцене."
@@ -1534,11 +1534,31 @@ function CompulsionWarning({ data }: { data: VtmSheetData }) {
 // ============================================================
 // «ПРЕДВЕСТИЕ ЗВЕРЯ» (раунд 44): при Голоде 4 Зверь уже точит когти —
 // янтарная карточка-предостережение за ступень до «Зверя у поводья».
+// Раунд 45: кнопка «🌙 новая охота» прямо в карточке — утоли Голод,
+// пока кровь ещё держит, не тянись к шапке панели.
 // ============================================================
 
-function BeastForeboding({ data }: { data: VtmSheetData }) {
+function BeastForeboding({
+  data,
+  mutate,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (draft: VtmSheetData) => void) => void;
+}) {
+  // мини-подтверждение: охота заживляет раны и меняет резонанс — случайный клик недопустим
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => {
+    if (!confirming) return;
+    const t = setTimeout(() => setConfirming(false), 8000);
+    return () => clearTimeout(t);
+  }, [confirming]);
+
   if (data.trackers.hunger !== 4) return null;
   const comp = clanCompulsionFor(data.info.clan);
+  const doHunt = () => {
+    performHunt(data, mutate);
+    setConfirming(false);
+  };
   return (
     <div className="vtm-forewarn-card" role="status">
       <span className="vtm-forewarn-title" aria-hidden>⚡ Предвестие Зверя</span>
@@ -1549,6 +1569,26 @@ function BeastForeboding({ data }: { data: VtmSheetData }) {
       <div className="vtm-forewarn-meta">
         <span className="vtm-forewarn-next">↓ ещё +1 Голод → ☠ Зверь у поводья</span>
         <span className="vtm-forewarn-tip">утоли Голод, пока кровь ещё держит</span>
+      </div>
+      <div className="vtm-forewarn-act">
+        {confirming ? (
+          <>
+            <button className="vtm-forewarn-hunt is-confirm" onClick={doHunt} aria-label="Подтвердить новую охоту из предвестия">
+              ✦ утолить сейчас
+            </button>
+            <button className="vtm-forewarn-hunt-cancel" onClick={() => setConfirming(false)} aria-label="Отменить охоту">✕</button>
+            <span className="vtm-forewarn-act-note">Голод обнулится, поверхностное заживёт</span>
+          </>
+        ) : (
+          <button
+            className="vtm-forewarn-hunt"
+            onClick={() => setConfirming(true)}
+            title="Начать новую охоту прямо из предвестия: Голод утолится, поверхностные раны и стресс заживут, тяжёлое останется."
+            aria-label="Начать новую охоту из предвестия"
+          >
+            🌙 новая охота
+          </button>
+        )}
       </div>
       <p className="vtm-forewarn-note">Ярость голода на грани: при Голоде 5 её сложность — 4 (Книга правил, стр. 218).</p>
     </div>
@@ -1566,6 +1606,55 @@ const newHuntSummary = (data: VtmSheetData): string => {
   if (data.trackers.wpSup > 0) parts.push(`поверхностный стресс ${data.trackers.wpSup} → 0 (отдых)`);
   return parts.length ? parts.join("; ") : "следы прошлой ночи уже смыты — тишина в трекерах";
 };
+
+/** Общая механика «новой охоты» (раунд 45): извлечена из NewHuntButton, чтобы
+ *  карточка «Предвестие Зверя» могла утолить Голод прямо из себя. Возвращает
+ *  true, если ночь оказалась «глубокой кровью» (резонанс 5). */
+function performHunt(
+  data: VtmSheetData,
+  mutate: (fn: (draft: VtmSheetData) => void) => void,
+): boolean {
+  const summary = newHuntSummary(data);
+  // Резонанс ночи: какой привкус эмоций несёт кровь сегодняшней добычи.
+  // Обычная охота даёт слабые резонансы (1–2), удачная — насыщенные (3), редкая ночь — глубокие (4–5).
+  const res = RESONANCES[Math.floor(Math.random() * RESONANCES.length)];
+  const roll = Math.random();
+  const intensity = roll < 0.42 ? 1 : roll < 0.74 ? 2 : roll < 0.92 ? 3 : roll < 0.98 ? 4 : 5;
+  // «Глубокая кровь» (раунд 43): интенсивность 5 — редкий исход (2%). Механика ×2
+  // уже живёт в утолении (resInt >= 4); здесь — только отличительные приметы ночи.
+  const deepBlood = intensity === 5;
+  mutate((d) => {
+    d.trackers.hunger = 0;
+    d.trackers.healthSup = 0;
+    d.trackers.wpSup = 0;
+    d.trackers.huntCount = (d.trackers.huntCount || 0) + 1;
+    const now = new Date();
+    const date = now.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
+    d.trackers.lastHunt = date;
+    d.resonance = { kind: res.id, intensity };
+    const resText = `${res.name} (${intensity} — ${RESONANCE_INTENSITY_LABELS[intensity] || "—"})`;
+    d.notes.entries = [
+      {
+        id: `hunt-${now.getTime().toString(36)}`,
+        title: "Новая охота",
+        date,
+        content: `${deepBlood ? "Эта ночь — из редких: кровь добычи животно чиста. ": ""}Солнце село — Сородич проснулся. ${summary}. Резонанс добычи: ${resText}. Тяжёлые раны и пятна Человечности не тронуты: ночь не стирает всё.`,
+      },
+      ...d.notes.entries,
+    ].slice(0, 40);
+  });
+  if (deepBlood) {
+    toast.success("Животная, чистая кровь", {
+      description: "Редкая ночь: резонанс 5 — одно утоление снимает 2 Голода, и кровь вдвойне ценна для Кровавого чародейства.",
+      duration: 9000,
+    });
+  } else {
+    toast.success("Новая охота началась", {
+      description: `Голод утолён, поверхностное зажило. Кровь этой ночи — ${res.name.toLowerCase()} (${intensity}). Запись в журнале ночи.`,
+    });
+  }
+  return deepBlood;
+}
 
 /** Кнопка «Новая охота»: одной ночью заживает поверхностное, Голод утоляется, тяжёлое остаётся. */
 function NewHuntButton({
@@ -1587,46 +1676,8 @@ function NewHuntButton({
     data.trackers.hunger > 0 || data.trackers.healthSup > 0 || data.trackers.wpSup > 0;
 
   const doReset = () => {
-    const summary = newHuntSummary(data);
-    // Резонанс ночи: какой привкус эмоций несёт кровь сегодняшней добычи.
-    // Обычная охота даёт слабые резонансы (1–2), удачная — насыщенные (3), редкая ночь — глубокие (4–5).
-    const res = RESONANCES[Math.floor(Math.random() * RESONANCES.length)];
-    const roll = Math.random();
-    const intensity = roll < 0.42 ? 1 : roll < 0.74 ? 2 : roll < 0.92 ? 3 : roll < 0.98 ? 4 : 5;
-    // «Глубокая кровь» (раунд 43): интенсивность 5 — редкий исход (2%). Механика ×2
-    // уже живёт в утолении (resInt >= 4); здесь — только отличительные приметы ночи.
-    const deepBlood = intensity === 5;
-    mutate((d) => {
-      d.trackers.hunger = 0;
-      d.trackers.healthSup = 0;
-      d.trackers.wpSup = 0;
-      d.trackers.huntCount = (d.trackers.huntCount || 0) + 1;
-      const now = new Date();
-      const date = now.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
-      d.trackers.lastHunt = date;
-      d.resonance = { kind: res.id, intensity };
-      const resText = `${res.name} (${intensity} — ${RESONANCE_INTENSITY_LABELS[intensity] || "—"})`;
-      d.notes.entries = [
-        {
-          id: `hunt-${now.getTime().toString(36)}`,
-          title: "Новая охота",
-          date,
-          content: `${deepBlood ? "Эта ночь — из редких: кровь добычи животно чиста. ": ""}Солнце село — Сородич проснулся. ${summary}. Резонанс добычи: ${resText}. Тяжёлые раны и пятна Человечности не тронуты: ночь не стирает всё.`,
-        },
-        ...d.notes.entries,
-      ].slice(0, 40);
-    });
+    performHunt(data, mutate);
     setConfirming(false);
-    if (deepBlood) {
-      toast.success("Животная, чистая кровь", {
-        description: "Редкая ночь: резонанс 5 — одно утоление снимает 2 Голода, и кровь вдвойне ценна для Кровавого чародейства.",
-        duration: 9000,
-      });
-    } else {
-      toast.success("Новая охота началась", {
-        description: `Голод утолён, поверхностное зажило. Кровь этой ночи — ${res.name.toLowerCase()} (${intensity}). Запись в журнале ночи.`,
-      });
-    }
   };
 
   return (

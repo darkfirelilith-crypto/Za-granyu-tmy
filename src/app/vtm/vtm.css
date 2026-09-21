@@ -1855,6 +1855,20 @@ select.vtm-input option { background: #170a0d; color: var(--vtm-bone); }
     height: 15px;
     border-bottom: 1px dashed #777;
   }
+  /* Кровь: изъян и Принуждение — полоса для стола Рассказчика (раунд 45) */
+  .vtm-sum-blood {
+    display: grid;
+    gap: 3px;
+    margin-top: 8px;
+    padding: 4px 6px 6px;
+    border: 1px solid #111;
+    border-left: 3px solid #111;
+    break-inside: avoid;
+  }
+  .vtm-sum-blood-row { font-size: 8pt; margin: 0; line-height: 1.35; }
+  .vtm-sum-blood-row i { font-style: normal; color: #444; font-size: 7pt; letter-spacing: 0.06em; }
+  .vtm-sum-blood-row b { font-weight: 700; }
+  .vtm-sum-blood-row em { font-style: italic; color: #555; font-size: 7pt; }
   .vtm-sum-footer {
     margin-top: 10px;
     border-top: 1px solid #111;
@@ -8104,4 +8118,176 @@ button.vtm-die.vtm-die-selectable.selected {
   .vtm-vauld-form,
   .vtm-vauld-result { animation: none; }
   .vtm-codex-comp .vtm-compulsion-card { transform: none; }
+}
+
+/* ============================================================
+   РАУНД 45 — охота из «Предвестия» · Жрец стаи и ⚗ чародейство
+   в Ваулдери · Принуждение в печатной сводке
+   ============================================================ */
+
+/* ---------- Кнопка «🌙 новая охота» на карточке «Предвестие Зверя» ---------- */
+
+.vtm-forewarn-act {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  position: relative;
+}
+
+.vtm-forewarn-hunt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid rgba(214, 168, 64, 0.5);
+  border-radius: 0.3rem;
+  background: linear-gradient(135deg, rgba(214, 168, 64, 0.16), rgba(120, 74, 20, 0.22));
+  color: #eed9a4;
+  font-family: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(214, 168, 64, 0.12);
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s, color 0.25s, transform 0.25s;
+}
+
+.vtm-forewarn-hunt:hover {
+  border-color: rgba(214, 168, 64, 0.85);
+  background: linear-gradient(135deg, rgba(214, 168, 64, 0.26), rgba(120, 74, 20, 0.3));
+  box-shadow: 0 0 14px rgba(214, 168, 64, 0.32);
+  transform: translateY(-1px);
+}
+
+.vtm-forewarn-hunt:focus-visible {
+  outline: 1px dashed rgba(214, 168, 64, 0.8);
+  outline-offset: 2px;
+}
+
+/* подтверждение: алый пульс — ночь действительно изменится */
+.vtm-forewarn-hunt.is-confirm {
+  border-color: rgba(232, 99, 107, 0.65);
+  background: linear-gradient(135deg, rgba(150, 62, 78, 0.5), rgba(66, 24, 38, 0.75));
+  color: #f0c4b0;
+  animation: vtm-forewarn-hunt-pulse 1.6s ease-in-out infinite;
+}
+
+.vtm-forewarn-hunt.is-confirm:hover {
+  border-color: rgba(232, 99, 107, 0.95);
+  box-shadow: 0 0 14px rgba(232, 99, 107, 0.4);
+}
+
+@keyframes vtm-forewarn-hunt-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(232, 99, 107, 0.25); }
+  50% { box-shadow: 0 0 16px rgba(232, 99, 107, 0.5); }
+}
+
+.vtm-forewarn-hunt-cancel {
+  width: 1.55rem;
+  height: 1.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(154, 130, 114, 0.4);
+  border-radius: 999px;
+  background: transparent;
+  color: #9c8072;
+  font-size: 0.68rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.vtm-forewarn-hunt-cancel:hover { border-color: rgba(154, 130, 114, 0.85); color: #c4ac9d; }
+
+.vtm-forewarn-act-note {
+  font-size: 0.66rem;
+  font-style: italic;
+  color: #b39763;
+}
+
+/* ---------- Ваулдери: жрец стаи и ⚗ Кровавое чародейство ---------- */
+
+.vtm-vauld-priest-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vtm-vauld-priest-label {
+  flex-shrink: 0;
+  font-size: 0.64rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9d86b3;
+  cursor: pointer;
+}
+
+.vtm-vauld-priest {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid rgba(168, 119, 192, 0.35);
+  border-radius: 0.3rem;
+  background: rgba(30, 16, 38, 0.5);
+  color: #e2d5ea;
+  font-family: inherit;
+  font-size: 0.75rem;
+  box-shadow: inset 0 0 10px rgba(168, 119, 192, 0.08);
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.vtm-vauld-priest::placeholder { color: #7d6b8d; font-style: italic; }
+
+.vtm-vauld-priest:focus {
+  outline: none;
+  border-color: rgba(168, 119, 192, 0.7);
+  box-shadow: inset 0 0 14px rgba(168, 119, 192, 0.16), 0 0 8px rgba(168, 119, 192, 0.2);
+}
+
+/* строка ⚗ бонуса чародейства */
+.vtm-vauld-sorc {
+  margin: 0;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid rgba(199, 84, 80, 0.3);
+  border-left: 2px solid rgba(199, 84, 80, 0.55);
+  border-radius: 0.3rem;
+  background: rgba(66, 24, 38, 0.35);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  color: #d8a89a;
+  cursor: help;
+}
+
+.vtm-vauld-sorc b { color: #e8a595; font-weight: 700; }
+
+/* чипы результата: жрец — аметист, чародейство — алый */
+.vtm-vauld-chip.is-priest {
+  border-color: rgba(168, 119, 192, 0.65);
+  color: #dcC8ec;
+  background: rgba(168, 119, 192, 0.16);
+  box-shadow: 0 0 8px rgba(168, 119, 192, 0.18);
+}
+
+.vtm-vauld-chip.is-sorc {
+  border-color: rgba(232, 99, 107, 0.55);
+  color: #e89b90;
+  background: rgba(150, 62, 78, 0.22);
+  box-shadow: 0 0 8px rgba(232, 99, 107, 0.18);
+}
+
+/* ---------- Мобильная сводка раунда 45 ---------- */
+@media (max-width: 640px) {
+  .vtm-forewarn-hunt { padding: 0.28rem 0.6rem; font-size: 0.68rem; }
+  .vtm-forewarn-act-note { width: 100%; }
+  .vtm-vauld-priest-row { flex-wrap: wrap; }
+  .vtm-vauld-priest { flex-basis: 100%; }
+  .vtm-vauld-sorc { font-size: 0.66rem; }
+}
+
+/* ---------- Доступность: меньше движения ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .vtm-forewarn-hunt,
+  .vtm-forewarn-hunt.is-confirm { animation: none; }
+  .vtm-forewarn-hunt:hover { transform: none; }
 }
