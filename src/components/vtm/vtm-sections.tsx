@@ -23,6 +23,7 @@ import {
   RESONANCES,
   RESONANCE_BY_ID,
   RESONANCE_INTENSITY_LABELS,
+  bloodPotencyByGeneration,
   XP_COSTS,
   pushXpLog,
   spendEconomy,
@@ -30,6 +31,7 @@ import {
   DEFAULT_CREATION_POOL,
   parsePredatorMerit,
   type PredatorGrant,
+  type VtmDiablerieEntry,
   plural,
 } from "@/lib/vtm-data";
 import { DISCIPLINE_BY_ID } from "@/lib/vtm-data";
@@ -929,18 +931,8 @@ export function DossierSection({
               </p>
             </div>
 
-            {/* Сила Крови */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="vtm-label text-[0.77rem] text-[#d9c7b6]">Сила Крови</span>
-                <span className="vtm-label text-[0.83rem] text-[#a877c0]">{derived.bp}</span>
-              </div>
-              <Dots value={derived.bp} max={5} color="violet" ariaLabel="Сила Крови" />
-              <p className="vtm-hint mt-1.5 !text-[0.75rem]">
-                По поколению: бонус +{derived.bpRow.bonusDice} к физике и Дисциплинам · заживление: {derived.bpRow.mend} · изъян: тяжесть {derived.bpRow.baneSeverity}
-                {derived.bpRow.feedingPenalty !== "—" ? ` · кормление: ${derived.bpRow.feedingPenalty}` : ""}
-              </p>
-            </div>
+            {/* Сила Крови: по поколению + подъём сверх (опыт/Диаблери/торпор) */}
+            <BloodPotencyBlock data={data} mutate={mutate} derived={derived} />
 
             <div className="vtm-divider text-[0.73rem]"><span>☾</span></div>
 
@@ -1520,6 +1512,11 @@ function NewHuntButton({
 
   const doReset = () => {
     const summary = newHuntSummary(data);
+    // Резонанс ночи: какой привкус эмоций несёт кровь сегодняшней добычи.
+    // Обычная охота даёт слабые резонансы (1–2), удачная — насыщенные (3), редкая ночь — глубокие (4–5).
+    const res = RESONANCES[Math.floor(Math.random() * RESONANCES.length)];
+    const roll = Math.random();
+    const intensity = roll < 0.42 ? 1 : roll < 0.74 ? 2 : roll < 0.92 ? 3 : roll < 0.98 ? 4 : 5;
     mutate((d) => {
       d.trackers.hunger = 0;
       d.trackers.healthSup = 0;
@@ -1528,18 +1525,22 @@ function NewHuntButton({
       const now = new Date();
       const date = now.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
       d.trackers.lastHunt = date;
+      d.resonance = { kind: res.id, intensity };
+      const resText = `${res.name} (${intensity} — ${RESONANCE_INTENSITY_LABELS[intensity] || "—"})`;
       d.notes.entries = [
         {
           id: `hunt-${now.getTime().toString(36)}`,
           title: "Новая охота",
           date,
-          content: `Солнце село — Сородич проснулся. ${summary}. Тяжёлые раны и пятна Человечности не тронуты: ночь не стирает всё.`,
+          content: `Солнце село — Сородич проснулся. ${summary}. Резонанс добычи: ${resText}. Тяжёлые раны и пятна Человечности не тронуты: ночь не стирает всё.`,
         },
         ...d.notes.entries,
       ].slice(0, 40);
     });
     setConfirming(false);
-    toast.success("Новая охота началась", { description: "Голод утолён, поверхностное зажило. Запись в журнале ночи." });
+    toast.success("Новая охота началась", {
+      description: `Голод утолён, поверхностное зажило. Кровь этой ночи — ${res.name.toLowerCase()} (${intensity}). Запись в журнале ночи.`,
+    });
   };
 
   return (
@@ -1569,7 +1570,102 @@ function NewHuntButton({
 }
 
 // ============================================================
-// ДИАБЛЕРИ: счётчик выпитых душ и след в ауре
+// СИЛА КРОВИ: база по поколению, подъём сверх — опыт/Диаблери/торпор
+// (Книга правил, стр. 217: цена подъёма — 10 × новый уровень опыта)
+// ============================================================
+
+function BloodPotencyBlock({
+  data,
+  mutate,
+  derived,
+}: {
+  data: VtmSheetData;
+  mutate: (fn: (draft: VtmSheetData) => void) => void;
+  derived: DerivedStats;
+}) {
+  const bp = derived.bp;
+  const genBp = bloodPotencyByGeneration(data.info.generation || 13);
+  const raised = bp > genBp;
+  const nextCost = XP_COSTS.bloodPotency(bp + 1);
+
+  // Клик по точке выше текущей — подъём за опыт (только сверх поколения).
+  const raise = (n: number) => {
+    if (n <= bp || n > 5) return;
+    const cost = XP_COSTS.bloodPotency(n) - XP_COSTS.bloodPotency(bp);
+    mutate((d) => {
+      d.trackers.bpOverride = n;
+      spendEconomy(d, cost, `«Сила Крови» ↑ ${bp} → ${n} (цена ${cost}, подъём сверх поколения)`);
+    });
+    toast.success(`Сила Крови ${n}`, { description: `Кровь густеет. Цена: ${cost} (${plural(cost, "очко", "очка", "очков")} из Кошелька). Эффекты таблицы уже применяются к листу.` });
+  };
+
+  // Клик по точке ниже текущей (но выше поколенческой) — снижение: торпор/решение Рассказчика, возврат дельты.
+  const lower = (n: number) => {
+    if (n < genBp || n >= bp) return;
+    const refund = XP_COSTS.bloodPotency(bp) - XP_COSTS.bloodPotency(n);
+    mutate((d) => {
+      d.trackers.bpOverride = n > genBp ? n : 0;
+      if (refund > 0) refundEconomy(d, refund, `«Сила Крови» ↓ ${bp} → ${n} (торпор/решение Рассказчика)`);
+    });
+    toast.info(`Сила Крови ${n}`, { description: "Кровь жидеет — торпор или решение Рассказчика. Возврат в Кошелёк оформлен." });
+  };
+
+  return (
+    <div className="vtm-bp-block">
+      <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+        <span className="vtm-label text-[0.77rem] text-[#d9c7b6]">Сила Крови</span>
+        <span className="flex items-center gap-1.5">
+          {raised && <span className="vtm-bp-above">↑ сверх поколения</span>}
+          <span className="vtm-label text-[0.83rem] text-[#a877c0]">{bp}</span>
+        </span>
+      </div>
+      <div className="vtm-bp-dots" role="group" aria-label="Сила Крови">
+        {[1, 2, 3, 4, 5].map((n) => {
+          const base = n <= genBp; // поколенческий фундамент — не продаётся
+          const filled = n <= bp;
+          const canRaise = !base && n === bp + 1 && n <= 5;
+          // снижение: и на базу поколения тоже (если СК поднята — возврат в кровь предков разрешён)
+          const canLower = n === bp - 1 && n >= genBp;
+          const clickable = canRaise || canLower;
+          return (
+            <button
+              key={n}
+              type="button"
+              className={`vtm-dot vtm-bp-dot violet ${filled ? "filled" : ""} ${base ? "is-base" : ""}`}
+              disabled={!clickable}
+              aria-label={`Сила Крови ${n}${base ? " (по поколению)" : canRaise ? ` — поднять за ${XP_COSTS.bloodPotency(n) - XP_COSTS.bloodPotency(bp)} опыта` : canLower ? " — снизить (торпор)" : ""}`}
+              title={
+                base
+                  ? n === bp - 1 && bp > genBp
+                    ? `Снизить до ${n} (торпор/рассказчик)`
+                    : `По поколению (${data.info.generation || 13}-е)`
+                  : canRaise
+                    ? `Поднять до ${n} — ${XP_COSTS.bloodPotency(n) - XP_COSTS.bloodPotency(bp)} опыта`
+                    : canLower
+                      ? `Снизить до ${n} (торпор/рассказчик)`
+                      : `Текущая Сила Крови ${n}`
+              }
+              onClick={() => (n > bp ? raise(n) : lower(n))}
+            />
+          );
+        })}
+        {bp < 5 && (
+          <span className="vtm-bp-cost">
+            ↑ {bp + 1} — {nextCost} опыта
+          </span>
+        )}
+      </div>
+      <p className="vtm-hint mt-1.5 !text-[0.75rem]">
+        По поколению ({genBp}): бонус +{derived.bpRow.bonusDice} к физике и Дисциплинам · заживление: {derived.bpRow.mend} · изъян: тяжесть {derived.bpRow.baneSeverity}
+        {derived.bpRow.feedingPenalty !== "—" ? ` · кормление: ${derived.bpRow.feedingPenalty}` : ""}
+        {raised ? " · подъём выше крови предков — редкая награда Диаблери или долгая ночь опыта." : " Подъём сверх поколения — 10 × новый уровень опыта либо милость Диаблери (по решению Рассказчика)."}
+      </p>
+    </div>
+  );
+}
+
+// ============================================================
+// ДИАБЛЕРИ: церемонии, счётчик выпитых душ и след в ауре
 // ============================================================
 
 function DiablerieBlock({
@@ -1579,33 +1675,148 @@ function DiablerieBlock({
   data: VtmSheetData;
   mutate: (fn: (draft: VtmSheetData) => void) => void;
 }) {
+  const [ceremony, setCeremony] = useState(false);
+  const [victim, setVictim] = useState("");
+  const [victimGen, setVictimGen] = useState(0);
   const count = data.diablerie?.count || 0;
   const notes = data.diablerie?.notes || "";
+  const entries = data.diablerie?.entries || [];
+  const ownBp = bloodPotencyByGeneration(data.info.generation || 13);
+
+  // Подтверждение церемонии: душа выпита. Два пятна Человечности — автоматически.
+  const commit = (bpGift: boolean) => {
+    const name = victim.trim() || "безымянный Сородич";
+    mutate((d) => {
+      d.diablerie = d.diablerie || { count: 0, notes: "", entries: [] };
+      const entry: VtmDiablerieEntry = {
+        id: vtmUid("diab"),
+        victim: name,
+        gen: victimGen,
+        ts: new Date().toISOString(),
+        bpGift,
+      };
+      d.diablerie.count = (d.diablerie.count || 0) + 1;
+      d.diablerie.entries = [entry, ...(d.diablerie.entries || [])].slice(0, 30);
+      // Диаблери — стигма Зверя: два пятна (в упрощённой системе листа).
+      const free = Math.max(0, 10 - d.trackers.humanity - d.trackers.stains);
+      d.trackers.stains = Math.min(d.trackers.stains + 2, 10 - d.trackers.humanity);
+      if (free < 2) pushXpLog(d, `Диаблери: душа «${name}» — пятна не поместились (Человечность ${d.trackers.humanity})`);
+      else pushXpLog(d, `Диаблери: душа «${name}»${victimGen ? ` (${victimGen}-е поколение)` : ""} — 2 пятна Человечности`);
+      if (bpGift) {
+        const newBp = Math.min(5, Math.max(ownBp, d.trackers.bpOverride || 0) + 1);
+        d.trackers.bpOverride = newBp;
+        pushXpLog(d, `Диаблери: душа сильнее твоей — Сила Крови поднята до ${newBp} (дар, без опыта)`);
+      }
+      d.notes.entries = [
+        {
+          id: `diab-${Date.now().toString(36)}`,
+          title: "Диаблери",
+          date: new Date().toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }),
+          content: `Выпита душа: ${name}${victimGen ? `, ${victimGen}-е поколение` : ""}.${bpGift ? " Душа была сильнее — Сила Крови выросла на 1." : ""} В ауре — новые чёрные прожилки.`,
+        },
+        ...d.notes.entries,
+      ].slice(0, 40);
+    });
+    setCeremony(false);
+    setVictim("");
+    setVictimGen(0);
+    toast.error("Церемония завершена", { description: `Душа «${name}» выпита. Два пятна Человечности поставлены. Ясновидение выдаст след на десятилетия.` });
+  };
+
+  // Отмена последней церемонии (если записали зря): убираем запись и одно Диаблери.
+  const undoLast = () => {
+    const last = entries[0];
+    mutate((d) => {
+      d.diablerie = d.diablerie || { count: 0, notes: "", entries: [] };
+      d.diablerie.count = Math.max(0, (d.diablerie.count || 0) - 1);
+      const removed = (d.diablerie.entries || []).shift();
+      d.diablerie.entries = d.diablerie.entries || [];
+      // снимаем пятна и дар, если они ещё на листе
+      d.trackers.stains = Math.max(0, d.trackers.stains - 2);
+      if (removed?.bpGift && d.trackers.bpOverride) {
+        d.trackers.bpOverride = Math.max(0, d.trackers.bpOverride - 1);
+        pushXpLog(d, `отмена Диаблери («${removed.victim}»): дар Силы Крови снят`);
+      } else {
+        pushXpLog(d, `отмена Диаблери («${removed?.victim || "?"}») — запись стёрта`);
+      }
+    });
+    toast.info("Церемония отменена", { description: last ? `Запись о душе «${last.victim}» стёрта, пятна сняты.` : "Запись стёрта." });
+  };
 
   return (
     <div className="vtm-diab-block">
       <div className="flex items-center justify-between mb-1.5 gap-2 flex-wrap">
         <span className="vtm-label text-[0.77rem] text-[#d9c7b6]">Диаблери</span>
         <div className="flex items-center gap-1">
-          <button
-            className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.75rem]"
-            onClick={() => mutate((d) => { d.diablerie = d.diablerie || { count: 0, notes: "" }; d.diablerie.count = Math.max(0, d.diablerie.count - 1); })}
-            aria-label="Убрать одно Диаблери"
-            title="Снять одно Диаблери (если записали зря)"
-          >
-            −
-          </button>
+          {count > 0 && (
+            <button
+              className="vtm-btn vtm-btn-ghost !py-0.5 !px-2 !text-[0.75rem]"
+              onClick={undoLast}
+              aria-label="Отменить последнюю церемонию"
+              title="Отменить последнюю запись (если записали зря): снимает и пятна"
+            >
+              ↺
+            </button>
+          )}
           <span className={`vtm-label text-[0.9rem] w-5 text-center ${count > 0 ? "text-[#e8636b]" : "text-[#9c8072]"}`}>{count}</span>
           <button
             className="vtm-btn vtm-btn-danger !py-0.5 !px-2 !text-[0.75rem]"
-            onClick={() => mutate((d) => { d.diablerie = d.diablerie || { count: 0, notes: "" }; d.diablerie.count = d.diablerie.count + 1; })}
-            aria-label="Записать совершённое Диаблери"
+            onClick={() => setCeremony((v) => !v)}
+            aria-expanded={ceremony}
+            aria-label={ceremony ? "Закрыть форму церемонии" : "Совершить Диаблери"}
             title="Выпил душу — запиши. Это не забывается."
           >
-            +
+            {ceremony ? "×" : "+"}
           </button>
         </div>
       </div>
+
+      {/* Форма церемонии */}
+      {ceremony && (
+        <div className="vtm-diab-form" role="form" aria-label="Церемония Диаблери">
+          <p className="vtm-diab-form-title">⚓ Церемония: сердце останавливается навсегда</p>
+          <input
+            className="vtm-input !py-1 !text-[0.84rem]"
+            value={victim}
+            onChange={(e) => setVictim(e.target.value.slice(0, 80))}
+            placeholder="имя жертвы — Кровь запомнит"
+            aria-label="Имя жертвы Диаблери"
+            maxLength={80}
+          />
+          <div className="flex items-center gap-1 flex-wrap mt-1.5" role="group" aria-label="Поколение жертвы">
+            <span className="vtm-hint !text-[0.72rem] mr-0.5">поколение жертвы:</span>
+            {[0, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5].map((g) => (
+              <button
+                key={g}
+                type="button"
+                className={`vtm-diab-gen ${victimGen === g ? "active" : ""}`}
+                onClick={() => setVictimGen(g)}
+                aria-pressed={victimGen === g}
+                title={g === 0 ? "неизвестно" : `${g}-е поколение`}
+              >
+                {g === 0 ? "?" : g}
+              </button>
+            ))}
+          </div>
+          {victimGen > 0 && victimGen < (data.info.generation || 13) && (
+            <button
+              type="button"
+              className="vtm-diab-gift"
+              onClick={() => commit(true)}
+              title="Душа старшего Сородича крепче: Рассказчик может даровать +1 Силы Крови вместо опыта"
+            >
+              🩸 выпить душу и принять дар Силы Крови (+1, милость Рассказчика)
+            </button>
+          )}
+          <button
+            type="button"
+            className="vtm-diab-commit"
+            onClick={() => commit(false)}
+          >
+            ⚓ записать церемонию — 2 пятна Человечности
+          </button>
+        </div>
+      )}
 
       {/* Аура: меняется с каждым Диаблери */}
       <div className={`vtm-diab-aura ${count > 0 ? "stained" : ""}`} role="status" aria-label={`След в ауре: ${count > 0 ? "чёрные прожилки диаблери" : "чистая аура"}`}>
@@ -1628,16 +1839,35 @@ function DiablerieBlock({
         </div>
       </div>
 
+      {/* Журнал церемоний */}
+      {entries.length > 0 && (
+        <ul className="vtm-diab-entries" aria-label="Журнал церемоний Диаблери">
+          {entries.slice(0, 5).map((e) => (
+            <li key={e.id} className="vtm-diab-entry">
+              <span className="vtm-diab-entry-name" title={e.victim}>
+                {e.victim}
+                {e.gen > 0 ? <span className="vtm-diab-entry-gen"> · {e.gen}-е</span> : null}
+                {e.bpGift ? <span className="vtm-diab-entry-gift" title="за это Диаблери дарована Сила Крови">↑СК</span> : null}
+              </span>
+              <span className="vtm-diab-entry-date">
+                {e.ts ? new Date(e.ts).toLocaleDateString("ru-RU", { day: "2-digit", month: "short" }) : "—"}
+              </span>
+            </li>
+          ))}
+          {entries.length > 5 && <li className="vtm-diab-entry vtm-diab-entry-more">…и ещё {plural(entries.length - 5, "церемония", "церемонии", "церемоний")} в тени</li>}
+        </ul>
+      )}
+
       <input
         className="vtm-input !py-1 !text-[0.84rem] mt-1.5 border-dashed"
         value={notes}
-        onChange={(e) => mutate((d) => { d.diablerie = d.diablerie || { count: 0, notes: "" }; d.diablerie.notes = e.target.value.slice(0, 300); })}
+        onChange={(e) => mutate((d) => { d.diablerie = d.diablerie || { count: 0, notes: "", entries: [] }; d.diablerie.notes = e.target.value.slice(0, 300); })}
         placeholder="кто, когда и почему — след в ауре дополняет предысторию"
         aria-label="Заметки о Диаблери"
         maxLength={300}
       />
       <p className="vtm-hint !text-[0.75rem] mt-1">
-        Механика: каждое Диаблери — 2 пятна Человечности, снижение поколения на ступень (по решению Рассказчика) и след в ауре. Полные правила — «База знаний → Механики → Диаблери».
+        Механика: каждое Диаблери — 2 пятна Человечности, след в ауре и шанс на милость Крови (душа старшего — +1 Силы Крови по решению Рассказчика). Полные правила — «База знаний → Механики → Диаблери».
       </p>
     </div>
   );
@@ -1860,7 +2090,7 @@ function XpBlock({
         </div>
       )}
       <p className="vtm-hint mt-1.5 !text-[0.73rem]">
-        Цены: хар-ка 5×ур · навык 3×ур · спец. 3 · факт биографии 3 пт/точка · Дисциплина 6×ур · сила 3×ур · Человечность 2×ур · достоинство 3×ур.
+        Цены: хар-ка 5×ур · навык 3×ур · спец. 3 · факт биографии 3 пт/точка · Дисциплина 6×ур · сила 3×ур · Человечность 2×ур · достоинство 3×ур · Сила Крови сверх поколения 10×ур.
         Все покупки списываются автоматически: сначала стартовый лимит ({DEFAULT_CREATION_POOL}+ пт, расширяется Рассказчиком), затем опыт — и без лимитов: хочешь десять Дисциплин — плати.
       </p>
     </div>

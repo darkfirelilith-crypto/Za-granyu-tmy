@@ -6,7 +6,7 @@
 // Печатается через кнопку «Сводка» в редакторе.
 // ============================================================
 
-import { VtmSheetData } from "@/lib/vtm-data";
+import { VtmSheetData, bloodPotencyByGeneration } from "@/lib/vtm-data";
 import { LORESHEET_BY_ID } from "@/lib/vtm-histories";
 import { DerivedStats } from "@/lib/vtm-calc";
 import {
@@ -62,7 +62,7 @@ export function VtmPrintSummary({ data, derived }: { data: VtmSheetData; derived
             {sect ? ` · ${sect.name}` : ""}
             {info.generation ? ` · ${info.generation}-е пок.` : ""}
             {predator ? ` · ${predator.name}` : ""}
-            {` · СК ${derived.bp}`}
+            {` · СК ${derived.bp}${derived.bp > bloodPotencyByGeneration(info.generation || 13) ? "↑" : ""}`}
           </p>
           {info.concept && <p className="vtm-sum-concept">{info.concept}</p>}
         </div>
@@ -148,14 +148,20 @@ export function VtmPrintSummary({ data, derived }: { data: VtmSheetData; derived
               })}
               {(data.diablerie?.count || 0) > 0 && (
                 <p className="vtm-sum-adv-item">
-                  <i>диаблери</i> выпито душ: {data.diablerie.count} — в ауре чёрные прожилки
+                  <i>диаблери</i> выпито душ: {data.diablerie.count}
+                  {(data.diablerie.entries || []).length > 0 &&
+                    ` — ${(data.diablerie.entries || []).slice(0, 3).map((e) => e.victim + (e.gen ? ` (${e.gen}-е)` : "") + (e.bpGift ? " ↑СК" : "")).join(", ")}`}
+                  {" — в ауре чёрные прожилки"}
                 </p>
               )}
             </>
           )}
           {(data.diablerie?.count || 0) > 0 && data.loresheets && !data.loresheets.some((l) => l.level > 0) && (
             <p className="vtm-sum-adv-item">
-              <i>диаблери</i> выпито душ: {data.diablerie.count} — в ауре чёрные прожилки
+              <i>диаблери</i> выпито душ: {data.diablerie.count}
+              {(data.diablerie.entries || []).length > 0 &&
+                ` — ${(data.diablerie.entries || []).slice(0, 3).map((e) => e.victim + (e.gen ? ` (${e.gen}-е)` : "") + (e.bpGift ? " ↑СК" : "")).join(", ")}`}
+              {" — в ауре чёрные прожилки"}
             </p>
           )}
         </div>

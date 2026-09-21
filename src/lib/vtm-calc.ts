@@ -39,7 +39,10 @@ export function deriveStats(sheet: VtmSheetData): DerivedStats {
   const healthMax = sta + 3;
   const wpMax = com + res;
 
-  const bp = bloodPotencyByGeneration(sheet.info.generation || 13);
+  // Сила Крови: база по поколению, но подъём сверх поколения (опыт, Диаблери, торпор)
+  // хранится в trackers.bpOverride и действует, только если выше поколенческой.
+  const bpOverride = Math.max(0, Math.min(5, Math.floor(Number(sheet.trackers.bpOverride) || 0)));
+  const bp = Math.max(bloodPotencyByGeneration(sheet.info.generation || 13), bpOverride);
   const bpRow = BLOOD_POTENCY_TABLE[Math.min(bp, BLOOD_POTENCY_TABLE.length - 1)];
 
   const attrTotal = str + dex + sta + cha + man + com + int + wit + res;

@@ -101,6 +101,22 @@ export interface VtmTrackers {
   creationSpent: number;  // потрачено из стартового лимита
   huntCount: number;   // сколько «новых охот» начато (сколько ночей прожито)
   lastHunt: string;    // дата последней «новой охоты» (ru-RU)
+  bpOverride?: number; // Сила Крови, поднятая сверх поколения (опыт/Диаблери/торпор; 0 — не поднята)
+}
+
+/** Одна церемония Диаблери: кто, какого поколения, когда. */
+export interface VtmDiablerieEntry {
+  id: string;
+  victim: string; // имя жертвы (или «безымянный Сородич»)
+  gen: number;    // поколение жертвы (0 — неизвестно)
+  ts: string;     // ISO-дата церемонии
+  bpGift?: boolean; // душа была сильнее: Рассказчик даровал +1 Силы Крови за это Диаблери
+}
+
+export interface VtmDiablerieState {
+  count: number;      // сколько душ выпито
+  notes: string;      // след в ауре: кто, когда и почему
+  entries?: VtmDiablerieEntry[]; // журнал церемоний (свежие сверху)
 }
 
 export interface VtmSheetData {
@@ -110,7 +126,7 @@ export interface VtmSheetData {
   disciplines: VtmDisciplineState[];
   advantages: VtmAdvantageEntry[]; // факты биографии + достоинства + недостатки
   loresheets: { sheetId: string; level: number; note: string }[]; // листоги («Истории», стр. 384+)
-  diablerie: { count: number; notes: string }; // совершённые Диаблери и след в ауре
+  diablerie: VtmDiablerieState; // совершённые Диаблери и след в ауре
   gear: {
     haven: string;      // убежище
     resources: string;  // деньги / источники дохода
@@ -1930,6 +1946,7 @@ export const XP_COSTS = {
   discipline: (next: number) => next * 6,      // Дисциплины: 6 × новый уровень
   disciplinePower: (level: number) => level * 3, // сила Дисциплины: 3 × уровень силы
   humanity: (next: number) => next * 2,        // Человечность: 2 × новый уровень
+  bloodPotency: (next: number) => next * 10,   // Сила Крови сверх поколения: 10 × новый уровень (Книга правил, стр. 217)
   meritRaise: (next: number) => next * 3,      // новые достоинства: договорная цена, 3 × уровень
   background: 3,                                // факт биографии: 3 за точку (и в стартовом лимите, и потом за опыт)
 } as const;
@@ -2022,7 +2039,7 @@ export function emptySheet(): VtmSheetData {
     disciplines: [],
     advantages: [],
     loresheets: [],
-    diablerie: { count: 0, notes: "" },
+    diablerie: { count: 0, notes: "", entries: [] },
     gear: { haven: "", resources: "", items: [] },
     notes: { draft: "", entries: [] },
     trackers: {
@@ -2039,6 +2056,7 @@ export function emptySheet(): VtmSheetData {
       creationSpent: 0,
       huntCount: 0,
       lastHunt: "",
+      bpOverride: 0,
     },
     rollLog: [],
     xpLog: [],
@@ -2201,12 +2219,24 @@ export function normalizeSheet(input: unknown): VtmSheetData {
       .filter((l: { sheetId: string; level: number; note: string }) => l.sheetId !== "");
   }
 
-  // diablerie: счётчик и след в ауре
+  // diablerie: счётчик, след в ауре и журнал церемоний
   if (raw.diablerie && typeof raw.diablerie === "object") {
     const db = raw.diablerie as Record<string, any>;
     base.diablerie = {
       count: clampInt(db.count, 0, 99),
       notes: asString(db.notes),
+      entries: Array.isArray(db.entries)
+        ? db.entries
+            .filter((e: any) => e && typeof e === "object")
+            .slice(0, 30)
+            .map((e: any, idx: number) => ({
+              id: asString(e.id) || vtmUid(`diab-${idx}`),
+              victim: asString(e.victim) || "безымянный Сородич",
+              gen: clampInt(e.gen, 0, 16),
+              ts: asString(e.ts),
+              bpGift: !!e.bpGift,
+            }))
+        : [],
     };
   }
 
@@ -2260,6 +2290,7 @@ export function normalizeSheet(input: unknown): VtmSheetData {
       creationSpent: clampInt(t.creationSpent ?? 0, 0, 9999),
       huntCount: clampInt(t.huntCount, 0, 9999),
       lastHunt: asString(t.lastHunt),
+      bpOverride: clampInt(t.bpOverride ?? 0, 0, 5),
     };
   }
 
