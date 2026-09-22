@@ -5,10 +5,11 @@
 // (факты биографии, достоинства/недостатки — покупки через Кошелёк Крови).
 // ============================================================
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   VtmSheetData,
+  VtmAdvantageEntry,
   VtmDisciplineState,
   DisciplineDef,
   DISCIPLINES,
@@ -659,6 +660,86 @@ function advPoints(kind: string, name: string, rating: number, ownCost?: number)
   return cost ? rating * cost : rating; // без цены — по уровню (договорная)
 }
 
+// ---------- Оболочка окна (стиль vtm-pm-*, как у модалок Дисциплин) ----------
+
+function AdvModalShell({
+  title,
+  kicker,
+  onClose,
+  children,
+  wide,
+}: {
+  title: string;
+  kicker: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  wide?: boolean;
+}) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  return (
+    <div className="vtm-pm-overlay" onClick={onClose} role="presentation">
+      <div
+        className={`vtm-pm-card vtm-adv-card ${wide ? "vtm-adv-card-wide" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="vtm-pm-head">
+          <div className="min-w-0">
+            <span className="vtm-pm-kicker">{kicker}</span>
+            <h3 className="vtm-pm-title">{title}</h3>
+          </div>
+          <button
+            ref={closeRef}
+            className="vtm-pm-close"
+            onClick={onClose}
+            aria-label="Закрыть окно"
+            title="Закрыть (Esc)"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="vtm-pm-body vtm-scroll">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/** Категории записей: метки, глифы и цвет плиток. */
+const ADV_TILE_KINDS: { id: FilterKind; label: string; glyph: string; cls: string }[] = [
+  { id: "all", label: "Все", glyph: "◈", cls: "is-merit" },
+  { id: "background", label: "Факты биографии", glyph: "◆", cls: "is-bg" },
+  { id: "merit", label: "Достоинства", glyph: "◈", cls: "is-merit" },
+  { id: "flaw", label: "Недостатки", glyph: "☠", cls: "is-flaw" },
+  { id: "thinblood", label: "Слабокровные", glyph: "⚗", cls: "is-thin" },
+];
+
+function advKindMeta(kind: VtmAdvantageEntry["kind"]) {
+  return ADV_TILE_KINDS.find((k) => k.id === kind) || ADV_TILE_KINDS[2];
+}
+
+function advKindLabel(kind: VtmAdvantageEntry["kind"]) {
+  if (kind === "background") return "факт биографии";
+  if (kind === "flaw") return "недостаток";
+  if (kind === "thinblood") return "слабокровное";
+  return "достоинство";
+}
+
 export function AdvantagesSection({
   data,
   mutate,
@@ -668,14 +749,9 @@ export function AdvantagesSection({
   mutate: (fn: (draft: VtmSheetData) => void) => void;
   derived: DerivedStats;
 }) {
-  const [filter, setFilter] = useState<FilterKind>("background");
-  const [customName, setCustomName] = useState("");
-  const [customKind, setCustomKind] = useState<"merit" | "flaw">("merit");
-  const [customLvl, setCustomLvl] = useState(1);
-  const [customCost, setCustomCost] = useState(1);
-  const [catQuery, setCatQuery] = useState("");
-  const [clanOnly, setClanOnly] = useState(false); // фильтр «подходит клану»
-  const cq = catQuery.trim().toLowerCase();
+  const [catOpen, setCatOpen] = useState(false);                  // каталог — в отдельном окне
+  const [detailId, setDetailId] = useState<string | null>(null);  // плитка → окно подробностей
+  const [tileFilter, setTileFilter] = useState<FilterKind>("all");
 
   const clan = CLAN_BY_ID.get(data.info.clan);
   const presetIds = useMemo(() => (clan ? CLAN_FLAW_PRESETS[clan.id] || [] : []), [clan]);
@@ -685,6 +761,27 @@ export function AdvantagesSection({
 
   /** Приход очков от недостатка уровня n (недостаток — источник очков, не расход). */
   const flawIncome = (n: number) => XP_COSTS.meritRaise(Math.max(1, n));
+
+  /** Изменение уровня записи с честным Кошельком Крови: недостатки приносят очки, остальное тратит. */
+  const changeLevel = (entryId: string, n: number) => {
+    mutate((d) => {
+      const x = d.advantages.find((y) => y.id === entryId);
+      if (!x) return;
+      const isBg = x.kind === "background";
+      if (x.kind === "flaw") {
+        if (x.free) { /* дар не приносит очков */ }
+        else if (n > x.rating) refundEconomy(d, flawIncome(n) - flawIncome(x.rating), `недостаток «${x.name}» ↑ до ${n} (приход +${flawIncome(n) - flawIncome(x.rating)} пт)`);
+        else if (n < x.rating) spendEconomy(d, flawIncome(x.rating) - flawIncome(n), `недостаток «${x.name}» ↓ до ${n} (расплата ${flawIncome(x.rating) - flawIncome(n)} пт)`);
+      } else if (n > x.rating) {
+        const cost = isBg ? XP_COSTS.background * (n - x.rating) : XP_COSTS.meritRaise(n) - XP_COSTS.meritRaise(x.rating);
+        spendEconomy(d, cost, `«${x.name}» ↑ до ${n} (цена ${cost})`);
+      } else if (n < x.rating && !x.free) {
+        const back = isBg ? XP_COSTS.background * (x.rating - n) : XP_COSTS.meritRaise(x.rating) - XP_COSTS.meritRaise(n);
+        refundEconomy(d, back, `«${x.name}» ↓ до ${n}`);
+      }
+      x.rating = n;
+    });
+  };
 
   const addBackground = (defId: string, defName: string) => {
     if (data.advantages.some((a) => a.kind === "background" && a.name === defName)) {
@@ -734,27 +831,25 @@ export function AdvantagesSection({
     });
   };
 
-  const addCustom = () => {
-    const trimmed = customName.trim();
+  /** Своя запись из конструктора в каталоге. */
+  const addCustom = (kind: "merit" | "flaw", name: string, lvl: number, cost: number) => {
+    const trimmed = name.trim();
     if (!trimmed) return;
     mutate((d) => {
-      if (customKind === "flaw") {
-        refundEconomy(d, flawIncome(customLvl), `свой недостаток «${trimmed}» ур. ${customLvl} (приход +${flawIncome(customLvl)} пт)`);
+      if (kind === "flaw") {
+        refundEconomy(d, flawIncome(lvl), `свой недостаток «${trimmed}» ур. ${lvl} (приход +${flawIncome(lvl)} пт)`);
       } else {
-        spendEconomy(d, XP_COSTS.meritRaise(customLvl), `своё «${trimmed}» ур. ${customLvl} (цена ${XP_COSTS.meritRaise(customLvl)})`);
+        spendEconomy(d, XP_COSTS.meritRaise(lvl), `своё «${trimmed}» ур. ${lvl} (цена ${XP_COSTS.meritRaise(lvl)})`);
       }
       d.advantages.push({
         id: vtmUid("custom"),
         name: trimmed,
-        kind: customKind,
-        rating: Math.max(1, Math.min(5, customLvl)),
+        kind,
+        rating: Math.max(1, Math.min(5, lvl)),
         note: "",
-        cost: Math.max(0, Math.min(9, customCost)),
+        cost: Math.max(0, Math.min(9, cost)),
       });
     });
-    setCustomName("");
-    setCustomLvl(1);
-    setCustomCost(1);
   };
 
   const removeAdv = (id: string) => {
@@ -776,6 +871,322 @@ export function AdvantagesSection({
       d.advantages = d.advantages.filter((a) => a.id !== id);
     });
   };
+
+  // Счётчики категорий для чипов-фильтров
+  const counts = useMemo(() => {
+    const c: Record<FilterKind, number> = { all: data.advantages.length, background: 0, merit: 0, flaw: 0, thinblood: 0 };
+    for (const a of data.advantages) if (c[a.kind] !== undefined) c[a.kind] += 1;
+    return c;
+  }, [data.advantages]);
+
+  const filtered = tileFilter === "all" ? data.advantages : data.advantages.filter((a) => a.kind === tileFilter);
+  const detailEntry = detailId ? data.advantages.find((a) => a.id === detailId) || null : null;
+
+  return (
+    <div className="space-y-4">
+      {/* Сводка очков */}
+      <div className="vtm-panel p-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="vtm-stamp vtm-stamp-gold">Преимущества</span>
+        <span className="vtm-label text-xs text-[#d9c7b6]">
+          Факты биографии: <b className={bgOver === 0 ? "text-[#d6a840]" : "text-[#a8863d]"}>{bgPoints}</b>
+          <i className="vtm-hint !text-[0.70rem] not-italic"> · старт 7 пт{bgOver > 0 ? ` · сверх лимита: ${bgOver} пт за опыт` : " · дальше за опыт, без лимита"}</i>
+        </span>
+        <span className="vtm-label text-xs text-[#c4ac9d]">Достоинства: <b className="text-[#d9c7b6]">{derived.meritPoints}</b></span>
+        <span className="vtm-label text-xs text-[#c4ac9d]">Недостатки: <b className="text-[#e8636b]">+{derived.flawPoints}</b></span>
+        <p className="vtm-hint !text-[0.75rem] flex-1 min-w-[200px]">
+          Без лимитов — есть только цена: списывается из стартового лимита, потом из опыта. Недостатки наоборот ПРИНОСЯТ очки в Кошелёк Крови. Снятие записи возвращает потраченное.
+        </p>
+      </div>
+
+      {/* У меня есть — основа раздела: плитки (название + уровень), подробности в окне */}
+      <section className="vtm-panel" aria-label="Мои преимущества">
+        <div className="vtm-panel-head flex-wrap gap-2">
+          <span className="vtm-label text-[0.81rem] text-[#d6a840]">У меня есть</span>
+          <span className="vtm-hint !text-[0.73rem]">{data.advantages.length} записей</span>
+          <button
+            className="vtm-adv-add ml-auto"
+            onClick={() => setCatOpen(true)}
+            title="Каталог: факты биографии, достоинства, недостатки…"
+          >
+            ✚ Добавить
+          </button>
+        </div>
+
+        {/* Фильтры по категориям */}
+        <div className="px-3 pt-3 md:px-4 md:pt-4">
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Фильтр по категориям">
+            {ADV_TILE_KINDS.map((k) => (
+              <button
+                key={k.id}
+                className={`vtm-adv-chip ${tileFilter === k.id ? "is-on" : ""}`}
+                onClick={() => setTileFilter(k.id)}
+                aria-pressed={tileFilter === k.id}
+              >
+                {k.label}<i>{counts[k.id]}</i>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-3 md:p-4">
+          {filtered.length === 0 ? (
+            <div className="vtm-adv-empty">
+              {data.advantages.length === 0 ? (
+                <>
+                  <span className="vtm-adv-empty-glyph" aria-hidden>◈</span>
+                  <p>На листе пока ни одного преимущества.</p>
+                  <p className="vtm-hint !text-[0.75rem]">Факты биографии, достоинства и недостатки ждут в каталоге.</p>
+                  <button className="vtm-adv-add" onClick={() => setCatOpen(true)}>✚ Открыть каталог</button>
+                </>
+              ) : (
+                <>
+                  <p>В этой категории пусто.</p>
+                  <p className="vtm-hint !text-[0.75rem]">Записи есть — загляни в другие фильтры.</p>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="vtm-adv-tiles">
+              {filtered.map((a) => {
+                const def = findDefByName(a.name);
+                const maxLvl = a.kind === "background" ? 5 : def?.max ?? 5;
+                const meta = advKindMeta(a.kind);
+                return (
+                  <div
+                    key={a.id}
+                    className={`vtm-adv-tile ${meta.cls}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setDetailId(a.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setDetailId(a.id);
+                      }
+                    }}
+                    aria-label={`${a.name}, уровень ${a.rating} из ${maxLvl} — открыть подробности`}
+                    title={`${a.name} — подробности`}
+                  >
+                    {a.free && <span className="vtm-adv-tile-free" title="Дар хищника — бесплатно">дар</span>}
+                    <span className="vtm-adv-tile-glyph" aria-hidden>{meta.glyph}</span>
+                    <span className="vtm-adv-tile-name">{a.name}</span>
+                    <span className="vtm-adv-tile-dots">
+                      <Dots
+                        value={a.rating}
+                        max={maxLvl}
+                        color={a.kind === "flaw" ? "blood" : "gold"}
+                        ariaLabel={`${a.name}: уровень ${a.rating}`}
+                      />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Окно подробностей записи */}
+      {detailEntry && (
+        <AdvDetailModal
+          entry={detailEntry}
+          sheetNames={data.advantages.map((a) => a.name)}
+          onClose={() => setDetailId(null)}
+          onLevel={(n) => changeLevel(detailEntry.id, n)}
+          onNote={(text) => mutate((d) => { const x = d.advantages.find((y) => y.id === detailEntry.id); if (x) x.note = text; })}
+          onCost={(v) => mutate((d) => { const x = d.advantages.find((y) => y.id === detailEntry.id); if (x) x.cost = v; })}
+          onRemove={() => { removeAdv(detailEntry.id); setDetailId(null); }}
+        />
+      )}
+
+      {/* Каталог — в отдельном окне */}
+      {catOpen && (
+        <AdvCatalogModal
+          data={data}
+          clanName={clan?.name || ""}
+          presetIds={presetIds}
+          onClose={() => setCatOpen(false)}
+          onAddBackground={addBackground}
+          onAddFromCatalog={addFromCatalog}
+          onAddCustom={addCustom}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------- Окно подробностей: что даёт преимущество ----------
+
+function AdvDetailModal({
+  entry,
+  sheetNames,
+  onClose,
+  onLevel,
+  onNote,
+  onCost,
+  onRemove,
+}: {
+  entry: VtmAdvantageEntry;
+  sheetNames: string[];
+  onClose: () => void;
+  onLevel: (n: number) => void;
+  onNote: (text: string) => void;
+  onCost: (v: number) => void;
+  onRemove: () => void;
+}) {
+  const def = findDefByName(entry.name);
+  const isCustom = !def;
+  const isBg = entry.kind === "background";
+  const maxLvl = isBg ? 5 : def?.max ?? 5;
+  const pts = advPoints(entry.kind, entry.name, entry.rating, entry.cost);
+  const tierText = def?.tiers?.[entry.rating - 1];
+  const kindLabel = advKindLabel(entry.kind);
+  const conflictNames = def && INCOMPATIBLE_ADVANTAGES[def.id]
+    ? sheetNames
+        .map((n) => findDefByName(n))
+        .filter((d) => d && INCOMPATIBLE_ADVANTAGES[def.id].includes(d.id))
+        .map((d) => d!.name)
+        .filter((n) => n !== entry.name)
+    : [];
+  const hasTierList = !!def?.tiers && def.tiers.length > 1;
+
+  return (
+    <AdvModalShell
+      title={entry.name}
+      kicker={`${kindLabel}${def?.group ? ` · ${def.group}` : ""}`}
+      onClose={onClose}
+    >
+      <div className="vtm-adv-detail">
+        <div className="vtm-adv-detail-meta">
+          <span className={`vtm-stamp !text-[0.66rem] ${entry.kind === "flaw" ? "" : "vtm-stamp-gold"}`}>{kindLabel}</span>
+          {def?.group && <span className="vtm-hint !text-[0.67rem] not-italic">{def.group}</span>}
+          {entry.free && (
+            <span className="vtm-adv-free-badge" title="Дар стиля охоты — бесплатно (Книга правил, стр. 183–186)">
+              дар хищника
+            </span>
+          )}
+          {isBg && <span className="vtm-label text-[0.70rem] text-[#a8863d]">3 пт/точка · до 5 ур.</span>}
+          {!isBg && def?.cost !== undefined && def.cost > 0 && (
+            <span className="vtm-label text-[0.70rem] text-[#a8863d]">
+              {def.max > 1 ? `1–${def.max} ур. · ${def.cost} пт/ур.` : `${def.cost} пт`}
+            </span>
+          )}
+          {def?.cost === 0 && <span className="vtm-label text-[0.70rem] text-[#a8863d]">цена договорная</span>}
+          {def?.stackable && <span className="vtm-label text-[0.66rem] text-[#b0565e]">можно несколько</span>}
+          {def?.req && <span className="vtm-req vtm-label">{def.req}</span>}
+        </div>
+
+        <div className="vtm-adv-detail-level">
+          <span className="vtm-label text-[0.77rem] text-[#c4ac9d]">Уровень:</span>
+          <Dots
+            value={entry.rating}
+            max={maxLvl}
+            color={entry.kind === "flaw" ? "blood" : "gold"}
+            onChange={onLevel}
+            ariaLabel={`${entry.name}: уровень ${entry.rating}`}
+          />
+          {entry.free ? (
+            <span className="vtm-label text-[0.77rem] text-[#d6a840]" title="Дар хищника — бесплатно">0 пт</span>
+          ) : pts !== null && (
+            <span className="vtm-label text-[0.77rem] text-[#a8863d]">{pts} пт</span>
+          )}
+          <span className="vtm-hint !text-[0.67rem] ml-auto">макс. {maxLvl}</span>
+        </div>
+
+        <p className="vtm-adv-detail-desc">
+          {def?.desc || "Своя запись: опиши в заметке, что она даёт у стола — цену Рассказчик утвердит сам."}
+        </p>
+
+        {hasTierList && def?.tiers && (
+          <div className="vtm-adv-detail-tiers">
+            {def.tiers.map((t, i) => (
+              <p
+                key={i}
+                className={`vtm-adv-detail-tier ${i + 1 === entry.rating ? "is-cur" : ""} ${i + 1 < entry.rating ? "is-past" : ""}`}
+              >
+                <span className="text-[#a8863d] not-italic" aria-hidden>{"●".repeat(i + 1)}</span> {t}
+                {i + 1 === entry.rating && <em>— твой уровень</em>}
+              </p>
+            ))}
+          </div>
+        )}
+        {tierText && !hasTierList && (
+          <p className="vtm-hint !text-[0.77rem] border-l-2 border-[#3d1a20] pl-2">Уровень {entry.rating}: {tierText}</p>
+        )}
+
+        {conflictNames.length > 0 && (
+          <p className="vtm-hint !text-[0.74rem] vtm-req">
+            ⚠ Конфликт: с «{conflictNames.join("», «")}» вместе не работают
+          </p>
+        )}
+
+        <label className="vtm-adv-detail-note">
+          <span className="vtm-label text-[0.72rem] text-[#c4ac9d]">Заметка — конкретика: кто, где и чем платит</span>
+          <input
+            className="vtm-input !py-1.5 !text-[0.86rem]"
+            value={entry.note}
+            onChange={(e) => onNote(e.target.value)}
+            placeholder="конкретика: кто, где и чем платит"
+            aria-label={`Заметка к ${entry.name}`}
+          />
+        </label>
+
+        {isCustom && entry.kind !== "thinblood" && (
+          <div className="vtm-adv-detail-cost">
+            <label className="vtm-hint !text-[0.72rem] not-italic flex items-center gap-1">
+              цена/ур.:
+              <input
+                type="number"
+                min={0}
+                max={9}
+                className="vtm-input !w-14 !py-0.5 !text-[0.76rem] text-center"
+                value={entry.cost ?? 0}
+                onChange={(e) => onCost(Math.max(0, Math.min(9, Math.floor(Number(e.target.value) || 0))))}
+                aria-label={`Цена за уровень своей записи ${entry.name}`}
+              />
+            </label>
+            <span className="vtm-hint !text-[0.67rem]">0 = договорная (считается по уровню)</span>
+          </div>
+        )}
+
+        <div className="vtm-adv-detail-foot">
+          <button className="vtm-btn vtm-btn-blood !py-1.5 !px-3 !text-[0.76rem]" onClick={onRemove}>
+            ✕ Убрать с листа
+          </button>
+          <span className="vtm-hint !text-[0.7rem]">снятие вернёт или заберёт очки по Кошельку Крови</span>
+        </div>
+      </div>
+    </AdvModalShell>
+  );
+}
+
+// ---------- Каталог в отдельном окне ----------
+
+function AdvCatalogModal({
+  data,
+  clanName,
+  presetIds,
+  onClose,
+  onAddBackground,
+  onAddFromCatalog,
+  onAddCustom,
+}: {
+  data: VtmSheetData;
+  clanName: string;
+  presetIds: string[];
+  onClose: () => void;
+  onAddBackground: (defId: string, defName: string) => void;
+  onAddFromCatalog: (defId: string) => void;
+  onAddCustom: (kind: "merit" | "flaw", name: string, lvl: number, cost: number) => void;
+}) {
+  const [filter, setFilter] = useState<FilterKind>("background");
+  const [query, setQuery] = useState("");
+  const [clanOnly, setClanOnly] = useState(false); // фильтр «подходит клану»
+  const [customName, setCustomName] = useState("");
+  const [customKind, setCustomKind] = useState<"merit" | "flaw">("merit");
+  const [customLvl, setCustomLvl] = useState(1);
+  const [customCost, setCustomCost] = useState(1);
+  const cq = query.trim().toLowerCase();
 
   const kinds: { id: FilterKind; label: string }[] = [
     { id: "background", label: "Факты биографии" },
@@ -814,289 +1225,187 @@ export function AdvantagesSection({
     return [...known, ...rest];
   })();
 
-  return (
-    <div className="space-y-4">
-      {/* Сводка очков */}
-      <div className="vtm-panel p-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <span className="vtm-stamp vtm-stamp-gold">Преимущества</span>
-        <span className="vtm-label text-xs text-[#d9c7b6]">
-          Факты биографии: <b className={bgOver === 0 ? "text-[#d6a840]" : "text-[#a8863d]"}>{bgPoints}</b>
-          <i className="vtm-hint !text-[0.70rem] not-italic"> · старт 7 пт{bgOver > 0 ? ` · сверх лимита: ${bgOver} пт за опыт` : " · дальше за опыт, без лимита"}</i>
-        </span>
-        <span className="vtm-label text-xs text-[#c4ac9d]">Достоинства: <b className="text-[#d9c7b6]">{derived.meritPoints}</b></span>
-        <span className="vtm-label text-xs text-[#c4ac9d]">Недостатки: <b className="text-[#e8636b]">+{derived.flawPoints}</b></span>
-        <p className="vtm-hint !text-[0.75rem] flex-1 min-w-[200px]">
-          Без лимитов — есть только цена: списывается из стартового лимита, потом из опыта. Недостатки наоборот ПРИНОСЯТ очки в Кошелёк Крови. Снятие записи возвращает потраченное.
-        </p>
-      </div>
+  const submitCustom = () => {
+    if (!customName.trim()) return;
+    onAddCustom(customKind, customName, customLvl, customCost);
+    setCustomName("");
+    setCustomLvl(1);
+    setCustomCost(1);
+  };
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Мои преимущества */}
-        <section className="vtm-panel" aria-label="Мои преимущества">
-          <div className="vtm-panel-head">
-            <span className="vtm-label text-[0.81rem] text-[#d6a840]">У меня есть</span>
-            <span className="vtm-hint !text-[0.73rem] ml-auto">{data.advantages.length} записей</span>
-          </div>
-          <div className="p-3 space-y-2 max-h-[620px] overflow-y-auto overflow-x-hidden vtm-scroll">
-            {data.advantages.length === 0 && (
-              <p className="vtm-hint text-center py-4">Пока ничего. Выбирай из каталога справа — или вписывай своё.</p>
+  return (
+    <AdvModalShell
+      title="Каталог преимуществ"
+      kicker="факты биографии · достоинства · недостатки"
+      onClose={onClose}
+      wide
+    >
+      <div className="vtm-adv-cat">
+        {/* Фильтры и поиск */}
+        <div className="vtm-adv-cat-tools">
+          <div className="flex flex-wrap gap-1" role="group" aria-label="Категории каталога">
+            {kinds.map((k) => (
+              <button
+                key={k.id}
+                className={`vtm-btn !py-1 !px-2 !text-[0.72rem] ${filter === k.id ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
+                onClick={() => {
+                  setFilter(k.id);
+                  // «для клана» имеет смысл только у Недостатков и «Всё» — не даём фильтру молча висеть
+                  if (k.id !== "flaw" && k.id !== "all") setClanOnly(false);
+                }}
+              >
+                {k.label}
+              </button>
+            ))}
+            {presetIds.length > 0 && (filter === "flaw" || filter === "all") && (
+              <button
+                className={`vtm-btn !py-1 !px-2 !text-[0.72rem] ${clanOnly ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
+                onClick={() => setClanOnly((v) => !v)}
+                aria-pressed={clanOnly}
+                title={`Недостатки, что подходят клану «${clanName}»`}
+              >
+                ⛧ для клана
+              </button>
             )}
-            {data.advantages.map((a) => {
-              const isBg = a.kind === "background";
-              const kindLabel = isBg ? "факт" : a.kind === "merit" ? "достоинство" : a.kind === "flaw" ? "недостаток" : "слабокровное";
-              const def = findDefByName(a.name);
-              const isCustom = !def;
-              const maxLvl = isBg ? 5 : def?.max ?? 5; // свои записи — до 5 уровней
-              const pts = advPoints(a.kind, a.name, a.rating, a.cost);
-              const tierText = def?.tiers?.[a.rating - 1];
-              const conflictNames = def && INCOMPATIBLE_ADVANTAGES[def.id]
-                ? data.advantages
-                    .map((x) => findDefByName(x.name))
-                    .filter((d) => d && INCOMPATIBLE_ADVANTAGES[def.id].includes(d.id))
-                    .map((d) => d!.name)
-                : [];
+          </div>
+          {filter !== "background" && (
+            <input
+              className="vtm-input !py-1.5 !text-[0.86rem]"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="поиск: чеснок, стигматы, узы, предпочтение…"
+              aria-label="Поиск по каталогу преимуществ"
+            />
+          )}
+        </div>
+
+        {/* Факты биографии */}
+        {filter === "background" && (
+          <div className="space-y-2">
+            {ADVANTAGE_LIBRARY.filter((a) => a.kind === "background").map((def) => {
+              const owned = data.advantages.some((a) => a.kind === "background" && a.name === def.name);
               return (
-                <div key={a.id} className="vtm-frame rounded-md p-2.5 space-y-1.5" style={a.kind === "flaw" ? { borderColor: "rgba(138,26,29,0.4)" } : undefined}>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`vtm-stamp !text-[0.66rem] ${a.kind === "flaw" ? "" : "vtm-stamp-gold"}`}>{kindLabel}</span>
-                    {a.free && <span className="vtm-adv-free-badge" title="Дар стиля охоты — бесплатно (Книга правил, стр. 183–186)">дар хищника</span>}
-                    {def?.group && <span className="vtm-hint !text-[0.67rem] not-italic">{def.group}</span>}
-                    <span className="text-sm text-[#d9c7b6] flex-1 min-w-[120px]">{a.name}</span>
-                    <div className="flex items-center gap-1.5">
-                      <Dots
-                        value={a.rating}
-                        max={maxLvl}
-                        color={isBg ? "gold" : a.kind === "flaw" ? "blood" : "gold"}
-                        onChange={(n) => mutate((d) => {
-                          const x = d.advantages.find((y) => y.id === a.id);
-                          if (!x) return;
-                          // авто-списание/возврат через Кошелёк Крови: недостатки дают очки, остальное — тратит
-                          // дар хищника: базовые уровни бесплатны — платим только за подъём сверх дара, возврата нет
-                          if (a.kind === "flaw") {
-                            if (x.free) { /* дар не приносит очков */ }
-                            else if (n > x.rating) refundEconomy(d, flawIncome(n) - flawIncome(x.rating), `недостаток «${a.name}» ↑ до ${n} (приход +${flawIncome(n) - flawIncome(x.rating)} пт)`);
-                            else if (n < x.rating) spendEconomy(d, flawIncome(x.rating) - flawIncome(n), `недостаток «${a.name}» ↓ до ${n} (расплата ${flawIncome(x.rating) - flawIncome(n)} пт)`);
-                          } else if (n > x.rating) {
-                            const cost = isBg ? XP_COSTS.background * (n - x.rating) : XP_COSTS.meritRaise(n) - XP_COSTS.meritRaise(x.rating);
-                            spendEconomy(d, cost, `«${a.name}» ↑ до ${n} (цена ${cost})`);
-                          } else if (n < x.rating && !x.free) {
-                            const back = isBg ? XP_COSTS.background * (x.rating - n) : XP_COSTS.meritRaise(x.rating) - XP_COSTS.meritRaise(n);
-                            refundEconomy(d, back, `«${a.name}» ↓ до ${n}`);
-                          }
-                          x.rating = n;
-                        })}
-                        ariaLabel={`${a.name}: уровень ${a.rating}`}
-                      />
-                      {a.free ? (
-                        <span className="vtm-label text-[0.77rem] text-[#d6a840] whitespace-nowrap" title="Дар хищника — бесплатно">0 пт</span>
-                      ) : pts !== null && (
-                        <span className="vtm-label text-[0.77rem] text-[#a8863d] whitespace-nowrap">{pts} пт</span>
-                      )}
-                      <button className="vtm-btn vtm-btn-ghost !p-1 !text-[0.73rem]" onClick={() => removeAdv(a.id)} aria-label={`Убрать ${a.name}`}>✕</button>
-                    </div>
-                  </div>
-                  {tierText && (
-                    <p className="vtm-hint !text-[0.77rem] border-l-2 border-[#3d1a20] pl-2">Уровень {a.rating}: {tierText}</p>
-                  )}
-                  {conflictNames.length > 0 && (
-                    <p className="vtm-hint !text-[0.74rem] vtm-req">
-                      ⚠ Конфликт: с «{conflictNames.join("», «")}» вместе не работают
+                <div key={def.id} className="flex items-start gap-2 p-2 rounded-md border border-[#2b1116]" style={{ background: "rgba(0,0,0,0.2)" }}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[0.88rem] text-[#d9c7b6]">
+                      {def.name}
+                      <span className="vtm-label text-[0.70rem] text-[#a8863d] ml-1.5">3 пт/точка · до 5 ур.</span>
                     </p>
-                  )}
-                  <input
-                    className="vtm-input !py-1 !text-[0.84rem]"
-                    value={a.note}
-                    onChange={(e) => mutate((d) => { const x = d.advantages.find((y) => y.id === a.id); if (x) x.note = e.target.value; })}
-                    placeholder="конкретика: кто, где и чем платит"
-                    aria-label={`Заметка к ${a.name}`}
-                  />
-                  {isCustom && a.kind !== "thinblood" && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <label className="vtm-hint !text-[0.7rem] not-italic flex items-center gap-1">
-                        цена/ур.:
-                        <input
-                          type="number"
-                          min={0}
-                          max={9}
-                          className="vtm-input !w-14 !py-0.5 !text-[0.76rem] text-center"
-                          value={a.cost ?? 0}
-                          onChange={(e) => {
-                            const v = Math.max(0, Math.min(9, Math.floor(Number(e.target.value) || 0)));
-                            mutate((d) => { const x = d.advantages.find((y) => y.id === a.id); if (x) x.cost = v; });
-                          }}
-                          aria-label={`Цена за уровень своей записи ${a.name}`}
-                        />
-                      </label>
-                      <span className="vtm-hint !text-[0.67rem]">0 = договорная (считается по уровню)</span>
-                    </div>
-                  )}
+                    <p className="vtm-hint !text-[0.75rem]">{def.desc}</p>
+                  </div>
+                  <button
+                    className={`vtm-btn shrink-0 !py-1 !px-2 !text-[0.73rem] ${owned ? "" : "vtm-btn-gold"}`}
+                    onClick={() => onAddBackground(def.id, def.name)}
+                    disabled={owned}
+                    title={owned ? "уже есть — поднимай уровень из окна записи" : `взять за ${XP_COSTS.background} пт (стартовый лимит → опыт)`}
+                  >
+                    {owned ? "✓" : `+${XP_COSTS.background} пт`}
+                  </button>
                 </div>
               );
             })}
+            <p className="vtm-hint text-center !text-[0.75rem] pt-1">
+              Лимитов нет: первая точка — 3 пт, каждая следующая — ещё 3 (списывается из стартового лимита, затем из опыта).
+            </p>
           </div>
-          {/* Своё: расширенный конструктор */}
-          <div className="p-3 border-t border-[#2b1116] space-y-2">
-            <div className="flex gap-2">
-              <select className="vtm-input !w-36" value={customKind} onChange={(e) => setCustomKind(e.target.value as "merit" | "flaw")} aria-label="Тип своей записи">
-                <option value="merit">достоинство</option>
-                <option value="flaw">недостаток</option>
-              </select>
-              <input
-                className="vtm-input flex-1 min-w-0"
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addCustom()}
-                placeholder="своё: прозвище, тайна, враг, фольклорный страх…"
-                aria-label="Название своей записи"
-              />
-              <button className="vtm-btn shrink-0" onClick={addCustom} disabled={!customName.trim()}>+</button>
-            </div>
-            <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
-              <span className="vtm-hint !text-[0.7rem] not-italic flex items-center gap-1.5">
-                уровень:
-                <Dots value={customLvl} max={5} color={customKind === "flaw" ? "blood" : "gold"} onChange={setCustomLvl} ariaLabel="Уровень своей записи" />
-              </span>
-              <label className="vtm-hint !text-[0.7rem] not-italic flex items-center gap-1">
-                цена/ур.:
-                <input
-                  type="number"
-                  min={0}
-                  max={9}
-                  className="vtm-input !w-14 !py-0.5 !text-[0.76rem] text-center"
-                  value={customCost}
-                  onChange={(e) => setCustomCost(Math.max(0, Math.min(9, Math.floor(Number(e.target.value) || 0))))}
-                  aria-label="Цена за уровень своей записи"
-                />
-              </label>
-              <span className="vtm-hint !text-[0.67rem]">0 = договорная (считается по уровню); итог = уровень × цена</span>
-            </div>
-          </div>
-        </section>
+        )}
 
-        {/* Каталог */}
-        <section className="vtm-panel" aria-label="Каталог преимуществ">
-          <div className="vtm-panel-head flex-wrap">
-            <span className="vtm-label text-[0.81rem] text-[#d6a840]">Каталог</span>
-            <div className="flex flex-wrap gap-1 ml-auto">
-              {kinds.map((k) => (
-                <button
-                  key={k.id}
-                  className={`vtm-btn !py-1 !px-2 !text-[0.72rem] ${filter === k.id ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
-                  onClick={() => {
-                    setFilter(k.id);
-                    // «для клана» имеет смысл только у Недостатков и «Всё» — не даём фильтру молча висеть
-                    if (k.id !== "flaw" && k.id !== "all") setClanOnly(false);
-                  }}
-                >
-                  {k.label}
-                </button>
-              ))}
-              {presetIds.length > 0 && (filter === "flaw" || filter === "all") && (
-                <button
-                  className={`vtm-btn !py-1 !px-2 !text-[0.72rem] ${clanOnly ? "vtm-btn-blood" : "vtm-btn-ghost"}`}
-                  onClick={() => setClanOnly((v) => !v)}
-                  aria-pressed={clanOnly}
-                  title={`Недостатки, что подходят клану «${clan?.name}»`}
-                >
-                  ⛧ для клана
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="p-3 space-y-2 max-h-[680px] overflow-y-auto overflow-x-hidden vtm-scroll">
-            {filter !== "background" && (
-              <input
-                className="vtm-input !py-1.5 !text-[0.86rem]"
-                value={catQuery}
-                onChange={(e) => setCatQuery(e.target.value)}
-                placeholder="поиск: чеснок, стигматы, узы, предпочтение…"
-                aria-label="Поиск по каталогу преимуществ"
-              />
-            )}
-            {filter === "background" ? (
-              <>
-                {ADVANTAGE_LIBRARY.filter((a) => a.kind === "background").map((def) => {
-                  const owned = data.advantages.some((a) => a.kind === "background" && a.name === def.name);
+        {/* Достоинства и недостатки по группам книги */}
+        {filter !== "background" && (
+          <div className="space-y-2">
+            {groupedEntries.map(({ group, items }) => (
+              <div key={group || "base"} className="space-y-1.5">
+                {group && <p className="vtm-cat-head vtm-label">{group}</p>}
+                {items.map((def) => {
+                  const alreadyOwned = data.advantages.some((a) => a.name === def.name);
+                  const canAdd = !alreadyOwned || def.stackable;
                   return (
-                    <div key={def.id} className="flex items-start gap-2 p-2 rounded-md border border-[#2b1116]" style={{ background: "rgba(0,0,0,0.2)" }}>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[0.88rem] text-[#d9c7b6]">
-                          {def.name}
-                          <span className="vtm-label text-[0.70rem] text-[#a8863d] ml-1.5">3 пт/точка · до 5 ур.</span>
-                        </p>
-                        <p className="vtm-hint !text-[0.75rem]">{def.desc}</p>
+                    <div key={def.id} className="p-2 rounded-md border border-[#2b1116] space-y-1" style={{ background: "rgba(0,0,0,0.2)", opacity: alreadyOwned && !def.stackable ? 0.55 : 1 }}>
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[0.88rem] text-[#d9c7b6]">
+                            {def.name}
+                            {def.cost !== undefined && def.cost > 0 ? (
+                              <span className="vtm-label text-[0.70rem] text-[#a8863d] ml-1.5">
+                                {def.max > 1 ? `1–${def.max} ур. · ${def.cost} пт/ур.` : `${def.cost} пт`}
+                              </span>
+                            ) : def.cost === 0 ? (
+                              <span className="vtm-label text-[0.70rem] text-[#a8863d] ml-1.5">цена договорная</span>
+                            ) : null}
+                            {def.stackable && <span className="vtm-label text-[0.66rem] text-[#b0565e] ml-1.5">можно несколько</span>}
+                            {def.req && <span className="vtm-req vtm-label ml-1.5">{def.req}</span>}
+                          </p>
+                          <p className="vtm-hint !text-[0.77rem]">{def.desc}</p>
+                          {def.tiers && def.tiers.length > 1 && (
+                            <div className="mt-1 space-y-0.5">
+                              {def.tiers.map((t, i) => (
+                                <p key={i} className="vtm-hint !text-[0.75rem] pl-1 border-l border-[#3d1a20]">
+                                  <span className="text-[#a8863d] not-italic">{"●".repeat(i + 1)}</span> {t}
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          className="vtm-btn shrink-0 !py-1 !px-2 !text-[0.73rem] vtm-btn-gold"
+                          onClick={() => onAddFromCatalog(def.id)}
+                          disabled={!canAdd}
+                          title={alreadyOwned && !def.stackable ? "уже на листе" : def.stackable ? "Добавить ещё одну" : "Добавить к листу (1 уровень)"}
+                        >
+                          {alreadyOwned && !def.stackable ? "✓" : "+"}
+                        </button>
                       </div>
-                      <button
-                        className={`vtm-btn shrink-0 !py-1 !px-2 !text-[0.73rem] ${owned ? "" : "vtm-btn-gold"}`}
-                        onClick={() => addBackground(def.id, def.name)}
-                        disabled={owned}
-                        title={owned ? "уже есть — поднимай уровень точками в списке слева" : `взять за ${XP_COSTS.background} пт (стартовый лимит → опыт)`}
-                      >
-                        {owned ? "✓" : `+${XP_COSTS.background} пт`}
-                      </button>
                     </div>
                   );
                 })}
-                <p className="vtm-hint text-center !text-[0.75rem] pt-1">
-                  Лимитов нет: первая точка — 3 пт, каждая следующая — ещё 3 (списывается из стартового лимита, затем из опыта).
-                </p>
-              </>
-            ) : (
-              groupedEntries.map(({ group, items }) => (
-                <div key={group || "base"} className="space-y-1.5">
-                  {group && <p className="vtm-cat-head vtm-label">{group}</p>}
-                  {items.map((def) => {
-                    const alreadyOwned = data.advantages.some((a) => a.name === def.name);
-                    const canAdd = !alreadyOwned || def.stackable;
-                    return (
-                      <div key={def.id} className="p-2 rounded-md border border-[#2b1116] space-y-1" style={{ background: "rgba(0,0,0,0.2)", opacity: alreadyOwned && !def.stackable ? 0.55 : 1 }}>
-                        <div className="flex items-start gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[0.88rem] text-[#d9c7b6]">
-                              {def.name}
-                              {def.cost !== undefined && def.cost > 0 ? (
-                                <span className="vtm-label text-[0.70rem] text-[#a8863d] ml-1.5">
-                                  {def.max > 1 ? `1–${def.max} ур. · ${def.cost} пт/ур.` : `${def.cost} пт`}
-                                </span>
-                              ) : def.cost === 0 ? (
-                                <span className="vtm-label text-[0.70rem] text-[#a8863d] ml-1.5">цена договорная</span>
-                              ) : null}
-                              {def.stackable && <span className="vtm-label text-[0.66rem] text-[#b0565e] ml-1.5">можно несколько</span>}
-                              {def.req && <span className="vtm-req vtm-label ml-1.5">{def.req}</span>}
-                            </p>
-                            <p className="vtm-hint !text-[0.77rem]">{def.desc}</p>
-                            {def.tiers && def.tiers.length > 1 && (
-                              <div className="mt-1 space-y-0.5">
-                                {def.tiers.map((t, i) => (
-                                  <p key={i} className="vtm-hint !text-[0.75rem] pl-1 border-l border-[#3d1a20]">
-                                    <span className="text-[#a8863d] not-italic">{"●".repeat(i + 1)}</span> {t}
-                                  </p>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            className="vtm-btn shrink-0 !py-1 !px-2 !text-[0.73rem] vtm-btn-gold"
-                            onClick={() => addFromCatalog(def.id)}
-                            disabled={!canAdd}
-                            title={alreadyOwned && !def.stackable ? "уже на листе" : def.stackable ? "Добавить ещё одну" : "Добавить к листу (1 уровень)"}
-                          >
-                            {alreadyOwned && !def.stackable ? "✓" : "+"}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))
-            )}
-            {filter !== "background" && pool.length === 0 && (
+              </div>
+            ))}
+            {pool.length === 0 && (
               <p className="vtm-hint text-center py-3">Ничего не нашлось — попробуй иначе.</p>
             )}
           </div>
-        </section>
+        )}
+
+        {/* Своя запись */}
+        <div className="vtm-adv-custom">
+          <p className="vtm-cat-head vtm-label">Своя запись</p>
+          <div className="flex gap-2 flex-wrap">
+            <select className="vtm-input !w-36" value={customKind} onChange={(e) => setCustomKind(e.target.value as "merit" | "flaw")} aria-label="Тип своей записи">
+              <option value="merit">достоинство</option>
+              <option value="flaw">недостаток</option>
+            </select>
+            <input
+              className="vtm-input flex-1 min-w-[160px]"
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submitCustom()}
+              placeholder="своё: прозвище, тайна, враг, фольклорный страх…"
+              aria-label="Название своей записи"
+            />
+            <button className="vtm-btn shrink-0" onClick={submitCustom} disabled={!customName.trim()}>+</button>
+          </div>
+          <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
+            <span className="vtm-hint !text-[0.7rem] not-italic flex items-center gap-1.5">
+              уровень:
+              <Dots value={customLvl} max={5} color={customKind === "flaw" ? "blood" : "gold"} onChange={setCustomLvl} ariaLabel="Уровень своей записи" />
+            </span>
+            <label className="vtm-hint !text-[0.7rem] not-italic flex items-center gap-1">
+              цена/ур.:
+              <input
+                type="number"
+                min={0}
+                max={9}
+                className="vtm-input !w-14 !py-0.5 !text-[0.76rem] text-center"
+                value={customCost}
+                onChange={(e) => setCustomCost(Math.max(0, Math.min(9, Math.floor(Number(e.target.value) || 0))))}
+                aria-label="Цена за уровень своей записи"
+              />
+            </label>
+            <span className="vtm-hint !text-[0.67rem]">0 = договорная (считается по уровню); итог = уровень × цена</span>
+          </div>
+        </div>
       </div>
-    </div>
+    </AdvModalShell>
   );
 }
 
